@@ -36,15 +36,15 @@ import scala.concurrent.{Future, Promise}
 import scala.util.control.NonFatal
 
 /**
- * Service for exporting OpenTelemetry traces
- */
+  * Service for exporting OpenTelemetry traces
+  */
 private[otel] trait TraceService extends Closeable {
   def exportSpans(request: ExportTraceServiceRequest): Future[ExportTraceServiceResponse]
 }
 
 /**
- * Companion object to [[GrpcTraceService]]
- */
+  * Companion object to [[GrpcTraceService]]
+  */
 private[otel] object GrpcTraceService {
   private val logger = LoggerFactory.getLogger(classOf[GrpcTraceService])
   private val executor = Executors.newSingleThreadExecutor(new ThreadFactory {
@@ -52,14 +52,16 @@ private[otel] object GrpcTraceService {
   })
 
   /**
-   * Builds the gRPC trace exporter using the provided configuration.
-   * @param config
-   * @return
-   */
+    * Builds the gRPC trace exporter using the provided configuration.
+    *
+    * @param config
+    * @return
+    */
   def apply(config: Config): TraceService = {
     val otelExporterConfig = config.getConfig("kamon.otel.trace")
     val schema = otelExporterConfig.getString("protocol")
     val endpoint = otelExporterConfig.getString("endpoint")
+    val fullEndpoint = if (otelExporterConfig.hasPath("fullEndpoint")) Some(otelExporterConfig.getString("fullEndpoint")) else None
     val compression = otelExporterConfig.getString("compression") match {
       case "gzip" => true
       case x =>
@@ -72,7 +74,17 @@ private[otel] object GrpcTraceService {
       case Array(k, v) => k -> v
     }.toSeq
     val timeoutNanos = otelExporterConfig.getDuration("timeout").toNanos
-    val url = new URL(endpoint)
+    // See https://opentelemetry.io/docs/reference/specification/protocol/exporter/#endpoint-urls-for-otlphttp
+    val url = (protocol, fullEndpoint) match {
+      case ("http/protobuf", Some(full)) =>
+        val parsed = new URL(full)
+        if (parsed.getPath.isEmpty) new URL(full :+ '/') else parsed
+      // Seems to be some dispute as to whether the / should technically be added in the case that the base path doesn't
+      // include it. Adding because it's probably what's desired most of the time, and can always be overridden by fullEndpoint
+      case ("http/protobuf", None) => if (endpoint.endsWith("/")) new URL(endpoint + "v1/traces") else new URL(endpoint + "/v1/traces")
+      case (_, Some(full)) => new URL(full)
+      case (_, None) => new URL(endpoint)
+    }
 
     //inspiration from https://github.com/open-telemetry/opentelemetry-java/blob/main/exporters/otlp/trace/src/main/java/io/opentelemetry/exporter/otlp/trace/OtlpGrpcSpanExporterBuilder.java
 
@@ -86,7 +98,7 @@ private[otel] object GrpcTraceService {
         val builder = ManagedChannelBuilder.forAddress(url.getHost, url.getPort)
         val metadata: Option[Metadata] = if (headers.isEmpty) None else {
           val m = new Metadata()
-          headers.foreach{ case (k, v) => m.put(Metadata.Key.of(k, Metadata.ASCII_STRING_MARSHALLER), v) }
+          headers.foreach { case (k, v) => m.put(Metadata.Key.of(k, Metadata.ASCII_STRING_MARSHALLER), v) }
           Some(m)
         }
         metadata.foreach(m => builder.intercept(MetadataUtils.newAttachHeadersInterceptor(m)))
@@ -104,16 +116,18 @@ private[otel] object GrpcTraceService {
 }
 
 import kamon.otel.GrpcTraceService._
+
 /**
- * Manages the remote communication over gRPC to the OpenTelemetry service.
- */
-private[otel] class GrpcTraceService(channel:ManagedChannel, traceService:TraceServiceFutureStub) extends TraceService {
+  * Manages the remote communication over gRPC to the OpenTelemetry service.
+  */
+private[otel] class GrpcTraceService(channel: ManagedChannel, traceService: TraceServiceFutureStub) extends TraceService {
 
   /**
-   * Exports the trace data asynchronously.
-   * @param request The trace data to export
-   * @return
-   */
+    * Exports the trace data asynchronously.
+    *
+    * @param request The trace data to export
+    * @return
+    */
   override def exportSpans(request: ExportTraceServiceRequest): Future[ExportTraceServiceResponse] = {
     val promise = Promise[ExportTraceServiceResponse]()
     Futures.addCallback(traceService.`export`(request), exportCallback(promise), executor)
@@ -121,22 +135,24 @@ private[otel] class GrpcTraceService(channel:ManagedChannel, traceService:TraceS
   }
 
   /**
-   * Closes the underlying gRPC channel.
-   */
+    * Closes the underlying gRPC channel.
+    */
   override def close(): Unit = {
     channel.shutdown()
     channel.awaitTermination(5, TimeUnit.SECONDS)
   }
 
   /**
-   * Wrapper from Java Future to Scala counterpart.
-   * When the Java future completes it completes the provided ''Promise''
-   * @param promise The Promise to complete
-   * @return
-   */
-  private def exportCallback(promise:Promise[ExportTraceServiceResponse]):FutureCallback[ExportTraceServiceResponse] =
+    * Wrapper from Java Future to Scala counterpart.
+    * When the Java future completes it completes the provided ''Promise''
+    *
+    * @param promise The Promise to complete
+    * @return
+    */
+  private def exportCallback(promise: Promise[ExportTraceServiceResponse]): FutureCallback[ExportTraceServiceResponse] =
     new FutureCallback[ExportTraceServiceResponse]() {
       override def onSuccess(result: ExportTraceServiceResponse): Unit = promise.success(result)
+
       override def onFailure(t: Throwable): Unit = promise.failure(t)
     }
 
@@ -147,12 +163,15 @@ private[otel] class HTTPTraceService(url: URL, compressionEnabled: Boolean, head
   private val daemonThreadFactory: ThreadFactory = new ThreadFactory {
     private val counter = new AtomicInteger
     private val delegate = Executors.defaultThreadFactory
+
     override def newThread(r: Runnable): Thread = {
       val t: Thread = delegate.newThread(r)
       try {
         t.setDaemon(true)
         t.setName("okhttp-dispatch-" + counter.incrementAndGet)
-      } catch { case _: SecurityException => }
+      } catch {
+        case _: SecurityException =>
+      }
       t
     }
   }
@@ -160,8 +179,10 @@ private[otel] class HTTPTraceService(url: URL, compressionEnabled: Boolean, head
     0, Integer.MAX_VALUE, 60, TimeUnit.SECONDS, new SynchronousQueue[Runnable], daemonThreadFactory
   ))
   private val protoMediaType: MediaType = MediaType.parse("application/x-protobuf")
+
   private def gzipRequestBody(requestBody: RequestBody): RequestBody = new RequestBody {
     override def contentType: MediaType = requestBody.contentType
+
     override def contentLength: Long = -1
 
     override def writeTo(bufferedSink: BufferedSink): Unit = {
@@ -170,6 +191,7 @@ private[otel] class HTTPTraceService(url: URL, compressionEnabled: Boolean, head
       gzipSink.close()
     }
   }
+
   def getStatusMessage(serializedStatus: Array[Byte]): String = {
     val input = CodedInputStream.newInstance(serializedStatus)
     while (true) {
@@ -183,14 +205,15 @@ private[otel] class HTTPTraceService(url: URL, compressionEnabled: Boolean, head
     }
     throw new Error("Unreachable")
   }
+
   private def extractErrorStatus(response: Response, responseBody: Option[ResponseBody]): String = responseBody match {
     case None => "Response body missing, HTTP status message: " + response.message
     case Some(responseBody) =>
-    try getStatusMessage(responseBody.bytes())
-    catch {
-      case _: IOException =>
-        "Unable to parse response body, HTTP status message: " + response.message
-    }
+      try getStatusMessage(responseBody.bytes())
+      catch {
+        case _: IOException =>
+          "Unable to parse response body, HTTP status message: " + response.message
+      }
   }
 
   // build delegate
@@ -201,7 +224,7 @@ private[otel] class HTTPTraceService(url: URL, compressionEnabled: Boolean, head
   // export method
   override def exportSpans(request: ExportTraceServiceRequest): Future[ExportTraceServiceResponse] = {
     val requestBuilder = new Request.Builder().url(url)
-    headers.foreach{ case (k, v) => requestBuilder.addHeader(k, v) }
+    headers.foreach { case (k, v) => requestBuilder.addHeader(k, v) }
     val requestBody = RequestBody.create(protoMediaType, request.toByteArray)
     if (compressionEnabled) {
       requestBuilder.addHeader("Content-Encoding", "gzip")
@@ -212,6 +235,7 @@ private[otel] class HTTPTraceService(url: URL, compressionEnabled: Boolean, head
     val responsePromise = Promise[ExportTraceServiceResponse]
     val callback: Callback = new Callback {
       override def onFailure(call: Call, e: IOException): Unit = responsePromise.failure(e)
+
       override def onResponse(call: Call, response: Response): Unit = {
         if (response.isSuccessful) responsePromise.success(ExportTraceServiceResponse.getDefaultInstance)
         else {
@@ -227,6 +251,8 @@ private[otel] class HTTPTraceService(url: URL, compressionEnabled: Boolean, head
   override def close(): Unit = {
     delegate.dispatcher().executorService().shutdown()
     delegate.connectionPool().evictAll()
-    try Option(delegate.cache()).foreach(_.close()) catch { case NonFatal(_) => }
+    try Option(delegate.cache()).foreach(_.close()) catch {
+      case NonFatal(_) =>
+    }
   }
 }
