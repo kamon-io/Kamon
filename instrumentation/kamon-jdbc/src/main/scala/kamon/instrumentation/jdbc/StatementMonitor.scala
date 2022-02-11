@@ -25,6 +25,7 @@ import kamon.trace.Span
 import kanela.agent.bootstrap.stack.CallStackDepth
 import net.sf.jsqlparser.parser.CCJSqlParserUtil
 
+import java.sql.PreparedStatement
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 
@@ -38,14 +39,34 @@ object StatementMonitor extends LoggingSupport {
     val GenericExecute = "execute"
   }
 
-  @volatile private var parseSqlOperationName: Boolean = loadSqlParsingConfig(Kamon.config())
+  @volatile private var parseSqlOperationName: Boolean = false
+  @volatile private var addStatementSQL: Boolean = true
+  @volatile private var addPreparedStatementSQL: Boolean = true
 
-  Kamon.onReconfigure { config =>
-    parseSqlOperationName = loadSqlParsingConfig(config)
-  }
+  Kamon.onReconfigure(c => updateSettings(c))
+  updateSettings(Kamon.config())
 
-  private def loadSqlParsingConfig(config: Config) = {
-    config.getBoolean("kamon.instrumentation.jdbc.parse-sql-for-operation-name")
+  private def updateSettings(config: Config): Unit = {
+    val jdbcInstrumentationConfig = config.getConfig("kamon.instrumentation.jdbc")
+    parseSqlOperationName = jdbcInstrumentationConfig.getBoolean("parse-sql-for-operation-name")
+
+    jdbcInstrumentationConfig.getString("add-db-statement-as-span-tag") match {
+      case "always" =>
+        addStatementSQL = true
+        addPreparedStatementSQL = true
+
+      case "prepared" =>
+        addStatementSQL = false
+        addPreparedStatementSQL = true
+
+      case "never" =>
+        addStatementSQL = false
+        addPreparedStatementSQL = false
+
+      case unrecognizedValue =>
+        logger.warn(s"Unrecognized value [${unrecognizedValue}] for the [add-db-statement-as-span-tag] setting. " +
+                    s"Falling back to [always]")
+    }
   }
 
   def start(statement: Any, sql: String, statementType: String): Option[Invocation] = {
@@ -83,7 +104,10 @@ object StatementMonitor extends LoggingSupport {
         statementType
       }
 
-      val clientSpan = Kamon.clientSpanBuilder(spanName, "jdbc").tag("db.statement", sql)
+      val clientSpan = Kamon.clientSpanBuilder(spanName, "jdbc")
+
+      if(addStatementSQL || (statement.isInstanceOf[PreparedStatement] && addPreparedStatementSQL))
+        clientSpan.tag("db.statement", sql)
 
       databaseTags.spanTags.iterator().foreach(t => clientSpan.tag(t.key, databaseTags.spanTags.get(Lookups.coerce(t.key))))
       databaseTags.metricTags.iterator().foreach(t => clientSpan.tagMetrics(t.key, databaseTags.metricTags.get(Lookups.coerce(t.key))))
