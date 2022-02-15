@@ -18,7 +18,6 @@ package kamon.influxdb
 
 import java.time.Instant
 import java.util.concurrent.TimeUnit
-
 import com.typesafe.config.Config
 import kamon.influxdb.InfluxDBReporter.Settings
 import kamon.metric.{MetricSnapshot, PeriodSnapshot}
@@ -27,8 +26,10 @@ import kamon.module.{MetricReporter, ModuleFactory}
 import kamon.tag.{Tag, TagSet}
 import kamon.util.{EnvironmentTags, Filter}
 import okhttp3.{Credentials, Interceptor, MediaType, OkHttpClient, Request, RequestBody, Response}
+import okio.ByteString
 import org.slf4j.LoggerFactory
 
+import java.nio.charset.StandardCharsets.ISO_8859_1
 import scala.util.Try
 
 
@@ -226,19 +227,25 @@ object InfluxDBReporter {
 
   def readSettings(config: Config): Settings = {
     import scala.collection.JavaConverters._
-    val root = config.getConfig("kamon.influxdb")
-    val host = root.getString("hostname")
-    val credentials = if (root.hasPath("authentication")) {
-      Some(Credentials.basic(root.getString("authentication.user"), root.getString("authentication.password")))
+    val influxDBConfig = config.getConfig("kamon.influxdb")
+    val host = influxDBConfig.getString("hostname")
+    val credentials = if (influxDBConfig.hasPath("authentication")) {
+      if(influxDBConfig.hasPath("token"))
+        Some("Token " + ByteString.encodeString(influxDBConfig.getString("token"), ISO_8859_1))
+      else
+        Some(Credentials.basic(
+          influxDBConfig.getString("authentication.user"),
+          influxDBConfig.getString("authentication.password")
+        ))
     } else {
       None
     }
-    val port = root.getInt("port")
-    val database = root.getString("database")
-    val protocol = root.getString("protocol").toLowerCase
-    val additionalTags = EnvironmentTags.from(Kamon.environment, root.getConfig("environment-tags"))
+    val port = influxDBConfig.getInt("port")
+    val database = influxDBConfig.getString("database")
+    val protocol = influxDBConfig.getString("protocol").toLowerCase
+    val additionalTags = EnvironmentTags.from(Kamon.environment, influxDBConfig.getConfig("environment-tags"))
 
-    val precision = root.getString("precision")
+    val precision = influxDBConfig.getString("precision")
 
     if (!Set("ns","u","µ","ms","s").contains(precision)){
       throw new RuntimeException("Precision must be one of `[ns,u,µ,ms,s]` to match https://docs.influxdata.com/influxdb/v1.7/tools/api/#query-string-parameters-1")
@@ -249,10 +256,10 @@ object InfluxDBReporter {
 
     Settings(
       url,
-      root.getDoubleList("percentiles").asScala.toList.map(_.toDouble),
+      influxDBConfig.getDoubleList("percentiles").asScala.toList.map(_.toDouble),
       credentials,
       Filter.from("kamon.influxdb.tag-filter"),
-      root.getBoolean("post-empty-distributions"),
+      influxDBConfig.getBoolean("post-empty-distributions"),
       additionalTags,
       precision
     )
