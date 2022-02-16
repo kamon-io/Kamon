@@ -32,27 +32,27 @@ import io.opentelemetry.sdk.resources.Resource
 import io.opentelemetry.sdk.trace.data.SpanData
 import kamon.tag.Tag
 
-object OpenTelemetryHttpTraceReporter {
-  private val logger = LoggerFactory.getLogger(classOf[OpenTelemetryHttpTraceReporter])
+object OpenTelemetryTraceReporter {
+  private val logger = LoggerFactory.getLogger(classOf[OpenTelemetryTraceReporter])
   private val kamonVersion = Kamon.status().settings().version
 
   class Factory extends ModuleFactory {
     override def create(settings: ModuleFactory.Settings): Module = {
       logger.info("Creating OpenTelemetry Http Trace Reporter")
 
-      val module = new OpenTelemetryHttpTraceReporter(HttpProtoTraceService.apply)(settings.executionContext)
+      val module = new OpenTelemetryTraceReporter(HttpProtoTraceService.apply)(settings.executionContext)
       module.reconfigure(settings.config)
       module
     }
   }
 }
 
-import OpenTelemetryHttpTraceReporter._
+import OpenTelemetryTraceReporter._
 
 /**
   * Converts internal finished Kamon spans to OpenTelemetry format and sends to a configured OpenTelemetry endpoint using gRPC.
   */
-class OpenTelemetryHttpTraceReporter(traceServiceFactory: Config => TraceService)(implicit ec: ExecutionContext) extends SpanReporter {
+class OpenTelemetryTraceReporter(traceServiceFactory: Config => TraceService)(implicit ec: ExecutionContext) extends SpanReporter {
   private var traceService: Option[TraceService] = None
   private var spanConverterFunc: Seq[Span.Finished] => JCollection[SpanData] = (_ => new util.ArrayList[SpanData](0))
 

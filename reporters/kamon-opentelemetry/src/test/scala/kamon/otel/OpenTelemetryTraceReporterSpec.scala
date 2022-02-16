@@ -30,13 +30,13 @@ import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 
 /**
-  * Tests for [[OpenTelemetryHttpTraceReporter]]
+  * Tests for [[OpenTelemetryTraceReporter]]
   */
 class OpenTelemetryTraceReporterSpec extends AnyWordSpec with Matchers with OptionValues with Utils {
 
-  private def openTelemetryTraceReporter(): (OpenTelemetryHttpTraceReporter, MockTraceService) = {
+  private def openTelemetryTraceReporter(): (OpenTelemetryTraceReporter, MockTraceService) = {
     val traceService = new MockTraceService()
-    val reporter = new OpenTelemetryHttpTraceReporter(_ => traceService)(ExecutionContext.global)
+    val reporter = new OpenTelemetryTraceReporter(_ => traceService)(ExecutionContext.global)
     reporter.reconfigure(config)
     (reporter, traceService)
   }
@@ -76,7 +76,7 @@ class OpenTelemetryTraceReporterSpec extends AnyWordSpec with Matchers with Opti
   }
 
   "building instance with the factory should work" in {
-    val reporter = new OpenTelemetryHttpTraceReporter.Factory().create(ModuleFactory.Settings(config, ExecutionContext.global))
+    val reporter = new OpenTelemetryTraceReporter.Factory().create(ModuleFactory.Settings(config, ExecutionContext.global))
     reporter.stop()
   }
 
