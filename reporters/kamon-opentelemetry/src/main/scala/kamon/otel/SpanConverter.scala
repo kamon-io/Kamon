@@ -49,7 +49,7 @@ class SpanWrapper(resource: Resource, instrumentationLibraryInfo: Instrumentatio
 
   override val getStartEpochNanos: Long = SpanConverter.toEpocNano(span.from)
 
-  override val getAttributes: Attributes = SpanConverter.toAttributes(span.tags)
+  override val getAttributes: Attributes = SpanConverter.toAttributes(span.metricTags withTags span.tags)
 
   override val getEvents: util.List[EventData] = span.marks.map(SpanConverter.toEvent).asJava
 
