@@ -22,7 +22,7 @@ import java.util.{Collection => JCollection}
 
 import scala.collection.JavaConverters._
 
-import io.opentelemetry.api.common.Attributes
+import io.opentelemetry.api.common.{AttributeKey, Attributes}
 import io.opentelemetry.api.trace._
 import io.opentelemetry.sdk.common.InstrumentationLibraryInfo
 import io.opentelemetry.sdk.resources.Resource
@@ -33,8 +33,19 @@ import kamon.trace.Trace.SamplingDecision.Sample
 import kamon.trace.{Identifier, Span}
 
 
-class SpanWrapper(resource: Resource, instrumentationLibraryInfo: InstrumentationLibraryInfo, span: Span.Finished) extends SpanData {
+class SpanWrapper(includeErrorEvent: Boolean, resource: Resource, instrumentationLibraryInfo: InstrumentationLibraryInfo, span: Span.Finished) extends SpanData {
   private val sampled: Boolean = span.trace.samplingDecision == Sample
+
+  private def getErrorEvent: Seq[EventData] =
+    if (includeErrorEvent && span.hasError) {
+      val builder = Attributes.builder()
+      Option(span.tags.get(Lookups.plain(TagKeys.ErrorMessage))).foreach(msg => builder.put(AttributeKey.stringKey("exception.message"), msg))
+      Option(span.tags.get(Lookups.plain(TagKeys.ErrorStacktrace))).foreach(st => builder.put(AttributeKey.stringKey("exception.stacktrace"), st))
+      // TODO generally we'd expect to see the specific class of the exception in this field, but that's not currently tracked internally
+      builder.put(AttributeKey.stringKey("exception.type"), "Exception")
+      Seq(EventData.create(SpanConverter.toEpocNano(span.from), "exception", builder.build))
+    }
+    else Nil
 
   override def getName: String = span.operationName
 
@@ -51,7 +62,7 @@ class SpanWrapper(resource: Resource, instrumentationLibraryInfo: Instrumentatio
 
   override val getAttributes: Attributes = SpanConverter.toAttributes(span.metricTags withTags span.tags)
 
-  override val getEvents: util.List[EventData] = span.marks.map(SpanConverter.toEvent).asJava
+  override val getEvents: util.List[EventData] = (getErrorEvent ++ span.marks.map(SpanConverter.toEvent)).asJava
 
   override val getLinks: util.List[LinkData] = span.links.map(SpanConverter.toLink).asJava
 
@@ -116,9 +127,9 @@ private[otel] object SpanConverter {
     builder.build()
   }
 
-  def convertSpan(resource: Resource, instrumentationLibrary: InstrumentationLibraryInfo)(span: Span.Finished): SpanData =
-    new SpanWrapper(resource, instrumentationLibrary, span)
+  def convertSpan(includeErrorEvent: Boolean, resource: Resource, instrumentationLibrary: InstrumentationLibraryInfo)(span: Span.Finished): SpanData =
+    new SpanWrapper(includeErrorEvent, resource, instrumentationLibrary, span)
 
-  def convert(resource: Resource, instrumentationLibrary: InstrumentationLibraryInfo)(spans: Seq[Span.Finished]): JCollection[SpanData] =
-    spans.map(convertSpan(resource, instrumentationLibrary)).asJava
+  def convert(includeErrorEvent: Boolean, resource: Resource, instrumentationLibrary: InstrumentationLibraryInfo)(spans: Seq[Span.Finished]): JCollection[SpanData] =
+    spans.map(convertSpan(includeErrorEvent, resource, instrumentationLibrary)).asJava
 }

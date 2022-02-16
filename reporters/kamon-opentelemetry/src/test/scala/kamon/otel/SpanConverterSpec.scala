@@ -130,7 +130,7 @@ class SpanConverterSpec extends AnyWordSpec with Matchers with Utils {
   "converting a Kamon to proto span" should {
     "result in a valid span for a successful kamon span" in {
       val kamonSpan = finishedSpan()
-      val protoSpan = SpanConverter.convertSpan(resource, instrumentationLibrary)(kamonSpan)
+      val protoSpan = SpanConverter.convertSpan(false, resource, instrumentationLibrary)(kamonSpan)
       compareSpans(kamonSpan, protoSpan)
     }
   }
@@ -138,7 +138,7 @@ class SpanConverterSpec extends AnyWordSpec with Matchers with Utils {
   "converting a list of Kamon spans" should {
     "result in a valid ResourceSpans" in {
       val kamonSpan = finishedSpan()
-      val resourceSpans = SpanConverter.convert(resource, instrumentationLibrary)(Seq(kamonSpan)).asScala
+      val resourceSpans = SpanConverter.convert(false, resource, instrumentationLibrary)(Seq(kamonSpan)).asScala
       //there should be a single span reported
       resourceSpans.size shouldEqual 1
       //assert resource labels

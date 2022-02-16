@@ -44,7 +44,7 @@ class TraceServiceSpec extends AnyWordSpec with Matchers with ScalaFutures with 
       val traceService = OtlpTraceService(config)
 
       //the actual data does not really matter as this will fail due to connection issues
-      val resources = SpanConverter.convert(resource, instrumentationLibrary)(Seq(finishedSpan()))
+      val resources = SpanConverter.convert(false, resource, instrumentationLibrary)(Seq(finishedSpan()))
       val f = traceService.exportSpans(resources)
       whenReady(f.failed, Timeout(Span.apply(12, Seconds))) { e =>
         e shouldEqual StatusRuntimeException
