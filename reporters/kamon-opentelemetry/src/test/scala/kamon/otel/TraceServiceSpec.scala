@@ -41,7 +41,7 @@ class TraceServiceSpec extends AnyWordSpec with Matchers with ScalaFutures with 
 
   "exporting traces" should {
     "fail in case the remote service is not operable" in {
-      val traceService = HttpProtoTraceService(config)
+      val traceService = OtlpTraceService(config)
 
       //the actual data does not really matter as this will fail due to connection issues
       val resources = SpanConverter.convert(resource, instrumentationLibrary)(Seq(finishedSpan()))
@@ -53,6 +53,6 @@ class TraceServiceSpec extends AnyWordSpec with Matchers with ScalaFutures with 
   }
 
   "closing service should execute without errors" in {
-    HttpProtoTraceService(config).close()
+    OtlpTraceService(config).close()
   }
 }

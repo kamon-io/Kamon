@@ -38,10 +38,10 @@ private[otel] trait TraceService extends Closeable {
 }
 
 /**
-  * Companion object to [[HttpProtoTraceService]]
+  * Companion object to [[OtlpTraceService]]
   */
-private[otel] object HttpProtoTraceService {
-  private val logger = LoggerFactory.getLogger(classOf[HttpProtoTraceService])
+private[otel] object OtlpTraceService {
+  private val logger = LoggerFactory.getLogger(classOf[OtlpTraceService])
 
   /**
     * Builds the http/protobuf trace exporter using the provided configuration.
@@ -85,11 +85,11 @@ private[otel] object HttpProtoTraceService {
 
     logger.info(s"Configured endpoint for OpenTelemetry trace reporting [$url] using $protocol protocol")
 
-    new HttpProtoTraceService(protocol, url, compression, headers, timeout)
+    new OtlpTraceService(protocol, url, compression, headers, timeout)
   }
 }
 
-private[otel] class HttpProtoTraceService(protocol: String, endpoint: String, compressionEnabled: Boolean, headers: Seq[(String, String)], timeout: Duration) extends TraceService {
+private[otel] class OtlpTraceService(protocol: String, endpoint: String, compressionEnabled: Boolean, headers: Seq[(String, String)], timeout: Duration) extends TraceService {
   private val compressionMethod = if (compressionEnabled) "gzip" else "none"
   private val delegate: SpanExporter = protocol match {
     case "grpc" =>
