@@ -39,8 +39,8 @@ class SpanWrapper(includeErrorEvent: Boolean, resource: Resource, instrumentatio
   private def getErrorEvent: Seq[EventData] =
     if (includeErrorEvent && span.hasError) {
       val builder = Attributes.builder()
-      Option(span.tags.get(Lookups.plain(TagKeys.ErrorMessage))).foreach(msg => builder.put(AttributeKey.stringKey("exception.message"), msg))
-      Option(span.tags.get(Lookups.plain(TagKeys.ErrorStacktrace))).foreach(st => builder.put(AttributeKey.stringKey("exception.stacktrace"), st))
+      span.tags.get(Lookups.option(TagKeys.ErrorMessage)).foreach(msg => builder.put(AttributeKey.stringKey("exception.message"), msg))
+      span.tags.get(Lookups.option(TagKeys.ErrorStacktrace)).foreach(st => builder.put(AttributeKey.stringKey("exception.stacktrace"), st))
       // TODO generally we'd expect to see the specific class of the exception in this field, but that's not currently tracked internally
       builder.put(AttributeKey.stringKey("exception.type"), "Exception")
       Seq(EventData.create(SpanConverter.toEpocNano(span.from), "exception", builder.build))
