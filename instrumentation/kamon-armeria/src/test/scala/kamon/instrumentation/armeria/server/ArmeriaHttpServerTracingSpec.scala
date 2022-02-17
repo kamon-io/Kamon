@@ -21,16 +21,18 @@ import kamon.tag.Lookups.{plain, plainBoolean, plainLong}
 import kamon.testkit._
 import org.scalatest.OptionValues.convertOptionToValuable
 import org.scalatest.concurrent.Eventually
-import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, Matchers, WordSpec}
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
+import org.scalatest.BeforeAndAfterAll
 import utils.ArmeriaServerSupport.startArmeriaServer
 import utils.Endpoints._
 
 import scala.concurrent.duration._
 
-class ArmeriaHttpServerTracingSpec extends WordSpec
+class ArmeriaHttpServerTracingSpec extends AnyWordSpec
   with Matchers
   with BeforeAndAfterAll
-  with BeforeAndAfterEach
+  with InitAndStopKamonAfterAll
   with Eventually
   with TestSpanReporter {
 
@@ -88,7 +90,7 @@ class ArmeriaHttpServerTracingSpec extends WordSpec
           }
         }
 
-          "set operation name with path + http method" when {
+        "set operation name with path + http method" when {
             "resource doesn't exist" in {
               val target = s"$protocol://$interface:$port/$usersEndpoint/not-found"
               val expected = "/users/{}"
@@ -218,6 +220,8 @@ class ArmeriaHttpServerTracingSpec extends WordSpec
     clientFactory.newClient(webClient).asInstanceOf[WebClient]
   }
 
-  override protected def afterAll(): Unit =
+  override protected def afterAll(): Unit = {
     httpServer.close()
+    super.afterAll()
+  }
 }

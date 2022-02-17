@@ -7,19 +7,22 @@ import kamon.Kamon
 import kamon.armeria.instrumentation.grpc.GrpcExample.{ArmeriaHelloServiceGrpc, HelloRequest}
 import kamon.context.Context
 import kamon.tag.Lookups.{plain, plainBoolean, plainLong}
-import kamon.testkit.TestSpanReporter
+import kamon.testkit.{InitAndStopKamonAfterAll, TestSpanReporter}
 import kamon.trace.Span
 import org.scalatest.concurrent.Eventually
-import org.scalatest.{BeforeAndAfterAll, Matchers, OptionValues, WordSpec}
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
+import org.scalatest.{BeforeAndAfterAll, OptionValues}
 import utils.ArmeriaHelloGrpcService
 import utils.ArmeriaServerSupport.startArmeriaServer
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.DurationInt
 
-class ArmeriaGrpcClientTracingSpec extends WordSpec
+class ArmeriaGrpcClientTracingSpec extends AnyWordSpec
   with Matchers
   with BeforeAndAfterAll
+  with InitAndStopKamonAfterAll
   with Eventually
   with TestSpanReporter
   with OptionValues {
@@ -64,6 +67,8 @@ class ArmeriaGrpcClientTracingSpec extends WordSpec
     }
   }
 
-  override protected def afterAll(): Unit =
+  override protected def afterAll(): Unit = {
     httpServer.close()
+    super.afterAll()
+  }
 }

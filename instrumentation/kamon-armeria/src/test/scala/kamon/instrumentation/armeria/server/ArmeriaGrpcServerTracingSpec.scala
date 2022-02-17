@@ -5,26 +5,29 @@ import com.linecorp.armeria.common.grpc.GrpcSerializationFormats
 import com.linecorp.armeria.server.grpc.GrpcService
 import kamon.armeria.instrumentation.grpc.GrpcExample.{ArmeriaHelloServiceGrpc, HelloRequest}
 import kamon.tag.Lookups.{plain, plainLong}
-import kamon.testkit.TestSpanReporter
+import kamon.testkit.{InitAndStopKamonAfterAll, TestSpanReporter}
 import org.scalatest.OptionValues.convertOptionToValuable
 import org.scalatest.concurrent.Eventually
-import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpec}
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.BeforeAndAfterAll
+import org.scalatest.wordspec.AnyWordSpec
 import utils.ArmeriaHelloGrpcService
 import utils.ArmeriaServerSupport.startArmeriaServer
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.DurationInt
 
-class ArmeriaGrpcServerTracingSpec extends WordSpec
+class ArmeriaGrpcServerTracingSpec extends AnyWordSpec
   with Matchers
   with BeforeAndAfterAll
+  with InitAndStopKamonAfterAll
   with Eventually
   with TestSpanReporter {
 
   val interface = "127.0.0.1"
   val httpPort = 8080
 
-  val helloService =
+  private val helloService =
     Clients.newClient(s"gproto+http://$interface:$httpPort/", classOf[ArmeriaHelloServiceGrpc.ArmeriaHelloServiceBlockingStub])
 
   val grpcService: GrpcService =
@@ -53,7 +56,9 @@ class ArmeriaGrpcServerTracingSpec extends WordSpec
     }
   }
 
-  override protected def afterAll(): Unit =
+  override protected def afterAll(): Unit = {
     httpServer.close()
+    super.afterAll()
+  }
 
 }

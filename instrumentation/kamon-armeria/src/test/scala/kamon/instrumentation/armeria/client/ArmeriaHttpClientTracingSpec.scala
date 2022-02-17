@@ -5,18 +5,21 @@ import com.linecorp.armeria.common.{HttpMethod, HttpRequest, RequestHeaders}
 import kamon.Kamon
 import kamon.context.Context
 import kamon.tag.Lookups.{plain, plainBoolean, plainLong}
-import kamon.testkit.TestSpanReporter
+import kamon.testkit.{InitAndStopKamonAfterAll, TestSpanReporter}
 import kamon.trace.Span
 import kamon.trace.SpanPropagation.B3
 import org.scalatest.concurrent.Eventually
+import org.scalatest.matchers.should.Matchers
 import org.scalatest.time.SpanSugar.convertIntToGrainOfTime
-import org.scalatest.{BeforeAndAfterAll, Matchers, OptionValues, WordSpec}
+import org.scalatest.wordspec.AnyWordSpec
+import org.scalatest.{BeforeAndAfterAll, OptionValues}
 import utils.ArmeriaServerSupport.startArmeriaServer
 import utils.TestSupport.getResponseHeaders
 
-class ArmeriaHttpClientTracingSpec extends WordSpec
+class ArmeriaHttpClientTracingSpec extends AnyWordSpec
   with Matchers
   with BeforeAndAfterAll
+  with InitAndStopKamonAfterAll
   with Eventually
   with TestSpanReporter
   with OptionValues {
@@ -27,7 +30,7 @@ class ArmeriaHttpClientTracingSpec extends WordSpec
   val interface = "127.0.0.1"
   val httpPort = 8080
 
-  val httpServer = startArmeriaServer(httpPort)
+  private val httpServer = startArmeriaServer(httpPort)
 
   "The Armeria http client tracing instrumentation" should {
 
@@ -202,6 +205,8 @@ class ArmeriaHttpClientTracingSpec extends WordSpec
 
 
   override protected def beforeAll(): Unit = {
+    super.beforeAll()
+
     applyConfig(
       s"""
          |kamon {
@@ -220,5 +225,7 @@ class ArmeriaHttpClientTracingSpec extends WordSpec
 
   override protected def afterAll(): Unit = {
     httpServer.close()
+
+    super.afterAll()
   }
 }
