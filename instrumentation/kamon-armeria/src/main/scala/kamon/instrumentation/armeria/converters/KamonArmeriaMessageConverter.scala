@@ -21,7 +21,6 @@ import kamon.context.HttpPropagation.HeaderWriter
 import kamon.instrumentation.http.HttpMessage
 
 import scala.collection.JavaConverters.iterableAsScalaIterableConverter
-import scala.collection.immutable.Map
 import scala.collection.{JavaConverters, mutable}
 
 object KamonArmeriaMessageConverter {
@@ -60,7 +59,7 @@ object KamonArmeriaMessageConverter {
 
     override def read(header: String): Option[String] = Option(request.headers().get(header))
 
-    override def readAll: Map[String, String] = {
+    override def readAll(): Map[String, String] = {
       JavaConverters
         .asScalaIteratorConverter(request.headers().iterator())
         .asScala
@@ -83,7 +82,7 @@ object KamonArmeriaMessageConverter {
       _headers += (header -> value)
     }
 
-    override def build: HttpRequest = {
+    override def build(): HttpRequest = {
       val newHeadersMap = request.headers.toBuilder
       _headers.foreach { case (key, value) => newHeadersMap.add(key, value) }
       request.withHeaders(newHeadersMap)

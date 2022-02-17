@@ -19,8 +19,9 @@ import java.util
 
 import com.linecorp.armeria.common.HttpStatus
 import com.linecorp.armeria.server._
+import com.typesafe.config.Config
 import kamon.Kamon
-import kamon.instrumentation.armeria.converters.JavaConverters
+import kamon.instrumentation.armeria.converters.JavaConverter
 import kamon.instrumentation.armeria.server.ArmeriaHttpServerDecorator.REQUEST_HANDLER_TRACE_KEY
 import kamon.instrumentation.armeria.server.InternalState.ServerBuilderInternalState
 import kamon.instrumentation.http.HttpServerInstrumentation
@@ -45,8 +46,8 @@ class ArmeriaServerBuilderAdvisor
   * After enter to <a href="https://github.com/line/armeria/blob/master/core/src/main/java/com/linecorp/armeria/server/ServerBuilder.java">build()</a>
   * some things are done with the ports field, so we aren't entirely sure that this ports are gonna to be final
   */
-object ArmeriaServerBuilderAdvisor extends JavaConverters {
-  lazy val httpServerConfig = Kamon.config().getConfig("kamon.instrumentation.armeria.server")
+object ArmeriaServerBuilderAdvisor extends JavaConverter {
+  lazy val httpServerConfig: Config = Kamon.config().getConfig("kamon.instrumentation.armeria.server")
 
   @Advice.OnMethodEnter
   def addKamonDecorator(@Advice.This builder: ServerBuilder): Unit = {
@@ -66,7 +67,7 @@ object ArmeriaServerBuilderAdvisor extends JavaConverters {
 class HandleNotFoundMethodAdvisor
 
 object HandleNotFoundMethodAdvisor {
-  lazy val unhandledOperationName = Kamon.config().getConfig("kamon.instrumentation.armeria.server").getString("tracing.operations.unhandled")
+  lazy val unhandledOperationName: String = Kamon.config().getConfig("kamon.instrumentation.armeria.server").getString("tracing.operations.unhandled")
 
   /**
     * When an HttpStatusException is thrown in {@link com.linecorp.armeria.server.FallbackService.handleNotFound( )} is because the route doesn't  exist
