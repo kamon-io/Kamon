@@ -59,7 +59,7 @@ lazy val `kamon-core` = (project in file("core/kamon-core"))
       ).inAll
     ),
     libraryDependencies ++= Seq(
-      "com.typesafe"      %  "config"       % "1.3.1",
+      "com.typesafe"      %  "config"       % "1.4.1",
       "org.slf4j"         %  "slf4j-api"    % "1.7.25",
       "org.hdrhistogram"  %  "HdrHistogram" % "2.1.9" % "provided,shaded",
       "org.jctools"       %  "jctools-core" % "3.3.0" % "provided,shaded",
