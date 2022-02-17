@@ -681,14 +681,14 @@ lazy val `kamon-armeria` = (project in file("instrumentation/kamon-armeria"))
         logbackClassic % "test"
       ) ++ grpcDependencies
     },
-    skip in Test := {
+    Test / skip := {
       CrossVersion.partialVersion(scalaVersion.value) match {
         case Some((2, n)) if n >= 12 => false
         case _                       => true // skip scala 2.11 tests because of compatibility issues with protobuf
     }
     },
-    PB.protoSources in Test := Seq(file("instrumentation/kamon-armeria/src/test/protobuf")),
-    PB.targets in Test := Seq(scalapb.gen() -> (sourceManaged in Test).value)
+    Test / PB.protoSources := Seq(file("instrumentation/kamon-armeria/src/test/protobuf")),
+    Test / PB.targets := Seq(scalapb.gen() -> (Test / sourceManaged).value)
   )
   .dependsOn(`kamon-instrumentation-common`, `kamon-testkit` % "test")
 
