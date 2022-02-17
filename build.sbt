@@ -967,7 +967,8 @@ lazy val `kamon-bundle-dependencies-all` = (project in file("bundle/kamon-bundle
     `kamon-okhttp`,
     `kamon-caffeine`,
     `kamon-lagom`,
-    `kamon-aws-sdk`
+    `kamon-aws-sdk`,
+    `kamon-armeria`
   )
 
 /**
