@@ -1,6 +1,7 @@
 package kamon.instrumentation.futures.cats
 
-import cats.effect.{ContextShift, IO}
+import cats.effect.unsafe.IORuntime
+import cats.effect.{IO, Spawn}
 import kamon.Kamon
 import kamon.context.Context
 import kamon.tag.Lookups.plain
@@ -24,13 +25,9 @@ class CatsIoInstrumentationSpec extends AnyWordSpec with Matchers with ScalaFutu
   "an cats.effect IO created when instrumentation is active" should {
     "capture the active span available when created" which {
       "must be available across asynchronous boundaries" in {
-        implicit val ctxShift: ContextShift[IO] = IO.contextShift(global)
-        val anotherExecutionContext: ExecutionContext =
-          ExecutionContext.fromExecutorService(Executors.newCachedThreadPool())
+        val runtime = IORuntime.global
+        val anotherExecutionContext: ExecutionContext = ExecutionContext.fromExecutorService(Executors.newCachedThreadPool())
         val context = Context.of("key", "value")
-
-        implicit val timer = IO.timer(global)
-
         val contextTagAfterTransformations =
           for {
             scope <- IO {
@@ -38,23 +35,28 @@ class CatsIoInstrumentationSpec extends AnyWordSpec with Matchers with ScalaFutu
             }
             len <- IO("Hello Kamon!").map(_.length)
             _ <- IO(len.toString)
-            _ <- IO.shift(global)
-            _ <- IO.shift
-            _ <- IO.sleep(Duration.Zero)
-            _ <- IO.shift(anotherExecutionContext)
+            beforeChanging <- getKey()
+            evalOnGlobalRes <- Spawn[IO].evalOn(IO.sleep(Duration.Zero).flatMap(_ => getKey()), global)
+            evalOnAnotherEx <- Spawn[IO].evalOn(IO.sleep(Duration.Zero).flatMap(_ => getKey()), anotherExecutionContext)
           } yield {
             val tagValue = Kamon.currentContext().getTag(plain("key"))
             scope.close()
-            tagValue
+            (beforeChanging, evalOnGlobalRes,evalOnAnotherEx, tagValue)
           }
 
-        val contextTagFuture = contextTagAfterTransformations.unsafeToFuture()
-
-
+        val contextTagFuture = contextTagAfterTransformations.unsafeToFuture()(runtime)
         eventually(timeout(10 seconds)) {
-          contextTagFuture.value.get.get shouldBe "value"
+          val (beforeChanging, evalOnGlobalRes,evalOnAnotherEx, tagValue) = contextTagFuture.value.get.get
+          withClue("before changing")(beforeChanging shouldBe "value")
+          withClue("on the global exec context")(evalOnGlobalRes shouldBe "value")
+          withClue("on a different exec context")(evalOnAnotherEx shouldBe "value")
+          withClue("final result")(tagValue shouldBe "value")
         }
       }
     }
+  }
+
+  private def getKey(): IO[String] = {
+    IO.delay(Kamon.currentContext().getTag(plain("key")))
   }
 }
