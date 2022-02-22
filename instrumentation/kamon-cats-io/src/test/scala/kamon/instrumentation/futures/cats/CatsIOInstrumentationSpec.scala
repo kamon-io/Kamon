@@ -5,6 +5,7 @@ import cats.effect.{IO, Spawn}
 import kamon.Kamon
 import kamon.context.Context
 import kamon.tag.Lookups.plain
+import kamon.trace.Span
 import org.scalatest.OptionValues
 import org.scalatest.concurrent.{Eventually, PatienceConfiguration, ScalaFutures}
 import org.scalatest.matchers.should.Matchers
@@ -28,35 +29,38 @@ class CatsIoInstrumentationSpec extends AnyWordSpec with Matchers with ScalaFutu
         val runtime = IORuntime.global
         val anotherExecutionContext: ExecutionContext = ExecutionContext.fromExecutorService(Executors.newCachedThreadPool())
         val context = Context.of("key", "value")
-        val contextTagAfterTransformations =
+        val test =
           for {
-            scope <- IO {
-              Kamon.storeContext(context)
-            }
+            scope <- IO.delay(Kamon.storeContext(context))
             len <- IO("Hello Kamon!").map(_.length)
             _ <- IO(len.toString)
             beforeChanging <- getKey()
             evalOnGlobalRes <- Spawn[IO].evalOn(IO.sleep(Duration.Zero).flatMap(_ => getKey()), global)
+            outerSpanIdBeginning <- IO.delay(Kamon.currentSpan().id.string)
+            innerSpan <- IO.delay(Kamon.clientSpanBuilder("Foo", "attempt").context(context).start())
+            innerSpanId1 <- Spawn[IO].evalOn(IO.delay(Kamon.currentSpan()), anotherExecutionContext)
+            innerSpanId2 <- IO.delay(Kamon.currentSpan())
+            _ <- IO.delay(innerSpan.finish())
+            outerSpanIdEnd <- IO.delay(Kamon.currentSpan().id.string)
             evalOnAnotherEx <- Spawn[IO].evalOn(IO.sleep(Duration.Zero).flatMap(_ => getKey()), anotherExecutionContext)
           } yield {
-            val tagValue = Kamon.currentContext().getTag(plain("key"))
             scope.close()
-            (beforeChanging, evalOnGlobalRes,evalOnAnotherEx, tagValue)
+            withClue("before changing")(beforeChanging shouldBe "value")
+            withClue("on the global exec context")(evalOnGlobalRes shouldBe "value")
+            withClue("on a different exec context")(evalOnAnotherEx shouldBe "value")
+            withClue("final result")(evalOnAnotherEx shouldBe "value")
+            withClue("inner span should be the same on different exec")(innerSpanId1 shouldBe innerSpan)
+            withClue("inner span should be the same on same exec")(innerSpanId2 shouldBe innerSpan)
+            withClue("inner and outer should be different")(outerSpanIdBeginning should not equal innerSpan)
           }
 
-        val contextTagFuture = contextTagAfterTransformations.unsafeToFuture()(runtime)
-        eventually(timeout(10 seconds)) {
-          val (beforeChanging, evalOnGlobalRes,evalOnAnotherEx, tagValue) = contextTagFuture.value.get.get
-          withClue("before changing")(beforeChanging shouldBe "value")
-          withClue("on the global exec context")(evalOnGlobalRes shouldBe "value")
-          withClue("on a different exec context")(evalOnAnotherEx shouldBe "value")
-          withClue("final result")(tagValue shouldBe "value")
-        }
+        test.unsafeRunSync()(runtime)
       }
     }
   }
-
   private def getKey(): IO[String] = {
     IO.delay(Kamon.currentContext().getTag(plain("key")))
   }
+
+
 }
