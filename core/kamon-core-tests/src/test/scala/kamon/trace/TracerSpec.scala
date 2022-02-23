@@ -273,8 +273,8 @@ class TracerSpec extends AnyWordSpec with Matchers with SpanInspection.Syntax wi
       val byExceptionStacktraceDisabled = Kamon.spanBuilder("o4").start()
         .fail(new RuntimeException("byExceptionStacktraceDisabled"))
 
-      Reconfigure.applyConfig("kamon.trace.include-error-type=true")
-      val byExceptionTypeEnabled = Kamon.spanBuilder("o5").start()
+      Reconfigure.applyConfig("kamon.trace.include-error-type=false")
+      val byExceptionTypeDisabled = Kamon.spanBuilder("o5").start()
         .fail(new RuntimeException("byExceptionTypeEnabled"))
 
       byMessage.metricTags().get(plainBoolean("error")) shouldBe true
@@ -285,22 +285,22 @@ class TracerSpec extends AnyWordSpec with Matchers with SpanInspection.Syntax wi
       byException.metricTags().get(plainBoolean("error")) shouldBe true
       byException.spanTags().get(plain("error.message")) shouldBe "byException"
       byException.spanTags().get(option("error.stacktrace")) shouldBe defined
-      byException.spanTags().get(option("error.type")) shouldBe None
+      byException.spanTags().get(option("error.type")) shouldBe Some("java.lang.RuntimeException")
 
       byMessageAndException.metricTags().get(plainBoolean("error")) shouldBe true
       byMessageAndException.spanTags().get(plain("error.message")) shouldBe "byMessageAndException"
       byMessageAndException.spanTags().get(option("error.stacktrace")) shouldBe defined
-      byMessageAndException.spanTags().get(option("error.type")) shouldBe None
+      byMessageAndException.spanTags().get(option("error.type")) shouldBe Some("java.lang.RuntimeException")
 
       byExceptionStacktraceDisabled.metricTags().get(plainBoolean("error")) shouldBe true
       byExceptionStacktraceDisabled.spanTags().get(plain("error.message")) shouldBe "byExceptionStacktraceDisabled"
       byExceptionStacktraceDisabled.spanTags().get(option("error.stacktrace")) shouldBe None
-      byExceptionStacktraceDisabled.spanTags().get(option("error.type")) shouldBe None
+      byExceptionStacktraceDisabled.spanTags().get(option("error.type")) shouldBe Some("java.lang.RuntimeException")
 
-      byExceptionTypeEnabled.metricTags().get(plainBoolean("error")) shouldBe true
-      byExceptionTypeEnabled.spanTags().get(plain("error.message")) shouldBe "byExceptionTypeEnabled"
-      byExceptionTypeEnabled.spanTags().get(option("error.stacktrace")) shouldBe None
-      byExceptionTypeEnabled.spanTags().get(option("error.type")) shouldBe Some("java.lang.RuntimeException")
+      byExceptionTypeDisabled.metricTags().get(plainBoolean("error")) shouldBe true
+      byExceptionTypeDisabled.spanTags().get(plain("error.message")) shouldBe "byExceptionTypeEnabled"
+      byExceptionTypeDisabled.spanTags().get(option("error.stacktrace")) shouldBe None
+      byExceptionTypeDisabled.spanTags().get(option("error.type")) shouldBe None
     }
   }
 
