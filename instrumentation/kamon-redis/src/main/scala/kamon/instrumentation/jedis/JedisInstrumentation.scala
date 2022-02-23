@@ -14,36 +14,47 @@
  * limitations under the License.
  */
 
-package kamon.instrumentation.jedis
+package kamon
+package instrumentation
+package jedis
 
 import kamon.Kamon
 import kamon.trace.Span
 import kanela.agent.api.instrumentation.InstrumentationBuilder
 import kanela.agent.libs.net.bytebuddy.asm.Advice
 import kanela.agent.libs.net.bytebuddy.description.method.MethodDescription
-import kanela.agent.libs.net.bytebuddy.matcher.ElementMatchers.isPublic
+import kanela.agent.libs.net.bytebuddy.matcher.ElementMatchers.{isMethod, isPublic, namedOneOf, not, whereAny}
+import redis.clients.jedis.Protocol
 
 class JedisInstrumentation extends InstrumentationBuilder {
-  onType("redis.clients.jedis.Protocol")
-    .advise(method("sendCommand").and(isPublic[MethodDescription]), classOf[SendCommandAdvice])
+  onType("redis.clients.jedis.Jedis")
+    .advise(
+      isMethod[MethodDescription]().and(not(namedOneOf[MethodDescription](
+        "close",
+        "toString",
+        "hashCode"
+      ))), classOf[SendCommandAdvice])
 }
 
 class SendCommandAdvice
 
 object SendCommandAdvice {
+
   @Advice.OnMethodEnter(suppress = classOf[Throwable])
-  def enter(@Advice.Argument(1) command: Any): Span = {
-    val spanName = s"redis.command.$command"
-    Kamon.clientSpanBuilder(spanName, "redis.client.jedis")
+  def enter(@Advice.Origin("#m") methodName: String): Span = {
+    val spanName = s"redis.command.${methodName}"
+
+    Kamon
+      .clientSpanBuilder(spanName, "redis.client.jedis")
       .start()
   }
 
   @Advice.OnMethodExit(onThrowable = classOf[Throwable], suppress = classOf[Throwable])
-  def exit(@Advice.Enter span: Span,
-           @Advice.Thrown t: Throwable): Unit = {
+  def exit(@Advice.Enter span: Span, @Advice.Thrown t: Throwable): Unit = {
     if (t != null) {
       span.fail(t)
     }
+
     span.finish()
   }
 }

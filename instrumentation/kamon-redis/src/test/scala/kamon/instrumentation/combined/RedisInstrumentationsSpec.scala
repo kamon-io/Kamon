@@ -51,7 +51,7 @@ class RedisInstrumentationsSpec extends AnyWordSpec
 
       eventually(timeout(2.seconds)) {
         val span = testSpanReporter().nextSpan().get
-        span.operationName shouldBe "redis.command.SET"
+        span.operationName shouldBe "redis.command.set"
         span.kind shouldBe Kind.Client
         testSpanReporter().spans() shouldBe empty
       }
@@ -61,7 +61,7 @@ class RedisInstrumentationsSpec extends AnyWordSpec
       jedis.get("foo")
       eventually(timeout(2.seconds)) {
         val span = testSpanReporter().nextSpan().get
-        span.operationName shouldBe "redis.command.GET"
+        span.operationName shouldBe "redis.command.get"
         span.kind shouldBe Kind.Client
         testSpanReporter().spans() shouldBe empty
       }
