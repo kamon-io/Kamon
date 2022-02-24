@@ -2,6 +2,8 @@ package kamon.instrumentation.combined
 
 
 import io.lettuce.core.{RedisClient => LettuceClient}
+import kamon.tag.Lookups
+import kamon.tag.Lookups._
 import kamon.testkit.{InitAndStopKamonAfterAll, MetricInspection, TestSpanReporter}
 import kamon.trace.Span.Kind
 import org.scalatest.concurrent.{Eventually, ScalaFutures}
@@ -51,8 +53,10 @@ class RedisInstrumentationsSpec extends AnyWordSpec
 
       eventually(timeout(2.seconds)) {
         val span = testSpanReporter().nextSpan().get
-        span.operationName shouldBe "redis.command.set"
         span.kind shouldBe Kind.Client
+        span.operationName shouldBe "SET"
+        span.metricTags.get(plain("db.system")) shouldBe "redis"
+        span.tags.get(plain("db.operation")) shouldBe "SET"
         testSpanReporter().spans() shouldBe empty
       }
 
@@ -61,8 +65,10 @@ class RedisInstrumentationsSpec extends AnyWordSpec
       jedis.get("foo")
       eventually(timeout(2.seconds)) {
         val span = testSpanReporter().nextSpan().get
-        span.operationName shouldBe "redis.command.get"
         span.kind shouldBe Kind.Client
+        span.operationName shouldBe "GET"
+        span.metricTags.get(plain("db.system")) shouldBe "redis"
+        span.tags.get(plain("db.operation")) shouldBe "GET"
         testSpanReporter().spans() shouldBe empty
       }
     }
