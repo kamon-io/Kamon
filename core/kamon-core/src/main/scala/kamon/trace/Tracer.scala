@@ -54,6 +54,7 @@ class Tracer(initialConfig: Config, clock: Clock, contextStorage: ContextStorage
   @volatile private var _delayedSpanReportingDelay: Duration = Duration.ZERO
   @volatile private var _localTailSamplerSettings: LocalTailSamplerSettings = LocalTailSamplerSettings(false, Int.MaxValue, Long.MaxValue)
   @volatile private var _scheduler: Option[ScheduledExecutorService] = None
+  @volatile private var _includeErrorType: Boolean = false
   private val _onSpanFinish: Span.Finished => Unit = _spanBuffer.offer
 
   reconfigure(initialConfig)
@@ -363,7 +364,7 @@ class Tracer(initialConfig: Config, clock: Clock, contextStorage: ContextStorage
 
         new Span.Local(id, parentId, trace, position, _kind, localParent, _name, _spanTags, _metricTags, at, _marks, _links,
           _trackMetrics, _tagWithParentOperation, _includeErrorStacktrace, isDelayed, clock, _preFinishHooks, _onSpanFinish,
-          _sampler, _scheduler.get, _delayedSpanReportingDelay, _localTailSamplerSettings)
+          _sampler, _scheduler.get, _delayedSpanReportingDelay, _localTailSamplerSettings, _includeErrorType)
       }
     }
 
@@ -429,6 +430,7 @@ class Tracer(initialConfig: Config, clock: Clock, contextStorage: ContextStorage
       val tagWithUpstreamService = traceConfig.getBoolean("span-metric-tags.upstream-service")
       val tagWithParentOperation = traceConfig.getBoolean("span-metric-tags.parent-operation")
       val includeErrorStacktrace = traceConfig.getBoolean("include-error-stacktrace")
+      val includeErrorType = traceConfig.getBoolean("include-error-type")
       val delayedSpanReportingDelay = traceConfig.getDuration("span-reporting-delay")
       val localTailSamplerSettings = LocalTailSamplerSettings(
         enabled = traceConfig.getBoolean("local-tail-sampler.enabled"),
@@ -454,6 +456,7 @@ class Tracer(initialConfig: Config, clock: Clock, contextStorage: ContextStorage
       _identifierScheme = identifierScheme
       _joinRemoteParentsWithSameSpanID = joinRemoteParentsWithSameSpanID
       _includeErrorStacktrace = includeErrorStacktrace
+      _includeErrorType = includeErrorType
       _tagWithUpstreamService = tagWithUpstreamService
       _tagWithParentOperation = tagWithParentOperation
       _traceReporterQueueSize = traceReporterQueueSize
