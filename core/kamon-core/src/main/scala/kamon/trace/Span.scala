@@ -412,7 +412,7 @@ object Span {
       createdAt: Instant, initialMarks: List[Mark], initialLinks: List[Link], initialTrackMetrics: Boolean, tagWithParentOperation: Boolean,
       includeErrorStacktrace: Boolean, isDelayed: Boolean, clock: Clock, preFinishHooks: Array[Tracer.PreFinishHook],
       onFinish: Span.Finished => Unit, sampler: Sampler, scheduler: ScheduledExecutorService, reportingDelay: Duration,
-      localTailSamplerSettings: LocalTailSamplerSettings) extends Span.Delayed {
+      localTailSamplerSettings: LocalTailSamplerSettings, includeErrorType: Boolean) extends Span.Delayed {
 
     private val _metricTags = metricTags
     private val _spanTags = spanTags
@@ -526,6 +526,9 @@ object Span {
 
           if(includeErrorStacktrace)
             _spanTags.add(TagKeys.ErrorStacktrace, toStackTraceString(throwable))
+
+          if (includeErrorType)
+            _spanTags.add(TagKeys.ErrorType, throwable.getClass.getName)
         }
       }
       this
@@ -541,6 +544,9 @@ object Span {
 
           if(includeErrorStacktrace)
             _spanTags.add(TagKeys.ErrorStacktrace, toStackTraceString(throwable))
+
+          if (includeErrorType)
+            _spanTags.add(TagKeys.ErrorType, throwable.getClass.getName)
         }
       }
       this
@@ -809,6 +815,7 @@ object Span {
     val Error = "error"
     val ErrorMessage = "error.message"
     val ErrorStacktrace = "error.stacktrace"
+    val ErrorType = "error.type"
     val Component = "component"
     val OperationName = "operation"
     val ParentOperationName = "parentOperation"
