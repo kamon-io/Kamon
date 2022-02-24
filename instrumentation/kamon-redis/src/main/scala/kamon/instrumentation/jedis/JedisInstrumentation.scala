@@ -24,7 +24,8 @@ import kamon.trace.Span
 import kanela.agent.api.instrumentation.InstrumentationBuilder
 import kanela.agent.libs.net.bytebuddy.asm.Advice
 import kanela.agent.libs.net.bytebuddy.description.method.MethodDescription
-import kanela.agent.libs.net.bytebuddy.matcher.ElementMatchers.{isMethod, isPublic, isStatic, namedOneOf, not}
+import kanela.agent.libs.net.bytebuddy.matcher.ElementMatchers
+import kanela.agent.libs.net.bytebuddy.matcher.ElementMatchers.{isMethod, isPublic, isStatic, namedOneOf, not, takesArgument, takesArguments}
 
 class JedisInstrumentation extends InstrumentationBuilder {
   onTypes("redis.clients.jedis.Jedis", "redis.clients.jedis.BinaryJedis")
@@ -57,11 +58,22 @@ class JedisInstrumentation extends InstrumentationBuilder {
         .and(isStatic[MethodDescription])
         .and(takesArguments(3)),
       classOf[SendCommandAdvice])
+
+  onType("redis.clients.jedis.Protocol")
+    .when(classIsPresent("redis.clients.jedis.CommandArguments"))
+    .advise(
+      method("sendCommand")
+        .and(isPublic[MethodDescription])
+        .and(isStatic[MethodDescription])
+        .and(takesArguments(2)),
+      classOf[SendCommandAdviceForJedis4])
+
+
 }
 
 class ClientOperationsAdvice
 object ClientOperationsAdvice {
-  private val currentRedisOperationKey = "redis.current-op"
+  private val currentRedisOperationKey = "redis.current"
 
   @Advice.OnMethodEnter(suppress = classOf[Throwable])
   def enter(@Advice.Origin("#m") methodName: String): Scope = {
@@ -108,3 +120,19 @@ object SendCommandAdvice {
       .tag("db.operation", command.toString())
   }
 }
+
+class SendCommandAdviceForJedis4
+object SendCommandAdviceForJedis4 {
+
+  @Advice.OnMethodEnter
+  def sendCommand(@Advice.Argument(1) commandArguments: Any): Unit = {
+    val firstArgument = commandArguments.asInstanceOf[java.lang.Iterable[Any]].iterator().next()
+
+    // The command object should actually be an Enum and its toString() produces
+    // the actual command name sent to Redis
+    Kamon.currentSpan()
+      .name(firstArgument.toString())
+      .tag("db.operation", firstArgument.toString())
+  }
+}
+
