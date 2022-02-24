@@ -10,17 +10,13 @@ import org.scalatest.concurrent.{Eventually, PatienceConfiguration, ScalaFutures
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 
-import java.util.concurrent.{Executors, ScheduledExecutorService}
-import scala.concurrent.{ExecutionContext, Future}
+import java.util.concurrent.Executors
+import scala.concurrent.{Await, ExecutionContext}
 import scala.concurrent.ExecutionContext.global
 import scala.concurrent.duration._
 import cats.implicits._
-import kamon.tag.TagSet
 import kamon.trace.Identifier.Scheme
-import kamon.trace.Tracer.LocalTailSamplerSettings
-import kamon.trace.{ConstantSampler, Identifier, Sampler, Span, Trace}
-
-import java.time.{Clock, Instant}
+import kamon.trace.{Identifier, Span, Trace}
 
 class CatsIoInstrumentationSpec extends AnyWordSpec with Matchers with ScalaFutures with PatienceConfiguration
     with OptionValues with Eventually {
@@ -70,6 +66,7 @@ class CatsIoInstrumentationSpec extends AnyWordSpec with Matchers with ScalaFutu
           Trace.create(Scheme.Single.traceIdFactory.generate(), Trace.SamplingDecision.Sample)
         )
         val context = Context.of(Span.Key, parentSpan)
+        implicit val ec = ExecutionContext.global
         /**
           * test
           *   - nestedLevel0
@@ -82,6 +79,7 @@ class CatsIoInstrumentationSpec extends AnyWordSpec with Matchers with ScalaFutu
           nestedLevel0 <- meteredWithSpanCapture("level1-A")(IO.sleep(100.millis))
           nestedUpToLevel2 <- meteredWithSpanCapture("level1-B")(meteredWithSpanCapture("level2-B")(IO.sleep(100.millis)))
           fiftyInParallel <- (0 to 49).toList.parTraverse(i => meteredWithSpanCapture(s"operation$i")(IO.sleep(100.millis)))
+          afterCede <- meteredWithSpanCapture("cede")(IO.cede *> IO.delay(Kamon.currentSpan()))
           afterEverything <- IO.delay(Kamon.currentSpan())
         } yield {
           span.id.string should not be empty
@@ -90,11 +88,15 @@ class CatsIoInstrumentationSpec extends AnyWordSpec with Matchers with ScalaFutu
           nestedUpToLevel2._1.id.string shouldBe nestedUpToLevel2._2._1.parentId.string
           fiftyInParallel.map(_._1.parentId.string).toSet shouldBe Set(span.id.string)
           fiftyInParallel.map(_._1.id.string).toSet should have size 50
+          afterCede._1.id.string shouldBe afterCede._2.id.string //A cede should not cause the span to be lost
           afterEverything.id.string shouldBe span.id.string
         }
-
         val runtime = IORuntime.global
-        (IO.delay(Kamon.init()) *> IO.delay(Kamon.storeContext(context)) *> test).unsafeRunSync()(runtime)
+
+        val result = scala.concurrent.Future.sequence(
+          (1 to 100).toList.map(_ => (IO.delay(Kamon.init()) *> IO.delay(Kamon.storeContext(context)) *> test).unsafeToFuture()(runtime))
+        )
+        Await.result(result, 10.seconds)
       }
     }
   }
@@ -103,13 +105,12 @@ class CatsIoInstrumentationSpec extends AnyWordSpec with Matchers with ScalaFutu
   }
 
   private def meteredWithSpanCapture[A](operation: String)(io: IO[A]): IO[(Span, A)] = {
-    Resource
-      .make{
+    Resource.make{
         for {
-          initialCtx <- IO.delay(Kamon.currentContext())
-          parentSpan <- IO.delay(Kamon.currentSpan())
-          newSpan     <- IO.delay(Kamon.spanBuilder(operation).context(initialCtx).asChildOf(parentSpan).start())
-          _           <- IO.delay(Kamon.storeContext(initialCtx.withEntry(Span.Key, newSpan)))
+          initialCtx <- IO(Kamon.currentContext())
+          parentSpan <- IO(Kamon.currentSpan())
+          newSpan    <- IO(Kamon.spanBuilder(operation).context(initialCtx).asChildOf(parentSpan).start())
+          _          <- IO(Kamon.storeContext(initialCtx.withEntry(Span.Key, newSpan)))
         } yield (initialCtx, newSpan)
       }{
         case (initialCtx, span) =>
