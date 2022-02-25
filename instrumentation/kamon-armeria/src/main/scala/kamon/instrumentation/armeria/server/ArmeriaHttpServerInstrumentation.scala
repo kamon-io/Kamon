@@ -23,10 +23,8 @@ import com.typesafe.config.Config
 import kamon.Kamon
 import kamon.instrumentation.armeria.converters.JavaConverter
 import kamon.instrumentation.armeria.server.ArmeriaHttpServerDecorator.REQUEST_HANDLER_TRACE_KEY
-import kamon.instrumentation.armeria.server.InternalState.ServerBuilderInternalState
 import kamon.instrumentation.http.HttpServerInstrumentation
 import kanela.agent.api.instrumentation.InstrumentationBuilder
-import kanela.agent.api.instrumentation.bridge.FieldBridge
 import kanela.agent.libs.net.bytebuddy.asm.Advice
 
 import scala.collection.JavaConverters.{collectionAsScalaIterableConverter, mapAsJavaMapConverter}
@@ -34,7 +32,6 @@ import scala.collection.JavaConverters.{collectionAsScalaIterableConverter, mapA
 class ArmeriaHttpServerInstrumentation extends InstrumentationBuilder {
   onType("com.linecorp.armeria.server.ServerBuilder")
     .advise(method("build"), classOf[ArmeriaServerBuilderAdvisor])
-    .bridge(classOf[ServerBuilderInternalState])
 
   onType("com.linecorp.armeria.server.FallbackService")
     .advise(method("handleNotFound"), classOf[HandleNotFoundMethodAdvisor])
@@ -51,9 +48,16 @@ object ArmeriaServerBuilderAdvisor extends JavaConverter {
 
   @Advice.OnMethodEnter
   def addKamonDecorator(@Advice.This builder: ServerBuilder): Unit = {
-    val serverPorts = builder.asInstanceOf[ServerBuilderInternalState].getServerPorts.asScala
 
-    val instrumentations: util.Map[Integer, HttpServerInstrumentation] = serverPorts.map(serverPort => {
+    def getPortsFrom(builder: ServerBuilder): util.List[ServerPort] = {
+      val ports = classOf[ServerBuilder].getDeclaredField("ports")
+      ports.setAccessible(true)
+      ports.get(builder).asInstanceOf[util.List[ServerPort]]
+    }
+
+    val serverPorts = getPortsFrom(builder)
+
+    val instrumentations: util.Map[Integer, HttpServerInstrumentation] = serverPorts.asScala.map(serverPort => {
       val hostname = serverPort.localAddress().getHostName
       val port = serverPort.localAddress().getPort
       (Int.box(port), HttpServerInstrumentation.from(httpServerConfig, "armeria.http.server", hostname, port))
@@ -82,15 +86,6 @@ object HandleNotFoundMethodAdvisor {
         requestHandler.span.name(unhandledOperationName)
     }
   }
-}
-
-object InternalState {
-
-  trait ServerBuilderInternalState {
-    @FieldBridge(value = "ports")
-    def getServerPorts: java.util.List[ServerPort]
-  }
-
 }
 
 
