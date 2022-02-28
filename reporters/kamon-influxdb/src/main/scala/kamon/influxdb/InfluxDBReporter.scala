@@ -231,7 +231,7 @@ object InfluxDBReporter {
     val host = influxDBConfig.getString("hostname")
     val credentials = if (influxDBConfig.hasPath("authentication")) {
       if(influxDBConfig.hasPath("authentication.token"))
-        Some("Token " + ByteString.encodeString(influxDBConfig.getString("authentication.token"), ISO_8859_1))
+        Some("Token " + influxDBConfig.getString("authentication.token"))
       else
         Some(Credentials.basic(
           influxDBConfig.getString("authentication.user"),
