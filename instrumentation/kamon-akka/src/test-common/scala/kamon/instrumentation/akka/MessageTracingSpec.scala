@@ -4,24 +4,29 @@ import java.util.concurrent.TimeUnit
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.pattern.ask
 import akka.routing.{RoundRobinGroup, RoundRobinPool}
+import akka.stream.{ActorMaterializer, Materializer}
+import akka.stream.scaladsl.Source
 import akka.testkit.{ImplicitSender, TestKit}
 import akka.util.Timeout
 import kamon.Kamon
 import kamon.tag.Lookups
 import kamon.testkit.{InitAndStopKamonAfterAll, MetricInspection, Reconfigure, SpanInspection, TestSpanReporter}
 import kamon.trace.Span
-import org.scalatest.concurrent.Eventually
+import org.scalactic.TimesOnInt.convertIntToRepeater
+import org.scalatest.concurrent.{Eventually, ScalaFutures}
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.time.SpanSugar._
 import org.scalatest.wordspec.AnyWordSpecLike
 import org.scalatest.{BeforeAndAfterAll, OptionValues}
 
 import java.util.concurrent.TimeUnit
-import scala.concurrent.Await
+import scala.concurrent.duration.Duration
+import scala.concurrent.{Await, Future}
 
 
-class MessageTracingSpec extends TestKit(ActorSystem("MessageTracing")) with AnyWordSpecLike with MetricInspection.Syntax with Matchers
-  with SpanInspection with Reconfigure with InitAndStopKamonAfterAll with ImplicitSender with Eventually with OptionValues with TestSpanReporter {
+class MessageTracingSpec extends TestKit(ActorSystem("MessageTracing")) with AnyWordSpecLike with MetricInspection.Syntax
+  with Matchers with SpanInspection with Reconfigure with InitAndStopKamonAfterAll with ImplicitSender with Eventually
+  with OptionValues with ScalaFutures with TestSpanReporter {
 
   "Message tracing instrumentation" should {
     "skip filtered out actors" in {
@@ -172,6 +177,24 @@ class MessageTracingSpec extends TestKit(ActorSystem("MessageTracing")) with Any
       }
     }
 
+    "not track Akka Streams actors" in {
+      implicit val timeout = Timeout(10 seconds)
+      val actorWithMaterializer = system.actorOf(Props[ActorWithMaterializer])
+
+      val finishedStream = Kamon.runWithSpan(Kamon.serverSpanBuilder("wrapper", "test").start()) {
+        actorWithMaterializer.ask("stream").mapTo[String]
+      }
+      
+      5 times {
+        val allSpans = testSpanReporter()
+          .spans()
+          .filterNot(s => s.operationName == "wrapper" || s.operationName == "ask(String)")
+
+        allSpans shouldBe empty
+        Thread.sleep(1000)
+      }
+    }
+
     def stringTag(span: Span.Finished)(tag: String): String = {
       span.tags.withTags(span.metricTags).get(Lookups.plain(tag))
     }
@@ -195,5 +218,22 @@ class TracingTestActor extends Actor {
     case "ping-and-wait" =>
       Thread.sleep(50)
       sender ! "pong"
+  }
+}
+
+class ActorWithMaterializer extends Actor {
+  implicit val mat = ActorMaterializer()
+
+  override def receive: Receive = {
+    case "stream" =>
+      Await.result (
+        Source(1 to 10)
+          .async
+          .map(x => x + x)
+          .runReduce(_ + _),
+        5 seconds
+      )
+
+      sender() ! "done"
   }
 }
