@@ -87,12 +87,6 @@ class PlayServerInstrumentation extends InstrumentationBuilder {
     try { Class.forName("io.netty.util.concurrent.GenericFutureListener") != null} catch { case _ => false }
   }
 
-  /**
-    * When using play gRPC, we can reuse the instrumentation that is provided by the akka HTTP module, we just need to
-    * apply the operation name and make a sampling decision.
-    */
-  onType("play.grpc.internal.PlayRouter$$anon$1")
-    .advise(method("apply"), GenerateGRPCOperationName)
 }
 
 
@@ -270,36 +264,6 @@ object GenerateOperationNameOnFilterHandler {
       span.name(_routerNameGenerator.generateOperationName(handler))
       span.takeSamplingDecision()
     })
-  }
-
-}
-
-object GenerateGRPCOperationName {
-
-  private val defaultGrpcRouterNameGenerator = new DefaultGrpcRouterNameGenerator()
-  private val _logger = LoggerFactory.getLogger(GenerateOperationNameOnFilterHandler.getClass)
-
-  @volatile private var _grpcRouterNameGenerator: GrpcRouterNameGenerator = rebuildRouterNameGenerator(Kamon.config())
-
-  Kamon.onReconfigure(newConfig => _grpcRouterNameGenerator = rebuildRouterNameGenerator(newConfig))
-
-  private def rebuildRouterNameGenerator(config: Config): GrpcRouterNameGenerator = {
-    val nameGeneratorClazz = config.getString("kamon.instrumentation.play.http.server.extra.grpc-name-generator")
-    Try(ClassLoading.createInstance[GrpcRouterNameGenerator](nameGeneratorClazz)) match {
-      case Failure(exception) =>
-        _logger.error(s"Exception occurred on $nameGeneratorClazz instance creation, used default", exception)
-        defaultGrpcRouterNameGenerator
-      case Success(value) =>
-        value
-    }
-  }
-
-  @Advice.OnMethodEnter
-  def enter(@Advice.Argument(0) request: akka.http.scaladsl.model.HttpRequest): Unit = {
-    val span = Kamon.currentSpan()
-    span.name(_grpcRouterNameGenerator.generateOperationName(request))
-    span.tag("http.protocol", request.protocol.value)
-    span.takeSamplingDecision()
   }
 
 }

@@ -103,17 +103,6 @@ class AkkaHttpServerInstrumentation extends InstrumentationBuilder {
   onType("akka.http.scaladsl.Http2Ext")
     .advise(method("bindAndHandleAsync") and isPublic(), classOf[Http2ExtBindAndHandleAdvice])
 
-  /**
-    * Support for Akka gRPC servers.
-    *
-    * gRPC requests get their spans started by the ServerFlowWrapper like any other requests, but they never go
-    * through any instrumentation that gives a good operation name to the Span and forces taking a sampling decision.
-    * This instrumentation gives a proper name and tags to the span when it matches one of the exposed services,
-    * otherwise the span remains unchanged. Assumes no actual implementation of `akka.grpc.internal.TelemetrySpi` is
-    * configured.
-    */
-  onType("akka.grpc.internal.NoOpTelemetry")
-    .advise(method("onRequest"), AkkaGRPCServerSampling)
 }
 
 trait HasMatchingContext {
@@ -349,20 +338,5 @@ object Http2BlueprintInterceptor {
       case _ =>
         zuper.call()
     }
-  }
-}
-
-object AkkaGRPCServerSampling {
-
-  @Advice.OnMethodEnter()
-  def enter(@Advice.Argument(0) serviceName: String, @Advice.Argument(1) method: String): Unit = {
-    val fullSpanName = serviceName + "/" + method
-    Kamon.currentSpan()
-      .name(fullSpanName)
-      .tagMetrics("component", "akka.grpc.server")
-      .tagMetrics("rpc.system", "grpc")
-      .tagMetrics("rpc.service", serviceName)
-      .tagMetrics("rpc.method", method)
-      .takeSamplingDecision()
   }
 }

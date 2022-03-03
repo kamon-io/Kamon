@@ -438,7 +438,7 @@ lazy val `kamon-akka` = (project in file("instrumentation/kamon-akka"))
 
 def akkaHttpVersion(scalaVersion: String) = scalaVersion match {
   case "2.11" => "10.1.12"
-  case _      => "10.2.3"
+  case _      => "10.2.8"
 }
 
 lazy val `kamon-akka-http` = (project in file("instrumentation/kamon-akka-http"))
@@ -463,6 +463,32 @@ lazy val `kamon-akka-http` = (project in file("instrumentation/kamon-akka-http")
       "org.json4s"        %% "json4s-native"        % "3.6.7" % "test",
     ),
   )).dependsOn(`kamon-akka`, `kamon-testkit` % "test")
+
+lazy val `kamon-akka-grpc` = (project in file("instrumentation/kamon-akka-grpc"))
+  .enablePlugins(JavaAgent, AkkaGrpcPlugin)
+  .disablePlugins(AssemblyPlugin)
+  .settings(instrumentationSettings)
+  .settings(Seq(
+    PB.additionalDependencies := Seq.empty,
+    crossScalaVersions := Seq(`scala_2.12_version`, `scala_2.13_version`),
+    libraryDependencies ++= Seq(
+      kanelaAgent % "provided",
+
+      "com.typesafe.akka" %% "akka-http"            % akkaHttpVersion(scalaBinaryVersion.value) % "provided",
+      "com.typesafe.akka" %% "akka-http2-support"   % akkaHttpVersion(scalaBinaryVersion.value)  % "provided",
+      "com.typesafe.akka" %% "akka-stream"          % "2.5.32" % "provided",
+      "com.typesafe.akka" %% "akka-discovery"       % "2.5.32" % "provided",
+
+      // gRPC-specific dependencies provided by the sbt-akka-grpc plugin. We
+      "com.thesamet.scalapb"    %% "scalapb-runtime"   % "0.11.8" % "provided",
+      "com.lightbend.akka.grpc" %% "akka-grpc-runtime" % "2.1.3"  % "provided",
+      "io.grpc"                 %  "grpc-stub"         % "1.43.2" % "provided",
+
+      scalatest % "test",
+      slf4jApi % "test",
+      logbackClassic % "test",
+    ),
+  )).dependsOn(`kamon-akka-http`, `kamon-testkit` % "test")
 
 
 lazy val `kamon-play` = (project in file("instrumentation/kamon-play"))

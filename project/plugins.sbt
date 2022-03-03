@@ -14,5 +14,4 @@ addSbtPlugin("org.xerial.sbt" % "sbt-sonatype" % "3.8.1")
 addSbtPlugin("com.jsuereth" % "sbt-pgp" % "2.0.1")
 addSbtPlugin("de.heikoseeberger" % "sbt-header" % "5.5.0")
 
-addSbtPlugin("com.lightbend.akka.grpc" % "sbt-akka-grpc" % "1.0.0")
-libraryDependencies += "com.lightbend.play" %% "play-grpc-generators" % "0.9.0"
+addSbtPlugin("com.lightbend.akka.grpc" % "sbt-akka-grpc" % "2.1.3")
