@@ -18,10 +18,10 @@ class AkkaGrpcServerInstrumentation extends InstrumentationBuilder {
     * configured.
     */
   onType("akka.grpc.internal.NoOpTelemetry$")
-    .advise(method("onRequest"), AkkaGRPCServerSampling)
+    .advise(method("onRequest"), AkkaGRPCServerRequestHandler)
 }
 
-object AkkaGRPCServerSampling {
+object AkkaGRPCServerRequestHandler {
 
   @Advice.OnMethodEnter()
   def enter(@Advice.Argument(0) serviceName: String, @Advice.Argument(1) method: String): Unit = {
