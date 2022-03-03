@@ -886,8 +886,9 @@ lazy val `kamon-bundle-dependencies-2-12-and-up` = (project in file("bundle/kamo
   )
   .dependsOn(
     `kamon-bundle-dependencies-all`,
+    `kamon-akka-grpc`,
     `kamon-finagle`,
-    `kamon-tapir`
+    `kamon-tapir`,
   )
 
 lazy val `kamon-bundle` = (project in file("bundle/kamon-bundle"))
