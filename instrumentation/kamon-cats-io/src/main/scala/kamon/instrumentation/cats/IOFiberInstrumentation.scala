@@ -1,5 +1,6 @@
 package kamon.instrumentation.cats
 
+import cats.effect.{IO, IOLocal}
 import kamon.Kamon
 import kamon.context.Context
 import kamon.instrumentation.context.HasContext
@@ -65,7 +66,7 @@ object RestoreContextFromFiber {
   def enter(@Advice.This fiber: Any): Unit = {
     val field = fiber.getClass.getDeclaredField("resumeTag")
     field.setAccessible(true)
-    println(s"run(enter)     | Resume Tag: ${field.get(fiber)} | CurrFiberId: ${padTo(fiber.hashCode(), 10)} | ToBeScheduledFiberId: ${padTo("NA", 10)} | Fiber: ${padTo(fiber.asInstanceOf[HasContext].context.tags, 15)} | Thread ${padTo(Kamon.currentContext().tags, 15)} | IO: ${padTo(fiber.getClass.getCanonicalName, 25)} | Thread ${Thread.currentThread().getName}")
+    //println(s"run(enter)     | Resume Tag: ${field.get(fiber)} | CurrFiberId: ${padTo(fiber.hashCode(), 10)} | ToBeScheduledFiberId: ${padTo("NA", 10)} | Fiber: ${padTo(fiber.asInstanceOf[HasContext].context.tags, 15)} | Thread ${padTo(Kamon.currentContext().tags, 15)} | IO: ${padTo(fiber.getClass.getCanonicalName, 25)} | Thread ${Thread.currentThread().getName}")
     val ctxFiber = fiber.asInstanceOf[HasContext].context
     setCurrentCtxIfNotEmpty(ctxFiber)
   }
@@ -76,7 +77,7 @@ object SaveCurrentContextOnExit {
   def exit(@Advice.This fiber: Any): Unit = {
     val field = fiber.getClass.getDeclaredField("resumeTag")
     field.setAccessible(true)
-    println(s"run(exit)      | Resume Tag: ${field.get(fiber)} | CurrFiberId: ${padTo(fiber.hashCode(), 10)} | ToBeScheduledFiberId: ${padTo("NA", 10)} | Fiber: ${padTo(fiber.asInstanceOf[HasContext].context.tags, 15)} | Thread ${padTo(Kamon.currentContext().tags, 15)} | IO: ${padTo(fiber.getClass.getCanonicalName, 25)} | Thread ${Thread.currentThread().getName}")
+    //println(s"run(exit)      | Resume Tag: ${field.get(fiber)} | CurrFiberId: ${padTo(fiber.hashCode(), 10)} | ToBeScheduledFiberId: ${padTo("NA", 10)} | Fiber: ${padTo(fiber.asInstanceOf[HasContext].context.tags, 15)} | Thread ${padTo(Kamon.currentContext().tags, 15)} | IO: ${padTo(fiber.getClass.getCanonicalName, 25)} | Thread ${Thread.currentThread().getName}")
     val currentCtx = Kamon.currentContext()
     setIfNotEmpty(fiber.asInstanceOf[HasContext])(currentCtx)
   }
@@ -88,7 +89,7 @@ object SetContextOnNewFiber {
   def enter(@Advice.This currFiber: Any, @Advice.Argument(1) fiber: Any): Unit = {
     val field = fiber.getClass.getDeclaredField("resumeTag")
     field.setAccessible(true)
-    println(s"ScheduleNew    | Resume Tag: ${field.get(fiber)} | CurrFiberId: ${padTo(currFiber.hashCode(), 10)} | ToBeScheduledFiberId: ${padTo(fiber.hashCode(), 10)} | Fiber: ${padTo(fiber.asInstanceOf[HasContext].context.tags, 15)} | Thread ${padTo(Kamon.currentContext().tags, 15)} | IO: ${padTo(fiber.getClass.getCanonicalName, 25)} | Thread ${Thread.currentThread().getName}")
+    //println(s"ScheduleNew    | Resume Tag: ${field.get(fiber)} | CurrFiberId: ${padTo(currFiber.hashCode(), 10)} | ToBeScheduledFiberId: ${padTo(fiber.hashCode(), 10)} | Fiber: ${padTo(fiber.asInstanceOf[HasContext].context.tags, 15)} | Thread ${padTo(Kamon.currentContext().tags, 15)} | IO: ${padTo(fiber.getClass.getCanonicalName, 25)} | Thread ${Thread.currentThread().getName}")
     val currentCtx = Kamon.currentContext()
     setIfNotEmpty(fiber.asInstanceOf[HasContext])(currentCtx)
   }
@@ -99,7 +100,7 @@ object SetContextOnNewFiberForWSTP {
   def enter(@Advice.Argument(0) fiber: Any): Unit = {
     val field = fiber.getClass.getDeclaredField("resumeTag")
     field.setAccessible(true)
-    println(s"ScheduleNew    | Resume Tag: ${field.get(fiber)} | CurrFiberId: ${padTo("unknown", 10)} | ToBeScheduledFiberId: ${padTo(fiber.hashCode(), 10)} | Fiber: ${padTo(fiber.asInstanceOf[HasContext].context.tags, 15)} | Thread ${padTo(Kamon.currentContext().tags, 15)} | IO: ${padTo(fiber.getClass.getCanonicalName, 25)} | Thread ${Thread.currentThread().getName}")
+    //println(s"ScheduleNew    | Resume Tag: ${field.get(fiber)} | CurrFiberId: ${padTo("unknown", 10)} | ToBeScheduledFiberId: ${padTo(fiber.hashCode(), 10)} | Fiber: ${padTo(fiber.asInstanceOf[HasContext].context.tags, 15)} | Thread ${padTo(Kamon.currentContext().tags, 15)} | IO: ${padTo(fiber.getClass.getCanonicalName, 25)} | Thread ${Thread.currentThread().getName}")
     val currentCtx = Kamon.currentContext()
     setIfNotEmpty(fiber.asInstanceOf[HasContext])(currentCtx)
   }
@@ -110,7 +111,7 @@ object InstrumentRunLoop {
   def enter(@Advice.This fiber: Any): Unit = {
     val field = fiber.getClass.getDeclaredField("resumeTag")
     field.setAccessible(true)
-    println(s"run(enter)     | Resume Tag: ${field.get(fiber)} | CurrFiberId: ${padTo(fiber.hashCode(), 10)} | ToBeScheduledFiberId: ${padTo("NA", 10)} | Fiber: ${padTo(fiber.asInstanceOf[HasContext].context.tags, 15)} | Thread ${padTo(Kamon.currentContext().tags, 15)} | IO: ${padTo(fiber.getClass.getCanonicalName, 25)} | Thread ${Thread.currentThread().getName}")
+    //println(s"run(enter)     | Resume Tag: ${field.get(fiber)} | CurrFiberId: ${padTo(fiber.hashCode(), 10)} | ToBeScheduledFiberId: ${padTo("NA", 10)} | Fiber: ${padTo(fiber.asInstanceOf[HasContext].context.tags, 15)} | Thread ${padTo(Kamon.currentContext().tags, 15)} | IO: ${padTo(fiber.getClass.getCanonicalName, 25)} | Thread ${Thread.currentThread().getName}")
     val ctxFiber = fiber.asInstanceOf[HasContext].context
     Kamon.storeContext(ctxFiber)
   }
@@ -119,7 +120,7 @@ object InstrumentRunLoop {
   def exit(@Advice.This fiber: Any): Unit = {
     val field = fiber.getClass.getDeclaredField("resumeTag")
     field.setAccessible(true)
-    println(s"run(exit)      | Resume Tag: ${field.get(fiber)} | CurrFiberId: ${padTo(fiber.hashCode(), 10)} | ToBeScheduledFiberId: {${padTo("NA", 10)} | Fiber: ${padTo(fiber.asInstanceOf[HasContext].context.tags, 15)} | Thread ${padTo(Kamon.currentContext().tags, 15)} | IO: ${padTo(fiber.getClass.getCanonicalName, 25)} | Thread ${Thread.currentThread().getName}")
+    //println(s"run(exit)      | Resume Tag: ${field.get(fiber)} | CurrFiberId: ${padTo(fiber.hashCode(), 10)} | ToBeScheduledFiberId: {${padTo("NA", 10)} | Fiber: ${padTo(fiber.asInstanceOf[HasContext].context.tags, 15)} | Thread ${padTo(Kamon.currentContext().tags, 15)} | IO: ${padTo(fiber.getClass.getCanonicalName, 25)} | Thread ${Thread.currentThread().getName}")
     val currentCtx = Kamon.currentContext()
     fiber.asInstanceOf[HasContext].setContext(currentCtx)
   }
@@ -131,14 +132,14 @@ object Debug {
   def enter(@Advice.This fiber: Any, @Advice.Argument(0) io :Any): Unit = {
     val field = fiber.getClass.getDeclaredField("resumeTag")
     field.setAccessible(true)
-    println(s"runLoop(Enter) | Resume Tag: ${field.get(fiber)} | CurrFiberId: ${padTo(fiber.hashCode(), 10)} | ToBeScheduledFiberId: ${padTo("NA", 10)} | Fiber: ${padTo(fiber.asInstanceOf[HasContext].context.tags, 15)} | Thread ${padTo(Kamon.currentContext().tags, 15)} | IO: ${padTo(io.getClass.getCanonicalName, 25)} | Thread ${Thread.currentThread().getName}")
+    //println(s"runLoop(Enter) | Resume Tag: ${field.get(fiber)} | CurrFiberId: ${padTo(fiber.hashCode(), 10)} | ToBeScheduledFiberId: ${padTo("NA", 10)} | Fiber: ${padTo(fiber.asInstanceOf[HasContext].context.tags, 15)} | Thread ${padTo(Kamon.currentContext().tags, 15)} | IO: ${padTo(io.getClass.getCanonicalName, 25)} | Thread ${Thread.currentThread().getName}")
   }
 
   @Advice.OnMethodExit(suppress = classOf[Throwable])
   def exit(@Advice.This fiber: Any, @Advice.Argument(0) io :Any): Unit = {
     val field = fiber.getClass.getDeclaredField("resumeTag")
     field.setAccessible(true)
-    println(s"runLoop(Exit)  | Resume Tag: ${field.get(fiber)} | CurrFiberId: ${padTo(fiber.hashCode(), 10)} | ToBeScheduledFiberId: ${padTo("NA", 10)} | Fiber: ${padTo(fiber.asInstanceOf[HasContext].context.tags, 15)} | Thread ${padTo(Kamon.currentContext().tags, 15)} | IO: ${padTo(io.getClass.getCanonicalName, 25)} | Thread ${Thread.currentThread().getName}")
+    //println(s"runLoop(Exit)  | Resume Tag: ${field.get(fiber)} | CurrFiberId: ${padTo(fiber.hashCode(), 10)} | ToBeScheduledFiberId: ${padTo("NA", 10)} | Fiber: ${padTo(fiber.asInstanceOf[HasContext].context.tags, 15)} | Thread ${padTo(Kamon.currentContext().tags, 15)} | IO: ${padTo(io.getClass.getCanonicalName, 25)} | Thread ${Thread.currentThread().getName}")
   }
 }
 
@@ -148,13 +149,13 @@ object DebugWT {
   def enter(@Advice.Argument(0) fiber: Any): Unit = {
     val field = fiber.getClass.getDeclaredField("resumeTag")
     field.setAccessible(true)
-    println(s"WorkerThread   | Resume Tag: ${field.get(fiber)} | CurrFiberId: ${padTo("undefined", 10)} | ToBeScheduledFiberId: ${padTo(fiber.hashCode(), 10)} | Fiber: ${padTo(fiber.asInstanceOf[HasContext].context.tags, 15)} | Thread ${padTo(Kamon.currentContext().tags, 15)} | IO: ${padTo(-1, 25)} | Thread ${Thread.currentThread().getName}")
+    //println(s"WorkerThread   | Resume Tag: ${field.get(fiber)} | CurrFiberId: ${padTo("undefined", 10)} | ToBeScheduledFiberId: ${padTo(fiber.hashCode(), 10)} | Fiber: ${padTo(fiber.asInstanceOf[HasContext].context.tags, 15)} | Thread ${padTo(Kamon.currentContext().tags, 15)} | IO: ${padTo(-1, 25)} | Thread ${Thread.currentThread().getName}")
   }
 
   @Advice.OnMethodExit(suppress = classOf[Throwable])
   def exit(@Advice.Argument(0) fiber: Any): Unit = {
     val field = fiber.getClass.getDeclaredField("resumeTag")
     field.setAccessible(true)
-    println(s"WorkerThread   | Resume Tag: ${field.get(fiber)} | CurrFiberId: ${padTo("undefined", 10)} | ToBeScheduledFiberId: ${padTo(fiber.hashCode(), 10)} | Fiber: ${padTo(fiber.asInstanceOf[HasContext].context.tags, 15)} | Thread ${padTo(Kamon.currentContext().tags, 15)} | IO: ${padTo(-1, 25)} | Thread ${Thread.currentThread().getName}")
+    //println(s"WorkerThread   | Resume Tag: ${field.get(fiber)} | CurrFiberId: ${padTo("undefined", 10)} | ToBeScheduledFiberId: ${padTo(fiber.hashCode(), 10)} | Fiber: ${padTo(fiber.asInstanceOf[HasContext].context.tags, 15)} | Thread ${padTo(Kamon.currentContext().tags, 15)} | IO: ${padTo(-1, 25)} | Thread ${Thread.currentThread().getName}")
   }
 }

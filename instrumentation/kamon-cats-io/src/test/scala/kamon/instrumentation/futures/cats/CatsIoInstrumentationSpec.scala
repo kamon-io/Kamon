@@ -33,8 +33,9 @@ class CatsIoInstrumentationSpec extends AnyWordSpec with Matchers with ScalaFutu
         val context = Context.of("key", "value")
         val test =
           for {
-            _ <- IO.delay(Kamon.storeContext(Context.Empty))
             _ <- IO.delay(Kamon.storeContext(context))
+            _ <- Spawn[IO].evalOn(IO.sleep(0.seconds), anotherExecutionContext)
+            _ <- IO.delay(Kamon.storeContext(Context.Empty))
             _ <- Spawn[IO].evalOn(IO.sleep(0.seconds), anotherExecutionContext)
             afterCleaning <- IO.delay(Kamon.currentContext())
           } yield {
@@ -82,7 +83,7 @@ class CatsIoInstrumentationSpec extends AnyWordSpec with Matchers with ScalaFutu
         test.unsafeRunSync()(runtime)
       }
 
-     /*"must allow complex Span topologies to be created" in {
+     "must allow complex Span topologies to be created" in {
         val parentSpan = Span.Remote(
           Scheme.Single.spanIdFactory.generate(),
           Identifier.Empty,
@@ -120,7 +121,7 @@ class CatsIoInstrumentationSpec extends AnyWordSpec with Matchers with ScalaFutu
           (1 to 100).toList.map(_ => (IO.delay(Kamon.init()) *> IO.delay(Kamon.storeContext(context)) *> test).unsafeToFuture()(runtime))
         )
         Await.result(result, 10.seconds)
-      }*/
+      }
     }
   }
   private def getKey(): IO[String] = {
