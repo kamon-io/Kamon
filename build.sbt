@@ -135,6 +135,7 @@ val instrumentationProjects = Seq[ProjectReference](
   `kamon-system-metrics`,
   `kamon-akka`,
   `kamon-akka-http`,
+  `kamon-akka-grpc`,
   `kamon-play`,
   `kamon-okhttp`,
   `kamon-tapir`,
