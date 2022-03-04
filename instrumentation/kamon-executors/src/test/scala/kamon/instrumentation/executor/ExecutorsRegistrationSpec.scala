@@ -34,31 +34,15 @@ class ExecutorsRegistrationSpec extends AnyWordSpec with Matchers with MetricIns
       val registeredForkJoin  = ExecutorInstrumentation.instrument(new JavaForkJoinPool(1), "fjp")
       val registeredThreadPool = ExecutorInstrumentation.instrument(JavaExecutors.newFixedThreadPool(1), "thread-pool")
       val registeredScheduled = ExecutorInstrumentation.instrument(JavaExecutors.newScheduledThreadPool(1), "scheduled-thread-pool")
-      val registeredSingle = ExecutorInstrumentation.instrument(JavaExecutors.newSingleThreadExecutor(), "single-thread-pool")
-      val registeredSingleScheduled = ExecutorInstrumentation.instrument(JavaExecutors.newSingleThreadScheduledExecutor(), "single-scheduled-thread-pool")
-      val registeredSingleAsScheduled = ExecutorInstrumentation.instrumentScheduledExecutor(JavaExecutors.newSingleThreadScheduledExecutor(), "single-scheduled-thread-pool-as-scheduled")
-      val registeredUThreadPool = ExecutorInstrumentation.instrument(JavaExecutors.unconfigurableExecutorService(JavaExecutors.newFixedThreadPool(1)), "unconfigurable-thread-pool")
-      val registeredUScheduled = ExecutorInstrumentation.instrument(JavaExecutors.unconfigurableScheduledExecutorService(JavaExecutors.newScheduledThreadPool(1)), "unconfigurable-scheduled-thread-pool")
       val registeredExecContext = ExecutorInstrumentation.instrumentExecutionContext(ExecutionContext.fromExecutorService(JavaExecutors.newFixedThreadPool(1)), "execution-context")
 
       assertContainsAllExecutorNames(ThreadsActive.tagValues("name"))
       assertContainsAllExecutorNames(TasksSubmitted.tagValues("name"))
       assertContainsAllExecutorNames(QueueSize.tagValues("name"))
 
-      val (scheduledPoolOne, _) = ThreadsActive.instruments(TagSet.of("name", "single-scheduled-thread-pool")).head
-      val (scheduledPoolTwo, _) = ThreadsActive.instruments(TagSet.of("name", "single-scheduled-thread-pool-as-scheduled")).head
-
-      scheduledPoolOne.get(coerce("type")) shouldBe "ThreadPoolExecutor"
-      scheduledPoolTwo.get(coerce("type")) shouldBe "ScheduledThreadPoolExecutor"
-
       registeredForkJoin.shutdown()
       registeredThreadPool.shutdown()
       registeredScheduled.shutdown()
-      registeredSingle.shutdown()
-      registeredSingleScheduled.shutdown()
-      registeredSingleAsScheduled.shutdown()
-      registeredUThreadPool.shutdown()
-      registeredUScheduled.shutdown()
       registeredExecContext.shutdown()
 
       assertDoesNotContainAllExecutorNames(ThreadsActive.tagValues("name"))
@@ -79,11 +63,6 @@ class ExecutorsRegistrationSpec extends AnyWordSpec with Matchers with MetricIns
       "fjp",
       "thread-pool",
       "scheduled-thread-pool",
-      "single-thread-pool",
-      "single-scheduled-thread-pool",
-      "single-scheduled-thread-pool-as-scheduled",
-      "unconfigurable-thread-pool",
-      "unconfigurable-scheduled-thread-pool",
       "execution-context"
     )
   }
@@ -93,11 +72,6 @@ class ExecutorsRegistrationSpec extends AnyWordSpec with Matchers with MetricIns
       "fjp",
       "thread-pool",
       "scheduled-thread-pool",
-      "single-thread-pool",
-      "single-scheduled-thread-pool",
-      "single-scheduled-thread-pool-as-scheduled",
-      "unconfigurable-thread-pool",
-      "unconfigurable-scheduled-thread-pool",
       "execution-context"
     )
   }
