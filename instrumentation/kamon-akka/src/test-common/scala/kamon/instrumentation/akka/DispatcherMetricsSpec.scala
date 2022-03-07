@@ -106,7 +106,7 @@ class DispatcherMetricsSpec extends TestKit(ActorSystem("DispatcherMetricsSpec")
 
     "pick up default execution contexts provided when creating an actor system when the type is unknown" in {
       val dec = new WrappingExecutionContext(ExecutionContext.fromExecutor(Executors.newFixedThreadPool(8)))
-      val system = ActorSystem(name = "with-default-ec", defaultExecutionContext = Some(dec))
+      val system = ActorSystem(name = "with-unknown-default-ec", defaultExecutionContext = Some(dec))
 
       val instrumentExecutorsWithSystem = ExecutorMetrics.ThreadsActive.instruments().keys
         .filter(_.get(plain("akka.system")) == system.name)
