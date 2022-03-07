@@ -36,6 +36,7 @@ object KafkaInstrumentation {
     val kafkaConfig = config.getConfig("kamon.instrumentation.kafka.client")
 
     Settings(
+      startTraceOnProducer = kafkaConfig.getBoolean("tracing.start-trace-on-producer"),
       continueTraceOnConsumer = kafkaConfig.getBoolean("tracing.continue-trace-on-consumer"),
       useDelayedSpans = kafkaConfig.getBoolean("tracing.use-delayed-spans")
     )
@@ -197,6 +198,7 @@ object KafkaInstrumentation {
   }
 
   case class Settings (
+    startTraceOnProducer: Boolean,
     continueTraceOnConsumer: Boolean,
     useDelayedSpans: Boolean
   )
