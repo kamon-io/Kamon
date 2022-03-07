@@ -14,36 +14,136 @@
  * limitations under the License.
  */
 
-package kamon.instrumentation.jedis
+package kamon
+package instrumentation
+package jedis
 
-import kamon.Kamon
+import kamon.context.Storage.Scope
+import kamon.tag.Lookups.plain
 import kamon.trace.Span
 import kanela.agent.api.instrumentation.InstrumentationBuilder
 import kanela.agent.libs.net.bytebuddy.asm.Advice
 import kanela.agent.libs.net.bytebuddy.description.method.MethodDescription
-import kanela.agent.libs.net.bytebuddy.matcher.ElementMatchers.isPublic
+import kanela.agent.libs.net.bytebuddy.matcher.ElementMatchers.{isMethod, isPublic, isStatic, namedOneOf, not}
 
 class JedisInstrumentation extends InstrumentationBuilder {
+
+  /**
+    * Most methods in `Jedis` and `BinaryJedis` end up sending calls to the Redis server, so we are
+    * targeting all methods in those classes, except for the ones excluded below.
+    */
+  onTypes("redis.clients.jedis.Jedis", "redis.clients.jedis.BinaryJedis")
+    .advise(
+      isMethod[MethodDescription]()
+        .and(isPublic[MethodDescription])
+        .and(not(isStatic[MethodDescription]))
+        .and(not(namedOneOf[MethodDescription](
+          "setDataSource",
+          "getDB",
+          "isConnected",
+          "connect",
+          "disconnect",
+          "resetState",
+          "getClient",
+          "getConnection",
+          "isConnected",
+          "isBroken",
+          "close",
+          "toString",
+          "hashCode"
+        ))),
+      classOf[ClientOperationsAdvice])
+
+
+  /**
+    * For Jedis 3.x. This advice ensures we get the right command name in the Span.
+    */
   onType("redis.clients.jedis.Protocol")
-    .advise(method("sendCommand").and(isPublic[MethodDescription]), classOf[SendCommandAdvice])
+    .advise(
+      method("sendCommand")
+        .and(isPublic[MethodDescription])
+        .and(isStatic[MethodDescription])
+        .and(takesArguments(3)),
+      classOf[SendCommandAdvice])
+
+  /**
+    * For Jedis 4.x. This advice ensures we get the right command name in the Span. Notice
+    * how the method is the same, but there is a different number of arguments.
+    */
+  onType("redis.clients.jedis.Protocol")
+    .when(classIsPresent("redis.clients.jedis.CommandArguments"))
+    .advise(
+      method("sendCommand")
+        .and(isPublic[MethodDescription])
+        .and(isStatic[MethodDescription])
+        .and(takesArguments(2)),
+      classOf[SendCommandAdviceForJedis4])
+
+
 }
 
-class SendCommandAdvice
+class ClientOperationsAdvice
+object ClientOperationsAdvice {
+  private val currentRedisOperationKey = "redis.current"
 
-object SendCommandAdvice {
   @Advice.OnMethodEnter(suppress = classOf[Throwable])
-  def enter(@Advice.Argument(1) command: Any): Span = {
-    val spanName = s"redis.command.$command"
-    Kamon.clientSpanBuilder(spanName, "redis.client.jedis")
-      .start()
+  def enter(@Advice.Origin("#m") methodName: String): Scope = {
+    val currentContext = Kamon.currentContext()
+
+    if(currentContext.getTag(plain(currentRedisOperationKey)) == null) {
+
+      // The actual span name is going to be set in the SendCommand advice
+      val clientSpan = Kamon
+        .clientSpanBuilder("jedis", "redis.client.jedis")
+        .tagMetrics("db.system", "redis")
+        .start()
+
+      Kamon.storeContext(currentContext
+        .withEntry(Span.Key, clientSpan)
+        .withTag(currentRedisOperationKey, methodName)
+      )
+    } else Scope.Empty
   }
 
   @Advice.OnMethodExit(onThrowable = classOf[Throwable], suppress = classOf[Throwable])
-  def exit(@Advice.Enter span: Span,
-           @Advice.Thrown t: Throwable): Unit = {
-    if (t != null) {
-      span.fail(t)
+  def exit(@Advice.Enter scope: Scope, @Advice.Thrown t: Throwable): Unit = {
+    if(scope != Scope.Empty) {
+      val span = scope.context.get(Span.Key)
+      if (t != null) {
+        span.fail(t)
+      }
+
+      span.finish()
+      scope.close()
     }
-    span.finish()
   }
 }
+
+class SendCommandAdvice
+object SendCommandAdvice {
+
+  @Advice.OnMethodEnter
+  def sendCommand(@Advice.Argument(1) command: Any): Unit = {
+    // The command object should actually be an Enum and its toString() produces
+    // the actual command name sent to Redis
+    Kamon.currentSpan()
+      .name(command.toString())
+      .tag("db.operation", command.toString())
+  }
+}
+
+class SendCommandAdviceForJedis4
+object SendCommandAdviceForJedis4 {
+
+  @Advice.OnMethodEnter
+  def sendCommand(@Advice.Argument(1) commandArguments: Any): Unit = {
+    val firstArgument = commandArguments.asInstanceOf[java.lang.Iterable[Any]].iterator().next()
+
+    // The command object should actually be an Enum and its toString() produces
+    // the actual command name sent to Redis
+    Kamon.currentSpan()
+      .name(firstArgument.toString())
+      .tag("db.operation", firstArgument.toString())
+  }
+}
+
