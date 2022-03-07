@@ -148,7 +148,6 @@ object ExecutorInstrumentation {
     */
   def instrument(executor: ExecutorService, name: String, extraTags: TagSet, settings: Settings): ExecutorService = {
     executor match {
-      case es: ExecutorService if isWrapper(es) => instrument(unwrap(es), name, extraTags, settings)
       case tpe: ThreadPoolExecutor  => new InstrumentedThreadPool(tpe, name, extraTags, settings)
       case jfjp: JavaForkJoinPool   => new InstrumentedForkJoinPool(jfjp, ForkJoinPoolTelemetryReader.forJava(jfjp), name, extraTags, settings)
       case sfjp: ScalaForkJoinPool  => new InstrumentedForkJoinPool(sfjp, ForkJoinPoolTelemetryReader.forScala(sfjp), name, extraTags, settings)
@@ -172,8 +171,6 @@ object ExecutorInstrumentation {
     */
   def instrumentScheduledExecutor(executor: ScheduledExecutorService, name: String, extraTags: TagSet): ScheduledExecutorService = {
     executor match {
-      case es: ScheduledExecutorService if isWrapper(es) =>
-        instrumentScheduledExecutor(unwrap(es).asInstanceOf[ScheduledExecutorService], name, extraTags)
 
       case stpe: ScheduledThreadPoolExecutor =>
         new InstrumentedScheduledThreadPoolExecutor(stpe, name, extraTags.withTag("scheduled", true))
@@ -251,33 +248,11 @@ object ExecutorInstrumentation {
       new Settings(shouldTrackTimeInQueue, false)
   }
 
-
-  private val _delegatedExecutorClass = Class.forName("java.util.concurrent.Executors$DelegatedExecutorService")
-  private val _finalizableDelegatedClass = Class.forName("java.util.concurrent.Executors$FinalizableDelegatedExecutorService")
-  private val _delegateScheduledClass = Class.forName("java.util.concurrent.Executors$DelegatedScheduledExecutorService")
-  private val _delegatedExecutorField = {
-    val field = _delegatedExecutorClass.getDeclaredField("e")
-    field.setAccessible(true)
-    field
-  }
-
   private val _executionContextExecutorField = {
     val field = Class.forName("scala.concurrent.impl.ExecutionContextImpl").getDeclaredField("executor")
     field.setAccessible(true)
     field
   }
-
-  private def isAssignableTo(executor: ExecutorService, expectedClass: Class[_]): Boolean =
-    expectedClass.isAssignableFrom(executor.getClass)
-
-  private def isWrapper(executor: ExecutorService): Boolean = {
-    isAssignableTo(executor, _delegatedExecutorClass) ||
-    isAssignableTo(executor, _finalizableDelegatedClass) ||
-    isAssignableTo(executor, _delegateScheduledClass)
-  }
-
-  private def unwrap(delegatedExecutor: ExecutorService): ExecutorService =
-    _delegatedExecutorField.get(delegatedExecutor).asInstanceOf[ExecutorService]
 
   private def unwrapExecutionContext(executionContext: ExecutionContext): Option[ExecutorService] =
     try {
@@ -286,7 +261,7 @@ object ExecutorInstrumentation {
       // or ExecutionContext.fromExecutorService.
       Some(_executionContextExecutorField.get(executionContext).asInstanceOf[ExecutorService])
     } catch {
-      case anyError =>
+      case _: Throwable =>
         _logger.warn("Cannot unwrap unsupported ExecutionContext [{}]", executionContext)
         None
     }

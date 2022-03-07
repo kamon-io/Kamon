@@ -38,16 +38,6 @@ class ExecutorMetricsSpec extends AnyWordSpec with Matchers with InstrumentInspe
 
 
   "the ExecutorServiceMetrics" should {
-    "register a SingleThreadPool, collect their metrics and remove it" in {
-      val singleThreadPoolExecutor = JavaExecutors.newSingleThreadExecutor()
-      val registeredPool = ExecutorInstrumentation.instrument(singleThreadPoolExecutor, "single-thread-pool-metrics")
-
-      ExecutorMetrics.ThreadsActive.tagValues("name")  should contain ("single-thread-pool-metrics")
-      ExecutorMetrics.ThreadsActive.tagValues("type")  should contain ("ThreadPoolExecutor")
-
-      registeredPool.shutdown()
-    }
-
     "register a ThreadPoolExecutor, collect their metrics and remove it" in {
       val threadPoolExecutor = JavaExecutors.newCachedThreadPool()
       val registeredPool = ExecutorInstrumentation.instrument(threadPoolExecutor, "thread-pool-executor-metrics")
@@ -59,7 +49,7 @@ class ExecutorMetricsSpec extends AnyWordSpec with Matchers with InstrumentInspe
     }
 
     "register a ScheduledThreadPoolExecutor, collect their metrics and remove it" in {
-      val scheduledThreadPoolExecutor = JavaExecutors.newSingleThreadScheduledExecutor()
+      val scheduledThreadPoolExecutor = JavaExecutors.newScheduledThreadPool(1)
       val registeredPool = ExecutorInstrumentation.instrument(scheduledThreadPoolExecutor, "scheduled-thread-pool-executor-metrics")
 
       ExecutorMetrics.ThreadsActive.tagValues("name")  should contain ("scheduled-thread-pool-executor-metrics")
