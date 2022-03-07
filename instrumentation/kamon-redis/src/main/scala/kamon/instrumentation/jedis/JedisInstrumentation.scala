@@ -24,10 +24,14 @@ import kamon.trace.Span
 import kanela.agent.api.instrumentation.InstrumentationBuilder
 import kanela.agent.libs.net.bytebuddy.asm.Advice
 import kanela.agent.libs.net.bytebuddy.description.method.MethodDescription
-import kanela.agent.libs.net.bytebuddy.matcher.ElementMatchers
-import kanela.agent.libs.net.bytebuddy.matcher.ElementMatchers.{isMethod, isPublic, isStatic, namedOneOf, not, takesArgument, takesArguments}
+import kanela.agent.libs.net.bytebuddy.matcher.ElementMatchers.{isMethod, isPublic, isStatic, namedOneOf, not}
 
 class JedisInstrumentation extends InstrumentationBuilder {
+
+  /**
+    * Most methods in `Jedis` and `BinaryJedis` end up sending calls to the Redis server, so we are
+    * targeting all methods in those classes, except for the ones excluded below.
+    */
   onTypes("redis.clients.jedis.Jedis", "redis.clients.jedis.BinaryJedis")
     .advise(
       isMethod[MethodDescription]()
@@ -51,6 +55,9 @@ class JedisInstrumentation extends InstrumentationBuilder {
       classOf[ClientOperationsAdvice])
 
 
+  /**
+    * For Jedis 3.x. This advice ensures we get the right command name in the Span.
+    */
   onType("redis.clients.jedis.Protocol")
     .advise(
       method("sendCommand")
@@ -59,6 +66,10 @@ class JedisInstrumentation extends InstrumentationBuilder {
         .and(takesArguments(3)),
       classOf[SendCommandAdvice])
 
+  /**
+    * For Jedis 4.x. This advice ensures we get the right command name in the Span. Notice
+    * how the method is the same, but there is a different number of arguments.
+    */
   onType("redis.clients.jedis.Protocol")
     .when(classIsPresent("redis.clients.jedis.CommandArguments"))
     .advise(
