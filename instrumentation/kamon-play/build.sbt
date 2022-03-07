@@ -1,5 +1,4 @@
 import sbt.Tests._
-import play.grpc.gen.scaladsl.{PlayScalaServerCodeGenerator, PlayScalaClientCodeGenerator}
 
 val `Play-2.6-version` = "2.6.25"
 val `Play-2.7-version` = "2.7.9"
@@ -20,8 +19,6 @@ configs(
   `Test-Play-2.6`
 )
 
-enablePlugins(AkkaGrpcPlugin)
-
 libraryDependencies ++= Seq(
   kanelaAgent % "provided",
   "com.typesafe.play" %%  "play"                  % `Play-2.7-version` % "provided,test-common,test-play-2.7",
@@ -41,25 +38,18 @@ libraryDependencies ++= { if(scalaBinaryVersion.value == "2.13") Seq.empty else 
   "com.typesafe.play" %%  "play-akka-http-server" % `Play-2.6-version` % "test-play-2.6",
   "com.typesafe.play" %%  "play-ws"               % `Play-2.6-version` % "test-play-2.6",
   "com.typesafe.play" %%  "play-test"             % `Play-2.6-version` % "test-play-2.6",
-  "com.typesafe.play" %%  "play-logback"          % `Play-2.6-version` % "test-play-2.6",
+  "com.typesafe.play" %%  "play-logback"          % `Play-2.6-version` % "test-play-2.6"
 )}
 
 libraryDependencies ++= { if(scalaBinaryVersion.value == "2.11") Seq.empty else Seq(
-  "com.lightbend.play" %%  "play-grpc-runtime"    % "0.9.1" % "test-play-2.8",
-  "com.lightbend.play" %%  "play-grpc-scalatest"  % "0.9.1" % "test-play-2.8",
   "com.typesafe.play" %%  "play-akka-http2-support" % `Play-2.8-version` % "test-play-2.8",
   "com.typesafe.play" %%  "play"                  % `Play-2.8-version` % "test-play-2.8",
   "com.typesafe.play" %%  "play-netty-server"     % `Play-2.8-version` % "test-play-2.8",
   "com.typesafe.play" %%  "play-akka-http-server" % `Play-2.8-version` % "test-play-2.8",
   "com.typesafe.play" %%  "play-ws"               % `Play-2.8-version` % "test-play-2.8",
   "com.typesafe.play" %%  "play-test"             % `Play-2.8-version` % "test-play-2.8",
-  "com.typesafe.play" %%  "play-logback"          % `Play-2.8-version` % "test-play-2.8",
+  "com.typesafe.play" %%  "play-logback"          % `Play-2.8-version` % "test-play-2.8"
 )}
-
-// We are explicitly removing the gRPC-related dependencies because the are manually added
-// on the Test configuration for Play 2.8.
-PB.additionalDependencies := Seq.empty
-
 
 /**
   * Test-related settings
@@ -94,17 +84,10 @@ inConfig(`Test-Play-2.7`)(Defaults.testSettings ++ instrumentationSettings ++ ba
 inConfig(`Test-Play-2.8`)(Defaults.testSettings ++ instrumentationSettings ++ baseTestSettings ++ Seq(
   sources := joinSources(TestCommon, `Test-Play-2.8`).value,
   crossScalaVersions := Seq("2.12.13", "2.13.3"),
-  akkaGrpcGeneratedSources := Seq(AkkaGrpc.Server, AkkaGrpc.Client),
-  akkaGrpcGeneratedLanguages := Seq(AkkaGrpc.Scala),
-  akkaGrpcExtraGenerators += PlayScalaServerCodeGenerator,
-  akkaGrpcExtraGenerators += PlayScalaClientCodeGenerator,
   testGrouping := singleTestPerJvm(definedTests.value, javaOptions.value),
   unmanagedResourceDirectories ++= (Compile / unmanagedResourceDirectories).value,
   unmanagedResourceDirectories ++= (TestCommon / unmanagedResourceDirectories).value,
 ))
-
-AkkaGrpcPlugin.configSettings(TestCommon)
-AkkaGrpcPlugin.configSettings(`Test-Play-2.8`)
 
 Test / test := Def.taskDyn {
   if(scalaBinaryVersion.value == "2.13")
