@@ -52,14 +52,14 @@ private[otel] object OtlpTraceService {
   def apply(config: Config): TraceService = {
     val otelExporterConfig = config.getConfig("kamon.otel.trace")
     val endpoint = otelExporterConfig.getString("endpoint")
-    val fullEndpoint = if (otelExporterConfig.hasPath("fullEndpoint")) Some(otelExporterConfig.getString("fullEndpoint")) else None
+    val fullEndpoint = if (otelExporterConfig.hasPath("full-endpoint")) Some(otelExporterConfig.getString("full-endpoint")) else None
     val compression = otelExporterConfig.getString("compression") match {
       case "gzip" => true
       case x =>
         if (x != "") logger.warn(s"unrecognised compression $x. Defaulting to no compression")
         false
     }
-    val protocol = otelExporterConfig.getString("otelProtocol") match {
+    val protocol = otelExporterConfig.getString("protocol") match {
       case "http/protobuf" => "http/protobuf"
       case "grpc" => "grpc"
       case x =>
@@ -77,7 +77,7 @@ private[otel] object OtlpTraceService {
         val parsed = new URL(full)
         if (parsed.getPath.isEmpty) full :+ '/' else full
       // Seems to be some dispute as to whether the / should technically be added in the case that the base path doesn't
-      // include it. Adding because it's probably what's desired most of the time, and can always be overridden by fullEndpoint
+      // include it. Adding because it's probably what's desired most of the time, and can always be overridden by full-endpoint
       case ("http/protobuf", None) => if (endpoint.endsWith("/")) endpoint + "v1/traces" else endpoint + "/v1/traces"
       case (_, Some(full)) => full
       case (_, None) => endpoint
