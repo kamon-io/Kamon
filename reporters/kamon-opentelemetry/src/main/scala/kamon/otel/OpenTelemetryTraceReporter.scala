@@ -30,11 +30,12 @@ import scala.util.{Failure, Success}
 import io.opentelemetry.sdk.common.InstrumentationLibraryInfo
 import io.opentelemetry.sdk.resources.Resource
 import io.opentelemetry.sdk.trace.data.SpanData
+import kamon.status.Status
 import kamon.tag.Tag
 
 object OpenTelemetryTraceReporter {
   private val logger = LoggerFactory.getLogger(classOf[OpenTelemetryTraceReporter])
-  private val kamonVersion = Kamon.status().settings().version
+  private val kamonSettings: Status.Settings = Kamon.status().settings()
 
   class Factory extends ModuleFactory {
     override def create(settings: ModuleFactory.Settings): Module = {
@@ -72,8 +73,8 @@ class OpenTelemetryTraceReporter(traceServiceFactory: Config => TraceService)(im
     logger.info("Reconfigure OpenTelemetry Trace Reporter")
 
     //pre-generate the function for converting Kamon span to proto span
-    val instrumentationLibraryInfo: InstrumentationLibraryInfo = InstrumentationLibraryInfo.create("kamon", kamonVersion)
-    val resource: Resource = buildResource(newConfig.getBoolean("kamon.otel.trace.include-environment-tags"))
+    val instrumentationLibraryInfo: InstrumentationLibraryInfo = InstrumentationLibraryInfo.create("kamon", kamonSettings.version)
+    val resource: Resource = buildResource
     this.spanConverterFunc = SpanConverter.convert(newConfig.getBoolean("kamon.otel.trace.include-error-event"), resource, instrumentationLibraryInfo)
 
     this.traceService = Option(traceServiceFactory.apply(newConfig))
@@ -88,24 +89,23 @@ class OpenTelemetryTraceReporter(traceServiceFactory: Config => TraceService)(im
   /**
     * Builds the resource information added as resource labels to the exported traces
     *
-    * @param includeEnvTags
     * @return
     */
-  private def buildResource(includeEnvTags: Boolean): Resource = {
+  private def buildResource: Resource = {
     val env = Kamon.environment
     val builder = Resource.builder()
+      .put("host.name", kamonSettings.environment.host)
+      .put("service.instance.id", kamonSettings.environment.instance)
       .put("service.name", env.service)
       .put("telemetry.sdk.name", "kamon")
       .put("telemetry.sdk.language", "scala")
-      .put("telemetry.sdk.version", kamonVersion)
+      .put("telemetry.sdk.version", kamonSettings.version)
 
     //add all kamon.environment.tags as KeyValues to the Resource object
-    if (includeEnvTags) {
-      env.tags.iterator().foreach {
-        case t: Tag.String => builder.put(t.key.replace('-', '.'), t.value)
-        case t: Tag.Boolean => builder.put(t.key.replace('-', '.'), t.value)
-        case t: Tag.Long => builder.put(t.key.replace('-', '.'), t.value)
-      }
+    env.tags.iterator().foreach {
+      case t: Tag.String => builder.put(t.key, t.value)
+      case t: Tag.Boolean => builder.put(t.key, t.value)
+      case t: Tag.Long => builder.put(t.key, t.value)
     }
 
     builder.build()

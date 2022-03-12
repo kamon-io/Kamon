@@ -60,6 +60,12 @@ class OpenTelemetryTraceReporterSpec extends AnyWordSpec with Matchers with Opti
       spanData.getResource.getAttributes.asMap().asScala should contain(AttributeKey.stringKey("telemetry.sdk.name"), "kamon")
       spanData.getResource.getAttributes.asMap().asScala should contain(AttributeKey.stringKey("telemetry.sdk.language"), "scala")
       spanData.getResource.getAttributes.asMap().asScala should contain(AttributeKey.stringKey("telemetry.sdk.version"), kamonVersion)
+      spanData.getResource.getAttributes.asMap().asScala should contain(AttributeKey.stringKey("service.version"), "x.x.x")
+      spanData.getResource.getAttributes.asMap().asScala should contain(AttributeKey.stringKey("env"), "kamon-devint")
+      val host = spanData.getResource.getAttributes.asMap().asScala.get(AttributeKey.stringKey("host.name"))
+      host shouldBe defined
+      val instance = spanData.getResource.getAttributes.asMap().asScala.get(AttributeKey.stringKey("service.instance.id"))
+      instance should contain(s"kamon-test-application@${host.get}")
 
       //assert instrumentation labels
       val instrumentationLibraryInfo = spanData.getInstrumentationLibraryInfo
