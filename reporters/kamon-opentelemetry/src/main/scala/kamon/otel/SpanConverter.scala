@@ -33,7 +33,9 @@ import kamon.trace.Trace.SamplingDecision.Sample
 import kamon.trace.{Identifier, Span}
 
 
-class SpanWrapper(includeErrorEvent: Boolean, resource: Resource, instrumentationLibraryInfo: InstrumentationLibraryInfo, span: Span.Finished) extends SpanData {
+class SpanWrapper(includeErrorEvent: Boolean, resource: Resource, kamonVersion: String, span: Span.Finished) extends SpanData {
+  private val instrumentationLibraryInfo: InstrumentationLibraryInfo =
+    InstrumentationLibraryInfo.create(span.metricTags.get(Lookups.option(Span.TagKeys.Component)) getOrElse "kamon-instrumentation", kamonVersion)
   private val sampled: Boolean = span.trace.samplingDecision == Sample
 
   private def getErrorEvent: Seq[EventData] =
@@ -126,9 +128,9 @@ private[otel] object SpanConverter {
     builder.build()
   }
 
-  def convertSpan(includeErrorEvent: Boolean, resource: Resource, instrumentationLibrary: InstrumentationLibraryInfo)(span: Span.Finished): SpanData =
-    new SpanWrapper(includeErrorEvent, resource, instrumentationLibrary, span)
+  def convertSpan(includeErrorEvent: Boolean, resource: Resource, kamonVersion: String)(span: Span.Finished): SpanData =
+    new SpanWrapper(includeErrorEvent, resource, kamonVersion, span)
 
-  def convert(includeErrorEvent: Boolean, resource: Resource, instrumentationLibrary: InstrumentationLibraryInfo)(spans: Seq[Span.Finished]): JCollection[SpanData] =
-    spans.map(convertSpan(includeErrorEvent, resource, instrumentationLibrary)).asJava
+  def convert(includeErrorEvent: Boolean, resource: Resource, kamonVersion: String)(spans: Seq[Span.Finished]): JCollection[SpanData] =
+    spans.map(convertSpan(includeErrorEvent, resource, kamonVersion)).asJava
 }

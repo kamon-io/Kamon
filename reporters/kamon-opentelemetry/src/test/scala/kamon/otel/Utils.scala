@@ -27,7 +27,7 @@ trait Utils {
   val spanIDFactory = Factory.EightBytesIdentifier
   val traceIDFactory = Factory.SixteenBytesIdentifier
 
-  def finishedSpan(): Span.Finished = {
+  def finishedSpan(metricsTags: TagSet = TagSet.Empty): Span.Finished = {
     val tagSet = TagSet.builder()
       .add("string.tag", "xyz")
       .add("boolean.tag", true)
@@ -45,7 +45,7 @@ trait Utils {
       Kind.Server,
       Span.Position.Unknown,
       tagSet,
-      TagSet.Empty,
+      metricsTags,
       Nil,
       Nil
     )

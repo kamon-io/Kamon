@@ -73,9 +73,8 @@ class OpenTelemetryTraceReporter(traceServiceFactory: Config => TraceService)(im
     logger.info("Reconfigure OpenTelemetry Trace Reporter")
 
     //pre-generate the function for converting Kamon span to proto span
-    val instrumentationLibraryInfo: InstrumentationLibraryInfo = InstrumentationLibraryInfo.create("kamon", kamonSettings.version)
     val resource: Resource = buildResource
-    this.spanConverterFunc = SpanConverter.convert(newConfig.getBoolean("kamon.otel.trace.include-error-event"), resource, instrumentationLibraryInfo)
+    this.spanConverterFunc = SpanConverter.convert(newConfig.getBoolean("kamon.otel.trace.include-error-event"), resource, kamonSettings.version)
 
     this.traceService = Option(traceServiceFactory.apply(newConfig))
   }

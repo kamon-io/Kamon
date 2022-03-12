@@ -16,7 +16,6 @@
 package kamon.otel
 
 import com.typesafe.config.ConfigFactory
-import io.opentelemetry.sdk.common.InstrumentationLibraryInfo
 import io.opentelemetry.sdk.resources.Resource
 import org.scalatest.concurrent.PatienceConfiguration.Timeout
 import org.scalatest.concurrent.ScalaFutures
@@ -25,18 +24,18 @@ import org.scalatest.time.{Millis, Seconds, Span}
 import org.scalatest.wordspec.AnyWordSpec
 
 /**
- * Tests for the [[TraceService]]
- */
+  * Tests for the [[TraceService]]
+  */
 class TraceServiceSpec extends AnyWordSpec with Matchers with ScalaFutures with Utils {
-  private implicit val defaultPatience: PatienceConfig = PatienceConfig(timeout =  Span(2, Seconds), interval = Span(15, Millis))
+  private implicit val defaultPatience: PatienceConfig = PatienceConfig(timeout = Span(2, Seconds), interval = Span(15, Millis))
 
-  private val resource =  Resource.builder()
+  private val resource = Resource.builder()
     .put("service.name", "TestService")
     .put("telemetry.sdk.name", "kamon")
     .put("telemetry.sdk.language", "scala")
     .put("telemetry.sdk.version", "0.0.0")
     .build()
-  private val instrumentationLibrary = InstrumentationLibraryInfo.create("kamon", "0.0.0")
+  private val kamonVersion = "0.0.0"
   private val config = ConfigFactory.defaultApplication().withFallback(ConfigFactory.defaultReference()).resolve()
 
   "exporting traces" should {
@@ -44,7 +43,7 @@ class TraceServiceSpec extends AnyWordSpec with Matchers with ScalaFutures with 
       val traceService = OtlpTraceService(config)
 
       //the actual data does not really matter as this will fail due to connection issues
-      val resources = SpanConverter.convert(false, resource, instrumentationLibrary)(Seq(finishedSpan()))
+      val resources = SpanConverter.convert(false, resource, kamonVersion)(Seq(finishedSpan()))
       val f = traceService.exportSpans(resources)
       whenReady(f.failed, Timeout(Span.apply(12, Seconds))) { e =>
         e shouldEqual StatusRuntimeException

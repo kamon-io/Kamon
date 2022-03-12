@@ -69,7 +69,7 @@ class OpenTelemetryTraceReporterSpec extends AnyWordSpec with Matchers with Opti
 
       //assert instrumentation labels
       val instrumentationLibraryInfo = spanData.getInstrumentationLibraryInfo
-      instrumentationLibraryInfo.getName should be("kamon")
+      instrumentationLibraryInfo.getName should be("kamon-instrumentation")
       instrumentationLibraryInfo.getVersion should be(kamonVersion)
     }
   }
