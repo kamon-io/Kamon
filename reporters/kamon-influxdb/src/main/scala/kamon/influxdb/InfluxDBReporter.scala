@@ -230,8 +230,8 @@ object InfluxDBReporter {
     val influxDBConfig = config.getConfig("kamon.influxdb")
     val host = influxDBConfig.getString("hostname")
     val credentials = if (influxDBConfig.hasPath("authentication")) {
-      if(influxDBConfig.hasPath("token"))
-        Some("Token " + ByteString.encodeString(influxDBConfig.getString("token"), ISO_8859_1))
+      if(influxDBConfig.hasPath("authentication.token"))
+        Some("Token " + influxDBConfig.getString("authentication.token"))
       else
         Some(Credentials.basic(
           influxDBConfig.getString("authentication.user"),

@@ -57,6 +57,18 @@ object Storage {
     def close(): Unit
   }
 
+  object Scope {
+
+    /**
+      * A Scope instance that doesn't carry any context and does nothing on close.
+      */
+    val Empty: Scope = new Scope {
+      override def context: Context = Context.Empty
+      override def close(): Unit = {}
+    }
+  }
+
+
   /**
     * A ThreadLocal context storage that allows the scope to be closed in a different
     * thread than the thread where store(..) was called.

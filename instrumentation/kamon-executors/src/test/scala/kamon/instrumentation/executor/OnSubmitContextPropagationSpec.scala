@@ -45,7 +45,7 @@ class OnSubmitContextPropagationSpec extends AnyWordSpec with Matchers with Cont
     }
 
     "capture the context when call execute(Runnable) in ThreadPool" in {
-      val executor = instrument(JavaExecutors.newSingleThreadExecutor())
+      val executor = instrument(JavaExecutors.newFixedThreadPool(1))
       val ctx = Kamon.runWithContext(testContext("in-runnable-body")) {
         val runnable = new SimpleRunnable
         executor.execute(runnable)
@@ -57,7 +57,7 @@ class OnSubmitContextPropagationSpec extends AnyWordSpec with Matchers with Cont
     }
 
     "capture the context when call submit(Runnable) in ThreadPool" in {
-      val executor = instrument(JavaExecutors.newSingleThreadExecutor())
+      val executor = instrument(JavaExecutors.newFixedThreadPool(1))
       val ctx = Kamon.runWithContext(testContext("in-runnable-body")) {
         val runnable = new SimpleRunnable
         executor.submit(runnable)
@@ -121,7 +121,7 @@ class OnSubmitContextPropagationSpec extends AnyWordSpec with Matchers with Cont
     }
 
     "capture the context when call submit(Callable) in ThreadPool" in {
-      val executor = instrument(JavaExecutors.newSingleThreadExecutor())
+      val executor = instrument(JavaExecutors.newFixedThreadPool(1))
       val ctx = Kamon.runWithContext(testContext("in-callable-body")) {
         val callable = new SimpleCallable
         executor.submit(callable)

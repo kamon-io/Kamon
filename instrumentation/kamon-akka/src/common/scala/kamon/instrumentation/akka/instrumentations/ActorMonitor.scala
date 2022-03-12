@@ -75,7 +75,7 @@ object ActorMonitor {
     val settings = AkkaInstrumentation.settings()
     val isTraced = Kamon.filter(TraceActorFilterName).accept(cell.path)
     val startsTrace = settings.safeActorStartTraceFilter.accept(cell.path)
-    val participatesInTracing = isTraced || startsTrace
+    val participatesInTracing = (isTraced || startsTrace) && !cell.isStreamImplementationActor
     val autoGroupingPath = resolveAutoGroupingPath(cell.actorOrRouterClass, ref, parent, system.name)
 
     def traceWrap(monitor: ActorMonitor): ActorMonitor =

@@ -16,12 +16,16 @@ case class ActorCellInfo (
   isRouter: Boolean,
   isRoutee: Boolean,
   isRootSupervisor: Boolean,
+  isStreamImplementationActor: Boolean,
   isTemporary: Boolean,
   actorOrRouterClass: Class[_],
   routeeClass: Option[Class[_]]
 )
 
 object ActorCellInfo {
+
+  private val StreamsSupervisorActorClassName = "akka.stream.impl.StreamSupervisor"
+  private val StreamsInterpreterActorClassName = "akka.stream.impl.fusing.ActorGraphInterpreter"
 
   /**
     * Reads information from an ActorCell.
@@ -63,8 +67,12 @@ object ActorCellInfo {
       }
     } else props.dispatcher
 
-    ActorCellInfo(fullPath, actorName, system.name, dispatcherName, isRouter, isRoutee, isRootSupervisor, isTemporary,
-      actorOrRouterClass, routeeClass)
+    val actorClassName = actorOrRouterClass.getName
+    val isStreamImplementationActor =
+      actorClassName == StreamsSupervisorActorClassName || actorClassName == StreamsInterpreterActorClassName
+
+    ActorCellInfo(fullPath, actorName, system.name, dispatcherName, isRouter, isRoutee, isRootSupervisor,
+      isStreamImplementationActor, isTemporary, actorOrRouterClass, routeeClass)
   }
 
   /**

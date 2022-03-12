@@ -30,7 +30,8 @@ import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
 
 import java.util.concurrent.Executors
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{Await, ExecutionContext, Future}
+import scala.concurrent.duration._
 
 class DispatcherMetricsSpec extends TestKit(ActorSystem("DispatcherMetricsSpec")) with AnyWordSpecLike with Matchers with MetricInspection.Syntax
   with BeforeAndAfterAll with ImplicitSender with Eventually {
@@ -46,7 +47,9 @@ class DispatcherMetricsSpec extends TestKit(ActorSystem("DispatcherMetricsSpec")
 
     val excluded = "explicitly-excluded"
     val allDispatchers = trackedDispatchers :+ excluded
-    val builtInDispatchers = Seq("akka.actor.default-dispatcher")++ (if(Version.current.startsWith("2.6")) Seq("akka.actor.internal-dispatcher") else Seq.empty)
+    val builtInDispatchers = Seq("akka.actor.default-dispatcher") ++ {
+      if(Version.current.startsWith("2.6")) Seq("akka.actor.internal-dispatcher") else Seq.empty
+    }
 
 
     "track dispatchers configured in the akka.dispatcher filter" in {
@@ -56,10 +59,10 @@ class DispatcherMetricsSpec extends TestKit(ActorSystem("DispatcherMetricsSpec")
       val queues = ExecutorMetrics.QueueSize.tagValues("name")
       val tasks = ExecutorMetrics.TasksCompleted.tagValues("name")
 
-      trackedDispatchers.forall { dispatcher =>
-        threads.contains(dispatcher) &&
-        queues.contains(dispatcher) &&
-        tasks.contains(dispatcher)
+      trackedDispatchers.forall { dispatcherName =>
+        threads.contains(dispatcherName) &&
+        queues.contains(dispatcherName) &&
+        tasks.contains(dispatcherName)
       } should be (true)
 
       Seq(threads, queues, tasks).flatten should not contain excluded
@@ -98,17 +101,24 @@ class DispatcherMetricsSpec extends TestKit(ActorSystem("DispatcherMetricsSpec")
         .map(_.get(plain("name")))
 
       instrumentExecutorsWithSystem should contain only(builtInDispatchers: _*)
+      Await.result(system.terminate(), 5 seconds)
     }
 
     "pick up default execution contexts provided when creating an actor system when the type is unknown" in {
       val dec = new WrappingExecutionContext(ExecutionContext.fromExecutor(Executors.newFixedThreadPool(8)))
-      val system = ActorSystem(name = "with-default-ec", defaultExecutionContext = Some(dec))
+      val system = ActorSystem(name = "with-unknown-default-ec", defaultExecutionContext = Some(dec))
 
       val instrumentExecutorsWithSystem = ExecutorMetrics.ThreadsActive.instruments().keys
         .filter(_.get(plain("akka.system")) == system.name)
         .map(_.get(plain("name")))
 
-      instrumentExecutorsWithSystem should contain only(builtInDispatchers: _*)
+      val builtInWithoutDefaultDispatcher = builtInDispatchers.filterNot(_.endsWith("default-dispatcher"))
+      if(builtInWithoutDefaultDispatcher.isEmpty)
+        instrumentExecutorsWithSystem shouldBe empty
+      else
+        instrumentExecutorsWithSystem should contain only(builtInWithoutDefaultDispatcher: _*)
+
+      Await.result(system.terminate(), 5 seconds)
     }
   }
 

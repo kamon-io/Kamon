@@ -37,20 +37,22 @@ public class SendMethodAdvisor {
                                @Advice.FieldValue("clientId") String clientId) {
         Context recordContext = ((HasContext) record).context();
 
-        String nullKey = KafkaInstrumentation.Keys$.MODULE$.Null();
-        String topic = record.topic() == null ? nullKey : record.topic();
-        String key = record.key() == null ? nullKey : record.key().toString();
+        if(!recordContext.get(Span.Key()).isEmpty() || KafkaInstrumentation.settings().startTraceOnProducer()) {
+            String nullKey = KafkaInstrumentation.Keys$.MODULE$.Null();
+            String topic = record.topic() == null ? nullKey : record.topic();
+            String key = record.key() == null ? nullKey : record.key().toString();
 
-        Span span = Kamon.producerSpanBuilder("producer.send", "kafka.producer")
-                .asChildOf(recordContext.get(Span.Key()))
-                .tag("kafka.topic", topic)
-                .tag("kafka.client-id", clientId)
-                .tag("kafka.key", key)
-                .start();
+            Span span = Kamon.producerSpanBuilder("producer.send", "kafka.producer")
+                    .asChildOf(recordContext.get(Span.Key()))
+                    .tag("kafka.topic", topic)
+                    .tag("kafka.client-id", clientId)
+                    .tag("kafka.key", key)
+                    .start();
 
-        Context ctx  = recordContext.withEntry(Span.Key(), span);
-        record.headers().add(KafkaInstrumentation.Keys$.MODULE$.ContextHeader(), ContextSerializationHelper.toByteArray(ctx));
+            Context ctx = recordContext.withEntry(Span.Key(), span);
+            record.headers().add(KafkaInstrumentation.Keys$.MODULE$.ContextHeader(), ContextSerializationHelper.toByteArray(ctx));
 
-        callback = new ProducerCallback(callback, span, ctx);
+            callback = new ProducerCallback(callback, span, ctx);
+        }
     }
 }
