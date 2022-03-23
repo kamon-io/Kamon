@@ -127,7 +127,6 @@ object BaseProject extends AutoPlugin {
     Global / concurrentRestrictions += Tags.limit(Tags.Test, 1),
     licenses += (("Apache-2.0", url("http://www.apache.org/licenses/LICENSE-2.0"))),
     resolvers += Resolver.mavenLocal,
-    headerLicense := Some(HeaderLicense.ALv2("2013-2021","The Kamon Project <https://kamon.io>")),
     Keys.commands += Command.command("testUntilFailed") { state: State =>
       "test" :: "testUntilFailed" :: state
     }
