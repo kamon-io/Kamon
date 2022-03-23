@@ -473,8 +473,8 @@ object W3CTraceContext {
 
         val samplingDecision =
           reader.read(Headers.SamplingPriority) match {
-            case Some(sampled) if sampled == SamplingPriority.Sample => SamplingDecision.Sample
-            case Some(sampled) if sampled == SamplingPriority.DoNotSample => SamplingDecision.DoNotSample
+            case Some(SamplingPriority.Sample) => SamplingDecision.Sample
+            case Some(SamplingPriority.DoNotSample) => SamplingDecision.DoNotSample
             case _ => SamplingDecision.Unknown
           }
 
