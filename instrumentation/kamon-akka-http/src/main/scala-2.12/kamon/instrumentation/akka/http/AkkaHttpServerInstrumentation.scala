@@ -41,7 +41,6 @@ import akka.NotUsed
 import akka.http.scaladsl.server.RouteResult.Rejected
 import akka.stream.scaladsl.Flow
 import kamon.context.Context
-import kanela.agent.libs.net.bytebuddy.asm.Advice
 import kanela.agent.libs.net.bytebuddy.matcher.ElementMatchers.isPublic
 
 import scala.collection.immutable
@@ -103,6 +102,14 @@ class AkkaHttpServerInstrumentation extends InstrumentationBuilder {
   onType("akka.http.scaladsl.Http2Ext")
     .advise(method("bindAndHandleAsync") and isPublic(), classOf[Http2ExtBindAndHandleAdvice])
 
+
+  /**
+    * Support for HTTP/1 and HTTP/2 at the same time.
+    *
+    */
+
+  onType("akka.stream.scaladsl.FlowOps")
+    .advise(method("mapAsync"), classOf[FlowOpsMapAsyncAdvice])
 }
 
 trait HasMatchingContext {

@@ -77,6 +77,13 @@ class AkkaHttpServerInstrumentation extends InstrumentationBuilder {
     .intercept(method("redirect"), classOf[ResolveOperationNameOnRouteInterceptor])
     .intercept(method("failWith"), classOf[ResolveOperationNameOnRouteInterceptor])
 
+  /**
+    * Support for HTTP/1 and HTTP/2 at the same time.
+    */
+
+  onType("akka.stream.scaladsl.Flow")
+    .advise(method("mapAsync"), classOf[FlowOpsMapAsyncAdvice])
+
 }
 
 trait HasMatchingContext {
