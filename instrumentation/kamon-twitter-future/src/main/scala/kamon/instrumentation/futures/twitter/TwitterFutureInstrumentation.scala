@@ -19,13 +19,28 @@ package instrumentation
 package futures
 package twitter
 
+import kamon.context.Context
 import kamon.instrumentation.context.{CaptureCurrentContextOnExit, HasContext, InvokeWithCapturedContext}
 import kanela.agent.api.instrumentation.InstrumentationBuilder
 
 class TwitterFutureInstrumentation extends InstrumentationBuilder {
 
-  onType("com.twitter.util.Promise$WaitQueue")
+  onTypes("com.twitter.util.Promise$Transformer", "com.twitter.util.Promise$Monitored")
     .mixin(classOf[HasContext.Mixin])
     .advise(isConstructor, CaptureCurrentContextOnExit)
-    .advise(method("runInScheduler"), InvokeWithCapturedContext)
+    .advise(method("apply"), InvokeWithCapturedContext)
+
+
+  onType("com.twitter.util.Promise$Interruptible")
+    .advise(isConstructor, classOf[InterruptiblePromiseConstructorAdvice])
+}
+
+class InterruptibleHandlerWithContext(context: Context, delegate: PartialFunction[Throwable, Unit])
+    extends PartialFunction[Throwable, Unit] {
+
+  override def isDefinedAt(x: Throwable): Boolean =
+    delegate.isDefinedAt(x)
+
+  override def apply(v1: Throwable): Unit =
+    Kamon.runWithContext(context)(delegate.apply(v1))
 }
