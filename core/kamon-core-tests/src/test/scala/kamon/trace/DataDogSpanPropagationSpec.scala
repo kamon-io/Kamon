@@ -70,7 +70,7 @@ class DataDogSpanPropagationSpec extends AnyWordSpec with Matchers with OptionVa
         .get(Span.Key).trace.samplingDecision shouldBe SamplingDecision.Unknown
     }
 
-    "not include the x-datadog-sampling-priorit header if the sampling decision is unknown" in {
+    "not include the x-datadog-sampling-priority header if the sampling decision is unknown" in {
       val context = testContext()
       val sampledSpan = context.get(Span.Key)
       val notSampledSpanContext = Context.Empty.withEntry(Span.Key,
