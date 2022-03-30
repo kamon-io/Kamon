@@ -37,9 +37,10 @@ class SpanWrapper(includeErrorEvent: Boolean, resource: Resource, kamonVersion: 
   private val instrumentationLibraryInfo: InstrumentationLibraryInfo =
     InstrumentationLibraryInfo.create(span.metricTags.get(Lookups.option(Span.TagKeys.Component)) getOrElse "kamon-instrumentation", kamonVersion)
   private val sampled: Boolean = span.trace.samplingDecision == Sample
+  private val attachErrorEvent: Boolean = includeErrorEvent && span.hasError
 
   private def getErrorEvent: Seq[EventData] =
-    if (includeErrorEvent && span.hasError) {
+    if (attachErrorEvent) {
       val builder = Attributes.builder()
       span.tags.get(Lookups.option(TagKeys.ErrorMessage)).foreach(msg => builder.put(AttributeKey.stringKey("exception.message"), msg))
       span.tags.get(Lookups.option(TagKeys.ErrorStacktrace)).foreach(st => builder.put(AttributeKey.stringKey("exception.stacktrace"), st))
@@ -71,7 +72,7 @@ class SpanWrapper(includeErrorEvent: Boolean, resource: Resource, kamonVersion: 
 
   override def hasEnded: Boolean = true
 
-  override def getTotalRecordedEvents: Int = span.marks.size
+  override def getTotalRecordedEvents: Int = span.marks.size + (if (attachErrorEvent) 1 else 0)
 
   override def getTotalRecordedLinks: Int = span.links.size
 
@@ -108,9 +109,9 @@ private[otel] object SpanConverter {
 
   private[otel] def getStatus(span: Span.Finished): StatusData =
     if (span.hasError) {
-      val msg = span.tags.get(Lookups.option(TagKeys.ErrorMessage)) getOrElse ""
+      val msg = span.tags.get(Lookups.option(TagKeys.ErrorMessage)).orNull
       StatusData.create(StatusCode.ERROR, msg)
-    } else StatusData.ok()
+    } else StatusData.unset()
 
   private[otel] def toEvent(mark: Span.Mark): EventData =
     EventData.create(toEpocNano(mark.instant), mark.key, Attributes.empty())
