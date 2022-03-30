@@ -238,7 +238,8 @@ object HttpPropagation {
       "span/b3" -> SpanPropagation.B3(),
       "span/uber" -> SpanPropagation.Uber(),
       "span/b3-single" -> SpanPropagation.B3Single(),
-      "span/w3c" -> SpanPropagation.W3CTraceContext()
+      "span/w3c" -> SpanPropagation.W3CTraceContext(),
+      "span/datadog" -> SpanPropagation.DataDog()
     )
 
     def from(config: Config, identifierScheme: String): Settings = {

@@ -417,4 +417,85 @@ object W3CTraceContext {
       override def initialValue(): Array[Byte] = Array.ofDim[Byte](256)
     }
   }
+
+  /**
+    * DataDog HTTP propagation. Based on `dd-trace-java` implementation and observations from services instrumented
+    * with the DataDog Java Agent. List of all available HTTP headers used in trace propagation.
+    *
+    * https://github.com/DataDog/dd-trace-java/blob/76e41d3d51314ed2814d0c8deac78c17bb87638e/dd-trace-core/src/main/java/datadog/trace/core/propagation/DatadogHttpCodec.java#L24..L27
+    *
+    * Only a subset of possible DataDog headers are handled.
+    */
+  object DataDog {
+    def apply(): DataDog = new DataDog
+
+    object Headers {
+      val ParentSpanId = "x-datadog-parent-id"
+      val TraceId = "x-datadog-trace-id"
+      val SamplingPriority = "x-datadog-sampling-priority"
+    }
+
+    object SamplingPriority {
+      val Sample = "1"
+      val DoNotSample = "0"
+    }
+
+    final implicit class KamonIdOps(private val id: kamon.trace.Identifier) extends AnyVal {
+      def toLongId: Long = BigInt(id.string, 16).toLong
+      def toUnsignedLongString: String = BigInt(id.string, 16).toString
+    }
+
+    /**
+      * DataDog tracing ids will be 64 bit unsigned integers.
+      * https://docs.datadoghq.com/tracing/guide/send_traces_to_agent_by_api/
+      */
+    def decodeUnsignedLongToHex(id: String): String =
+      urlDecode(id).toLong.toHexString
+  }
+
+  class DataDog extends Propagation.EntryReader[HeaderReader] with Propagation.EntryWriter[HeaderWriter] {
+    import DataDog._
+
+    override def read(reader: HeaderReader, context: Context): Context = {
+      val identifierScheme = Kamon.identifierScheme
+      val traceId = reader.read(Headers.TraceId)
+        .map(id => identifierScheme.traceIdFactory.from(decodeUnsignedLongToHex(id)))
+        .getOrElse(Identifier.Empty)
+
+      // To preserve the parent/child relationship of spans in DataDog the `x-parent-parent-id` is used as the span id
+      // of the new span. See `DatadogHttpCodec` implementation in `dd-trace-java` for details.
+      val spanId = reader.read(Headers.ParentSpanId)
+        .map(id => identifierScheme.spanIdFactory.from(decodeUnsignedLongToHex(id)))
+        .getOrElse(Identifier.Empty)
+
+      if (traceId != Identifier.Empty) {
+        val parentId = Identifier.Empty
+
+        val samplingDecision =
+          reader.read(Headers.SamplingPriority) match {
+            case Some(SamplingPriority.Sample) => SamplingDecision.Sample
+            case Some(SamplingPriority.DoNotSample) => SamplingDecision.DoNotSample
+            case _ => SamplingDecision.Unknown
+          }
+
+        context.withEntry(Span.Key, Span.Remote(spanId, parentId, Trace(traceId, samplingDecision)))
+      } else context
+    }
+
+    override def write(context: Context, writer: HeaderWriter): Unit = {
+      val span = context.get(Span.Key)
+
+      if (span != Span.Empty) {
+        writer.write(Headers.ParentSpanId, span.id.toUnsignedLongString)
+        writer.write(Headers.TraceId, span.trace.id.toUnsignedLongString)
+        if (span.trace.samplingDecision != SamplingDecision.Unknown) {
+          val decision = if (span.trace.samplingDecision == SamplingDecision.Sample)
+            SamplingPriority.Sample
+          else
+            SamplingPriority.DoNotSample
+          writer.write(Headers.SamplingPriority,decision)
+        }
+      }
+    }
+  }
 }
