@@ -255,7 +255,13 @@ class ModuleRegistry(configuration: Configuration, clock: Clock, metricRegistry:
 
   private def scheduleMetricsTick(entry: Entry[MetricReporter], periodSnapshot: PeriodSnapshot): Unit = {
     Future {
-      try entry.module.reportPeriodSnapshot(periodSnapshot) catch { case error: Throwable =>
+      try {
+        val filteredSnapshot = entry.settings.metricsFilter
+          .map(filter => applyMetricFilters(periodSnapshot, filter))
+          .getOrElse(periodSnapshot)
+
+        entry.module.reportPeriodSnapshot(filteredSnapshot)
+      } catch { case error: Throwable =>
         _logger.error(s"Reporter [${entry.name}] failed to process a metrics tick.", error)
       }
     }(entry.executionContext)
@@ -267,6 +273,16 @@ class ModuleRegistry(configuration: Configuration, clock: Clock, metricRegistry:
         _logger.error(s"Reporter [${entry.name}] failed to process a spans tick.", error)
       }
     }(entry.executionContext)
+  }
+
+  private def applyMetricFilters(snapshot: PeriodSnapshot, metricNameFilter: Filter): PeriodSnapshot = {
+    snapshot.copy(
+      counters = snapshot.counters.filter(m => metricNameFilter.accept(m.name)),
+      gauges = snapshot.gauges.filter(m => metricNameFilter.accept(m.name)),
+      histograms = snapshot.histograms.filter(m => metricNameFilter.accept(m.name)),
+      timers = snapshot.timers.filter(m => metricNameFilter.accept(m.name)),
+      rangeSamplers = snapshot.rangeSamplers.filter(m => metricNameFilter.accept(m.name))
+    )
   }
 
   private def collectorScheduleRunnable(entry: Entry[ScheduledAction]): Runnable = new Runnable {
