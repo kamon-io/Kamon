@@ -38,9 +38,11 @@ import scala.util.control.NonFatal
 import scala.util.{Failure, Success, Try}
 import java.util.regex.Pattern
 import akka.NotUsed
+import akka.http.scaladsl.model.headers.Upgrade
 import akka.http.scaladsl.server.RouteResult.Rejected
 import akka.stream.scaladsl.Flow
 import kamon.context.Context
+import kamon.trace.SpanBuilder
 import kanela.agent.libs.net.bytebuddy.asm.Advice
 import kanela.agent.libs.net.bytebuddy.matcher.ElementMatchers.isPublic
 
@@ -324,7 +326,31 @@ object Http2BlueprintInterceptor {
   case class HandlerWithEndpoint(interface: String, port: Int, handler: HttpRequest => Future[HttpResponse])
       extends (HttpRequest => Future[HttpResponse]) {
 
-    override def apply(request: HttpRequest): Future[HttpResponse] = handler(request)
+    override def apply(request: HttpRequest): Future[HttpResponse] = {
+      var spanBuilder: SpanBuilder = null
+      request.header[Upgrade] match {
+        case Some(upgrade) if upgrade.protocols.exists(_.name equalsIgnoreCase "h2c") =>
+          donothing()
+        case _ => {
+          spanBuilder = Kamon.spanBuilder(request.uri.path.toString())
+            .tag("protocol", "http2->1")
+            .tag("component", "http-server")
+            .tag("http.method", request.method.value)
+            .tag("path", s"${request._2}")
+        }
+      }
+
+      def donothing(): Unit = {
+
+      }
+
+      Kamon.runWithSpan(spanBuilder.start(), finishSpan = true) {
+        val response = handler(request)
+        // TODO: 未获取返回内容
+        response
+      }
+    }
+  }
   }
 
   @RuntimeType
