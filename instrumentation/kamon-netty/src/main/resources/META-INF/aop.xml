@@ -1,0 +1,17 @@
+<!DOCTYPE aspectj PUBLIC "-//AspectJ//DTD//EN" "http://www.eclipse.org/aspectj/dtd/aspectj.dtd">
+
+<aspectj>
+    <aspects>
+        <aspect name="kamon.netty.instrumentation.mixin.ChannelInstrumentation"/>
+        <aspect name="kamon.netty.instrumentation.EventLoopMixin"/>
+        <aspect name="kamon.netty.instrumentation.ServerBootstrapInstrumentation"/>
+        <aspect name="kamon.netty.instrumentation.EventLoopInstrumentation"/>
+        <aspect name="kamon.netty.instrumentation.EpollEventLoopInstrumentation"/>
+        <aspect name="kamon.netty.instrumentation.HttpClientInstrumentation"/>
+        <aspect name="kamon.netty.instrumentation.HttpServerInstrumentation"/>
+    </aspects>
+    <weaver>
+        <include within="kamon.netty..*"/>
+        <include within="io.netty..*"/>
+    </weaver>
+</aspectj>

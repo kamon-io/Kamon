@@ -596,6 +596,22 @@ lazy val `kamon-finagle` = (project in file("instrumentation/kamon-finagle"))
     )
   ).dependsOn(`kamon-core`, `kamon-instrumentation-common`, `kamon-testkit` % "test")
 
+lazy val `kamon-netty` = (project in file("instrumentation/kamon-netty"))
+  .disablePlugins(AssemblyPlugin)
+  .enablePlugins(JavaAgent)
+  .settings(instrumentationSettings)
+  .settings(
+    libraryDependencies ++= Seq(
+      kanelaAgent % "provided",
+      "io.netty"        %  "netty-all"                      % "4.1.65.Final" % "provided",
+      "io.netty"        %  "netty-transport-native-epoll"   % "4.1.65.Final" % "provided" classifier "linux-x86_64",
+
+      scalatest % "test",
+      logbackClassic % "test",
+    )
+  ).dependsOn(`kamon-core`, `kamon-instrumentation-common`, `kamon-testkit` % "test")
+
+
 /**
  * Reporters
  */
