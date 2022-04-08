@@ -21,7 +21,7 @@ import akka.stream.ActorMaterializer
 import kamon.tag.Lookups.{plain, plainBoolean, plainLong}
 import kamon.testkit._
 import kamon.trace.Span.Mark
-import okhttp3.{OkHttpClient, Request}
+import okhttp3.{OkHttpClient, Protocol, Request}
 import org.scalatest._
 import org.scalatest.concurrent.{Eventually, ScalaFutures}
 import org.scalatest.matchers.should.Matchers
@@ -30,6 +30,7 @@ import org.scalatest.wordspec.AnyWordSpecLike
 import java.util.UUID
 import javax.net.ssl.{HostnameVerifier, SSLSession}
 import scala.concurrent.duration._
+import scala.collection.JavaConverters._
 
 class AkkaHttpServerTracingSpec extends AnyWordSpecLike with Matchers with ScalaFutures with Inside with InitAndStopKamonAfterAll
     with MetricInspection.Syntax with Reconfigure with TestWebServer with Eventually with OptionValues with TestSpanReporter {
@@ -46,15 +47,22 @@ class AkkaHttpServerTracingSpec extends AnyWordSpecLike with Matchers with Scala
     .hostnameVerifier(new HostnameVerifier { override def verify(s: String, sslSession: SSLSession): Boolean = true })
     .build()
 
+  val okHttp1ONly = new OkHttpClient.Builder()
+    .sslSocketFactory(sslSocketFactory, trustManager)
+    .protocols(List(Protocol.HTTP_1_1).asJava)
+    .hostnameVerifier(new HostnameVerifier { override def verify(s: String, sslSession: SSLSession): Boolean = true })
+    .build()
+
   val timeoutTest: FiniteDuration = 5 second
   val interface = "127.0.0.1"
-  val http1WebServer = startServer(interface, 8081, https = false)
-  val http2WebServer = startServer(interface, 8082, https = true)
+  val httpWebServer = startServer(interface, 8081, https = false)
+  val httpsWebServer = startServer(interface, 8082, https = true)
 
-  testSuite("HTTP/1", http1WebServer)
-  testSuite("HTTP/2", http2WebServer)
+  testSuite("HTTP", httpWebServer, okHttp)
+  testSuite("HTTPS", httpsWebServer, okHttp)
+  testSuite("HTTPS with HTTP/1 only clients", httpsWebServer, okHttp1ONly)
 
-  def testSuite(httpVersion: String, server: WebServer) = {
+  def testSuite(httpVersion: String, server: WebServer, client: OkHttpClient) = {
     val interface = server.interface
     val port = server.port
     val protocol = server.protocol
@@ -62,11 +70,12 @@ class AkkaHttpServerTracingSpec extends AnyWordSpecLike with Matchers with Scala
     s"the Akka HTTP server instrumentation with ${httpVersion}" should {
       "create a server Span when receiving requests" in {
         val target = s"$protocol://$interface:$port/$dummyPathOk"
-        okHttp.newCall(new Request.Builder().url(target).build()).execute()
+        client.newCall(new Request.Builder().url(target).build()).execute()
+
 
         eventually(timeout(10 seconds)) {
           val span = testSpanReporter().nextSpan().value
-          span.tags.get(plain("http.url")) shouldBe target
+          span.tags.get(plain("http.url")) should endWith(s"$interface:$port/$dummyPathOk")
           span.metricTags.get(plain("component")) shouldBe "akka.http.server"
           span.metricTags.get(plain("http.method")) shouldBe "GET"
           span.metricTags.get(plainLong("http.status_code")) shouldBe 200L
@@ -76,7 +85,7 @@ class AkkaHttpServerTracingSpec extends AnyWordSpecLike with Matchers with Scala
       "return the correct operation name with overloaded route" in {
         val target = s"$protocol://$interface:$port/some_endpoint"
 
-        okHttp.newCall(new Request.Builder()
+        client.newCall(new Request.Builder()
           .get()
           .url(target).build())
           .execute()
@@ -89,7 +98,7 @@ class AkkaHttpServerTracingSpec extends AnyWordSpecLike with Matchers with Scala
           val path = s"extraction/nested/42/fixed/anchor/32/${UUID.randomUUID().toString}/fixed/44/CafE"
           val expected = "/extraction/nested/{}/fixed/anchor/{}/{}/fixed/{}/{}"
           val target = s"$protocol://$interface:$port/$path"
-          okHttp.newCall(new Request.Builder().url(target).build()).execute()
+          client.newCall(new Request.Builder().url(target).build()).execute()
 
           eventually(timeout(10 seconds)) {
             val span = testSpanReporter().nextSpan().value
@@ -101,7 +110,7 @@ class AkkaHttpServerTracingSpec extends AnyWordSpecLike with Matchers with Scala
           val path = "extraction/segment/special**"
           val expected = "/extraction/segment/{}"
           val target = s"$protocol://$interface:$port/$path"
-          val response = okHttp.newCall(new Request.Builder().url(target).build()).execute()
+          val response = client.newCall(new Request.Builder().url(target).build()).execute()
 
           response.code() shouldBe 200
           response.body().string() shouldBe "special**"
@@ -116,7 +125,7 @@ class AkkaHttpServerTracingSpec extends AnyWordSpecLike with Matchers with Scala
           val path = "extraction/on-complete/42/more-path"
           val expected = "/extraction/on-complete/{}/more-path"
           val target = s"$protocol://$interface:$port/$path"
-          okHttp.newCall(new Request.Builder().url(target).build()).execute()
+          client.newCall(new Request.Builder().url(target).build()).execute()
 
           eventually(timeout(10 seconds)) {
             val span = testSpanReporter().nextSpan().value
@@ -128,7 +137,7 @@ class AkkaHttpServerTracingSpec extends AnyWordSpecLike with Matchers with Scala
           val path = "extraction/on-success/42/after"
           val expected = "/extraction/on-success/{}/after"
           val target = s"$protocol://$interface:$port/$path"
-          okHttp.newCall(new Request.Builder().url(target).build()).execute()
+          client.newCall(new Request.Builder().url(target).build()).execute()
 
           eventually(timeout(10 seconds)) {
             val span = testSpanReporter().nextSpan().value
@@ -140,7 +149,7 @@ class AkkaHttpServerTracingSpec extends AnyWordSpecLike with Matchers with Scala
           val path = "extraction/complete-or-recover-with/42/after"
           val expected = "/extraction/complete-or-recover-with/{}/after"
           val target = s"$protocol://$interface:$port/$path"
-          okHttp.newCall(new Request.Builder().url(target).build()).execute()
+          client.newCall(new Request.Builder().url(target).build()).execute()
 
           eventually(timeout(10 seconds)) {
             val span = testSpanReporter().nextSpan().value
@@ -152,7 +161,7 @@ class AkkaHttpServerTracingSpec extends AnyWordSpecLike with Matchers with Scala
           val path = "extraction/complete-or-recover-with-success/42/after"
           val expected = "/extraction/complete-or-recover-with-success/{}"
           val target = s"$protocol://$interface:$port/$path"
-          okHttp.newCall(new Request.Builder().url(target).build()).execute()
+          client.newCall(new Request.Builder().url(target).build()).execute()
 
           eventually(timeout(10 seconds)) {
             val span = testSpanReporter().nextSpan().value
@@ -164,7 +173,7 @@ class AkkaHttpServerTracingSpec extends AnyWordSpecLike with Matchers with Scala
           val path = s"v3/user/3/post/3"
           val expected = "/v3/user/{}/post/{}"
           val target = s"$protocol://$interface:$port/$path"
-          okHttp.newCall(new Request.Builder().url(target).build()).execute()
+          client.newCall(new Request.Builder().url(target).build()).execute()
 
           eventually(timeout(10 seconds)) {
             val span = testSpanReporter().nextSpan().value
@@ -175,12 +184,12 @@ class AkkaHttpServerTracingSpec extends AnyWordSpecLike with Matchers with Scala
 
       "change the Span operation name when using the operationName directive" in {
         val target = s"$protocol://$interface:$port/$traceOk"
-        okHttp.newCall(new Request.Builder().url(target).build()).execute()
+        client.newCall(new Request.Builder().url(target).build()).execute()
 
         eventually(timeout(10 seconds)) {
           val span = testSpanReporter().nextSpan().value
           span.operationName shouldBe "user-supplied-operation"
-          span.tags.get(plain("http.url")) shouldBe target
+          span.tags.get(plain("http.url")) should endWith(s"$interface:$port/$traceOk")
           span.metricTags.get(plain("component")) shouldBe "akka.http.server"
           span.metricTags.get(plain("http.method")) shouldBe "GET"
           span.metricTags.get(plainLong("http.status_code")) shouldBe 200L
@@ -189,12 +198,12 @@ class AkkaHttpServerTracingSpec extends AnyWordSpecLike with Matchers with Scala
 
       "mark spans as failed when request fails" in {
         val target = s"$protocol://$interface:$port/$dummyPathError"
-        okHttp.newCall(new Request.Builder().url(target).build()).execute()
+        client.newCall(new Request.Builder().url(target).build()).execute()
 
         eventually(timeout(10 seconds)) {
           val span = testSpanReporter().nextSpan().value
           span.operationName shouldBe s"/$dummyPathError"
-          span.tags.get(plain("http.url")) shouldBe target
+          span.tags.get(plain("http.url")) should endWith(s"$interface:$port/$dummyPathError")
           span.metricTags.get(plain("component")) shouldBe "akka.http.server"
           span.metricTags.get(plain("http.method")) shouldBe "GET"
           span.metricTags.get(plainBoolean("error")) shouldBe true
@@ -204,12 +213,12 @@ class AkkaHttpServerTracingSpec extends AnyWordSpecLike with Matchers with Scala
 
       "change the operation name to 'unhandled' when the response status code is 404" in {
         val target = s"$protocol://$interface:$port/unknown-path"
-        okHttp.newCall(new Request.Builder().url(target).build()).execute()
+        client.newCall(new Request.Builder().url(target).build()).execute()
 
         eventually(timeout(10 seconds)) {
           val span = testSpanReporter().nextSpan().value
           span.operationName shouldBe "unhandled"
-          span.tags.get(plain("http.url")) shouldBe target
+          span.tags.get(plain("http.url"))  should endWith(s"$interface:$port/unknown-path")
           span.metricTags.get(plain("component")) shouldBe "akka.http.server"
           span.metricTags.get(plain("http.method")) shouldBe "GET"
           span.metricTags.get(plainBoolean("error")) shouldBe false
@@ -219,7 +228,7 @@ class AkkaHttpServerTracingSpec extends AnyWordSpecLike with Matchers with Scala
 
       "correctly time entity transfer timings" in {
         val target = s"$protocol://$interface:$port/$stream"
-        okHttp.newCall(new Request.Builder().url(target).build()).execute()
+        client.newCall(new Request.Builder().url(target).build()).execute()
 
         val span = eventually(timeout(10 seconds)) {
           val span = testSpanReporter().nextSpan().value
@@ -231,14 +240,14 @@ class AkkaHttpServerTracingSpec extends AnyWordSpecLike with Matchers with Scala
           case List(_ @ Mark(_, "http.response.ready")) =>
         }
 
-        span.tags.get(plain("http.url")) shouldBe target
+        span.tags.get(plain("http.url"))  should endWith(s"$interface:$port/$stream")
         span.metricTags.get(plain("component")) shouldBe "akka.http.server"
         span.metricTags.get(plain("http.method")) shouldBe "GET"
       }
 
       "include the trace-id and keep all user-provided headers in the responses" in {
         val target = s"$protocol://$interface:$port/extra-header"
-        val response = okHttp.newCall(new Request.Builder().url(target).build()).execute()
+        val response = client.newCall(new Request.Builder().url(target).build()).execute()
 
         response.headers().names() should contain allOf (
           "trace-id",
@@ -248,7 +257,7 @@ class AkkaHttpServerTracingSpec extends AnyWordSpecLike with Matchers with Scala
 
       "keep operation names provided by the HTTP Server instrumentation" in {
         val target = s"$protocol://$interface:$port/name-will-be-changed"
-        okHttp.newCall(new Request.Builder().url(target).build()).execute()
+        client.newCall(new Request.Builder().url(target).build()).execute()
 
         eventually(timeout(10 seconds)) {
           val span = testSpanReporter().nextSpan().value
@@ -260,8 +269,8 @@ class AkkaHttpServerTracingSpec extends AnyWordSpecLike with Matchers with Scala
 
   override protected def afterAll(): Unit = {
     super.afterAll()
-    http1WebServer.shutdown()
-    http2WebServer.shutdown()
+    httpWebServer.shutdown()
+    httpsWebServer.shutdown()
   }
 }
 

@@ -29,6 +29,12 @@ public class Http2ExtBindAndHandleAdvice {
      @Advice.Argument(1) String iface,
      @Advice.Argument(2) Integer port) {
 
+    FlowOpsMapAsyncAdvice.currentEndpoint.set(new FlowOpsMapAsyncAdvice.EndpointInfo(iface, port));
     handler = new Http2BlueprintInterceptor.HandlerWithEndpoint(iface, port, handler);
+  }
+
+  @Advice.OnMethodExit
+  public static void onExit() {
+    FlowOpsMapAsyncAdvice.currentEndpoint.remove();
   }
 }

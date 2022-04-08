@@ -748,8 +748,8 @@ lazy val `kamon-opentelemetry` = (project in file("reporters/kamon-opentelemetry
   .settings(
     crossScalaVersions += `scala_3_version`,
     libraryDependencies ++= Seq(
-      "io.opentelemetry" % "opentelemetry-proto" % "0.17.1",
-      "io.grpc" % "grpc-netty" % "1.36.0",
+      "io.opentelemetry" % "opentelemetry-exporter-otlp-http-trace" % "1.11.0",
+      "io.opentelemetry" % "opentelemetry-exporter-otlp-trace" % "1.11.0",
 
       scalatest % "test",
       logbackClassic % "test"

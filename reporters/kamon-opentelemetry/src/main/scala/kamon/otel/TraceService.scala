@@ -15,98 +15,108 @@
  */
 package kamon.otel
 
-import com.google.common.util.concurrent.{FutureCallback, Futures}
-import com.typesafe.config.Config
-import io.grpc.{ManagedChannel, ManagedChannelBuilder}
-import io.opentelemetry.proto.collector.trace.v1.TraceServiceGrpc.TraceServiceFutureStub
-import io.opentelemetry.proto.collector.trace.v1.{ExportTraceServiceRequest, ExportTraceServiceResponse, TraceServiceGrpc}
-import org.slf4j.LoggerFactory
-
 import java.io.Closeable
 import java.net.URL
-import java.util.concurrent.{Executors, ThreadFactory, TimeUnit}
+import java.time.Duration
+import java.util.{Collection => JCollection}
+
 import scala.concurrent.{Future, Promise}
 
+import com.typesafe.config.Config
+import io.opentelemetry.exporter.otlp.http.trace.OtlpHttpSpanExporter
+import io.opentelemetry.exporter.otlp.trace.OtlpGrpcSpanExporter
+import io.opentelemetry.sdk.trace.`export`.SpanExporter
+import io.opentelemetry.sdk.trace.data.SpanData
+import org.slf4j.LoggerFactory
+
+
 /**
- * Service for exporting OpenTelemetry traces
- */
+  * Service for exporting OpenTelemetry traces
+  */
 private[otel] trait TraceService extends Closeable {
-  def exportSpans(request: ExportTraceServiceRequest): Future[ExportTraceServiceResponse]
+  def exportSpans(spans: JCollection[SpanData]): Future[Unit]
 }
 
 /**
- * Companion object to [[GrpcTraceService]]
- */
-private[otel] object GrpcTraceService {
-  private val logger = LoggerFactory.getLogger(classOf[GrpcTraceService])
-  private val executor = Executors.newSingleThreadExecutor(new ThreadFactory {
-    override def newThread(r: Runnable): Thread = new Thread(r, "OpenTelemetryTraceReporterRemote")
-  })
+  * Companion object to [[OtlpTraceService]]
+  */
+private[otel] object OtlpTraceService {
+  private val logger = LoggerFactory.getLogger(classOf[OtlpTraceService])
 
   /**
-   * Builds the gRPC trace exporter using the provided configuration.
-   * @param config
-   * @return
-   */
-  def apply(config: Config): GrpcTraceService = {
+    * Builds the http/protobuf trace exporter using the provided configuration.
+    *
+    * @param config
+    * @return
+    */
+  def apply(config: Config): TraceService = {
     val otelExporterConfig = config.getConfig("kamon.otel.trace")
-    val protocol = otelExporterConfig.getString("protocol")
     val endpoint = otelExporterConfig.getString("endpoint")
-    val url = new URL(endpoint)
-
-    //inspiration from https://github.com/open-telemetry/opentelemetry-java/blob/main/exporters/otlp/trace/src/main/java/io/opentelemetry/exporter/otlp/trace/OtlpGrpcSpanExporterBuilder.java
-
-    logger.info(s"Configured endpoint for OpenTelemetry trace reporting [${url.getHost}:${url.getPort}]")
-    //TODO : possibly add support for trustedCertificates in case TLS is to be enabled
-    val builder = ManagedChannelBuilder.forAddress(url.getHost, url.getPort)
-    if (protocol.equals("https"))
-      builder.useTransportSecurity()
-    else
-      builder.usePlaintext()
-
-    val channel = builder.build()
-    new GrpcTraceService(
-      channel,
-      TraceServiceGrpc.newFutureStub(channel)
-    )
-  }
-}
-
-import kamon.otel.GrpcTraceService._
-/**
- * Manages the remote communication over gRPC to the OpenTelemetry service.
- */
-private[otel] class GrpcTraceService(channel:ManagedChannel, traceService:TraceServiceFutureStub) extends TraceService {
-
-  /**
-   * Exports the trace data asynchronously.
-   * @param request The trace data to export
-   * @return
-   */
-  override def exportSpans(request: ExportTraceServiceRequest): Future[ExportTraceServiceResponse] = {
-    val promise = Promise[ExportTraceServiceResponse]()
-    Futures.addCallback(traceService.`export`(request), exportCallback(promise), executor)
-    promise.future
-  }
-
-  /**
-   * Closes the underlying gRPC channel.
-   */
-  override def close(): Unit = {
-    channel.shutdown()
-    channel.awaitTermination(5, TimeUnit.SECONDS)
-  }
-
-  /**
-   * Wrapper from Java Future to Scala counterpart.
-   * When the Java future completes it completes the provided ''Promise''
-   * @param promise The Promise to complete
-   * @return
-   */
-  private def exportCallback(promise:Promise[ExportTraceServiceResponse]):FutureCallback[ExportTraceServiceResponse] =
-    new FutureCallback[ExportTraceServiceResponse]() {
-      override def onSuccess(result: ExportTraceServiceResponse): Unit = promise.success(result)
-      override def onFailure(t: Throwable): Unit = promise.failure(t)
+    val fullEndpoint = if (otelExporterConfig.hasPath("full-endpoint")) Some(otelExporterConfig.getString("full-endpoint")) else None
+    val compression = otelExporterConfig.getString("compression") match {
+      case "gzip" => true
+      case x =>
+        if (x != "") logger.warn(s"unrecognised compression $x. Defaulting to no compression")
+        false
+    }
+    val protocol = otelExporterConfig.getString("protocol") match {
+      case "http/protobuf" => "http/protobuf"
+      case "grpc" => "grpc"
+      case x =>
+        logger.warn(s"Unrecognised opentelemetry schema type $x. Defaulting to grpc")
+        "grpc"
+    }
+    val headers = otelExporterConfig.getString("headers").split(',').filter(_.nonEmpty).map(_.split("=", 2)).map {
+      case Array(k) => k -> ""
+      case Array(k, v) => k -> v
+    }.toSeq
+    val timeout = otelExporterConfig.getDuration("timeout")
+    // See https://opentelemetry.io/docs/reference/specification/protocol/exporter/#endpoint-urls-for-otlphttp
+    val url = (protocol, fullEndpoint) match {
+      case ("http/protobuf", Some(full)) =>
+        val parsed = new URL(full)
+        if (parsed.getPath.isEmpty) full :+ '/' else full
+      // Seems to be some dispute as to whether the / should technically be added in the case that the base path doesn't
+      // include it. Adding because it's probably what's desired most of the time, and can always be overridden by full-endpoint
+      case ("http/protobuf", None) => if (endpoint.endsWith("/")) endpoint + "v1/traces" else endpoint + "/v1/traces"
+      case (_, Some(full)) => full
+      case (_, None) => endpoint
     }
 
+    logger.info(s"Configured endpoint for OpenTelemetry trace reporting [$url] using $protocol protocol")
+
+    new OtlpTraceService(protocol, url, compression, headers, timeout)
+  }
 }
+
+private[otel] class OtlpTraceService(protocol: String, endpoint: String, compressionEnabled: Boolean, headers: Seq[(String, String)], timeout: Duration) extends TraceService {
+  private val compressionMethod = if (compressionEnabled) "gzip" else "none"
+  private val delegate: SpanExporter = protocol match {
+    case "grpc" =>
+      val builder = OtlpGrpcSpanExporter.builder().setEndpoint(endpoint).setCompression(compressionMethod).setTimeout(timeout)
+      headers.foreach { case (k, v) => builder.addHeader(k, v) }
+      builder.build()
+    case "http/protobuf" =>
+      val builder = OtlpHttpSpanExporter.builder().setEndpoint(endpoint).setCompression(compressionMethod).setTimeout(timeout)
+      headers.foreach { case (k, v) => builder.addHeader(k, v) }
+      builder.build()
+  }
+
+  override def exportSpans(spans: JCollection[SpanData]): Future[Unit] = {
+    val result = Promise[Unit]
+    val completableResultCode = delegate.`export`(spans)
+    val runnable: Runnable = new Runnable {
+      override def run(): Unit =
+        if (completableResultCode.isSuccess) result.success(())
+        else result.failure(StatusRuntimeException)
+    }
+    completableResultCode.whenComplete {
+      runnable
+    }
+    result.future
+  }
+
+  override def close(): Unit = delegate.close()
+}
+
+case object StatusRuntimeException extends RuntimeException("Exporting trace span failed")
