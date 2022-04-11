@@ -667,7 +667,7 @@ lazy val `kamon-armeria` = (project in file("instrumentation/kamon-armeria"))
         CrossVersion.partialVersion(scalaVersion.value) match {
           case Some((2, n)) if n >= 12 =>
             Seq(
-              "com.linecorp.armeria" % "armeria-grpc" % "1.11.0" % "test",
+              "com.linecorp.armeria" % "armeria-grpc" % "1.15.0" % "test",
               "com.thesamet.scalapb" %% "scalapb-runtime-grpc" % scalapb.compiler.Version.scalapbVersion % "test"
             )
           case _ => Nil // ignore this dependencies on scala 2.11 test because test will be ignored and this dependency scalapb-runtime-grpc is no available anymore
@@ -675,7 +675,7 @@ lazy val `kamon-armeria` = (project in file("instrumentation/kamon-armeria"))
       }
       Seq(
         kanelaAgent % "provided",
-        "com.linecorp.armeria" % "armeria" % "1.11.0" % "provided",
+        "com.linecorp.armeria" % "armeria" % "1.15.0" % "provided",
 
         scalatest % "test",
         logbackClassic % "test"
