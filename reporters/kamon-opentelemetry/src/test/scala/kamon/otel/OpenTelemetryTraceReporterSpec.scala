@@ -68,6 +68,11 @@ class OpenTelemetryTraceReporterSpec extends AnyWordSpec with Matchers with Opti
       instance should contain(s"kamon-test-application@${host.get}")
 
       //assert instrumentation labels
+      val instrumentationScopeInfo = spanData.getInstrumentationScopeInfo
+      instrumentationScopeInfo.getName should be("kamon-instrumentation")
+      instrumentationScopeInfo.getVersion should be(kamonVersion)
+      instrumentationScopeInfo.getSchemaUrl should be(null)
+      // deprecated
       val instrumentationLibraryInfo = spanData.getInstrumentationLibraryInfo
       instrumentationLibraryInfo.getName should be("kamon-instrumentation")
       instrumentationLibraryInfo.getVersion should be(kamonVersion)
