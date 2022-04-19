@@ -147,13 +147,8 @@ class SpanConverterSpec extends AnyWordSpec with Matchers with Utils {
       resourceSpans.head.getResource.getAttributes.asMap().asScala should contain(AttributeKey.stringKey("telemetry.sdk.language"), "scala")
       resourceSpans.head.getResource.getAttributes.asMap().asScala should contain(AttributeKey.stringKey("telemetry.sdk.version"), "0.0.0")
 
-      val scopeInfo = resourceSpans.head.getInstrumentationScopeInfo
-      //assert instrumentation labels
-      scopeInfo.getName should be("some-instrumentation-library")
-      scopeInfo.getVersion should be("0.0.0")
-      scopeInfo.getSchemaUrl should be(null)
-      // deprecated
       val instInfo = resourceSpans.head.getInstrumentationLibraryInfo
+      //assert instrumentation labels
       instInfo.getName should be("some-instrumentation-library")
       instInfo.getVersion should be("0.0.0")
 

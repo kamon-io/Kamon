@@ -24,7 +24,7 @@ import scala.collection.JavaConverters._
 
 import io.opentelemetry.api.common.{AttributeKey, Attributes}
 import io.opentelemetry.api.trace._
-import io.opentelemetry.sdk.common.{InstrumentationLibraryInfo, InstrumentationScopeInfo}
+import io.opentelemetry.sdk.common.InstrumentationLibraryInfo
 import io.opentelemetry.sdk.resources.Resource
 import io.opentelemetry.sdk.trace.data.{EventData, LinkData, SpanData, StatusData}
 import kamon.tag.{Lookups, Tag, TagSet}
@@ -34,8 +34,8 @@ import kamon.trace.{Identifier, Span}
 
 
 class SpanWrapper(includeErrorEvent: Boolean, resource: Resource, kamonVersion: String, span: Span.Finished) extends SpanData {
-  private val instrumentationScopeInfo: InstrumentationScopeInfo =
-    InstrumentationScopeInfo.create(span.metricTags.get(Lookups.option(Span.TagKeys.Component)) getOrElse "kamon-instrumentation", kamonVersion, null)
+  private val instrumentationLibraryInfo: InstrumentationLibraryInfo =
+    InstrumentationLibraryInfo.create(span.metricTags.get(Lookups.option(Span.TagKeys.Component)) getOrElse "kamon-instrumentation", kamonVersion)
   private val sampled: Boolean = span.trace.samplingDecision == Sample
   private val attachErrorEvent: Boolean = includeErrorEvent && span.hasError
 
@@ -78,10 +78,7 @@ class SpanWrapper(includeErrorEvent: Boolean, resource: Resource, kamonVersion: 
 
   override def getTotalAttributeCount: Int = getAttributes.size()
 
-  override def getInstrumentationLibraryInfo: InstrumentationLibraryInfo =
-    InstrumentationLibraryInfo.create(instrumentationScopeInfo.getName, instrumentationScopeInfo.getVersion)
-
-  override def getInstrumentationScopeInfo: InstrumentationScopeInfo = instrumentationScopeInfo
+  override def getInstrumentationLibraryInfo: InstrumentationLibraryInfo = instrumentationLibraryInfo
 
   override def getResource: Resource = resource
 }
