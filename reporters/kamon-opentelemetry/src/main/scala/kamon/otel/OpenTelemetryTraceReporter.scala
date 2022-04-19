@@ -22,10 +22,11 @@ import kamon.Kamon
 import kamon.module.{Module, ModuleFactory, SpanReporter}
 import kamon.trace.Span
 import org.slf4j.LoggerFactory
+import java.net.URLDecoder
 import java.util.{Collection => JCollection}
 
 import scala.concurrent.ExecutionContext
-import scala.util.{Failure, Success}
+import scala.util.{Failure, Success, Try}
 
 import io.opentelemetry.sdk.common.InstrumentationLibraryInfo
 import io.opentelemetry.sdk.resources.Resource
@@ -73,7 +74,14 @@ class OpenTelemetryTraceReporter(traceServiceFactory: Config => TraceService)(im
     logger.info("Reconfigure OpenTelemetry Trace Reporter")
 
     //pre-generate the function for converting Kamon span to proto span
-    val resource: Resource = buildResource
+    val attributes: Map[String, String] =
+      newConfig.getString("kamon.otel.attributes").split(',').filter(_ contains '=').map(_.trim.split("=", 2)).map {
+        case Array(k, v) =>
+          val decoded = Try(URLDecoder.decode(v.trim, "UTF-8"))
+          decoded.failed.foreach(t => throw new IllegalArgumentException(s"value for attribute ${k.trim} is not a url-encoded string", t))
+          k.trim -> decoded.get
+      }.toMap
+    val resource: Resource = buildResource(attributes)
     this.spanConverterFunc = SpanConverter.convert(newConfig.getBoolean("kamon.otel.trace.include-error-event"), resource, kamonSettings.version)
 
     this.traceService = Option(traceServiceFactory.apply(newConfig))
@@ -90,7 +98,7 @@ class OpenTelemetryTraceReporter(traceServiceFactory: Config => TraceService)(im
     *
     * @return
     */
-  private def buildResource: Resource = {
+  private def buildResource(attributes: Map[String, String]): Resource = {
     val env = Kamon.environment
     val builder = Resource.builder()
       .put("host.name", kamonSettings.environment.host)
@@ -100,6 +108,7 @@ class OpenTelemetryTraceReporter(traceServiceFactory: Config => TraceService)(im
       .put("telemetry.sdk.language", "scala")
       .put("telemetry.sdk.version", kamonSettings.version)
 
+    attributes.foreach { case (k, v) => builder.put(k, v) }
     //add all kamon.environment.tags as KeyValues to the Resource object
     env.tags.iterator().foreach {
       case t: Tag.String => builder.put(t.key, t.value)
