@@ -23,6 +23,7 @@ import java.util.{Collection => JCollection}
 import scala.concurrent.{Future, Promise}
 
 import com.typesafe.config.Config
+import io.opentelemetry.exporter.internal.retry.{RetryPolicy, RetryUtil}
 import io.opentelemetry.exporter.otlp.http.trace.OtlpHttpSpanExporter
 import io.opentelemetry.exporter.otlp.trace.OtlpGrpcSpanExporter
 import io.opentelemetry.sdk.trace.`export`.SpanExporter
@@ -91,15 +92,20 @@ private[otel] object OtlpTraceService {
 
 private[otel] class OtlpTraceService(protocol: String, endpoint: String, compressionEnabled: Boolean, headers: Seq[(String, String)], timeout: Duration) extends TraceService {
   private val compressionMethod = if (compressionEnabled) "gzip" else "none"
-  private val delegate: SpanExporter = protocol match {
-    case "grpc" =>
-      val builder = OtlpGrpcSpanExporter.builder().setEndpoint(endpoint).setCompression(compressionMethod).setTimeout(timeout)
-      headers.foreach { case (k, v) => builder.addHeader(k, v) }
-      builder.build()
-    case "http/protobuf" =>
-      val builder = OtlpHttpSpanExporter.builder().setEndpoint(endpoint).setCompression(compressionMethod).setTimeout(timeout)
-      headers.foreach { case (k, v) => builder.addHeader(k, v) }
-      builder.build()
+  private val delegate: SpanExporter = {
+    val d = protocol match {
+      case "grpc" =>
+        val builder = OtlpGrpcSpanExporter.builder().setEndpoint(endpoint).setCompression(compressionMethod).setTimeout(timeout)
+        headers.foreach { case (k, v) => builder.addHeader(k, v) }
+        builder.build()
+      case "http/protobuf" =>
+        val builder = OtlpHttpSpanExporter.builder().setEndpoint(endpoint).setCompression(compressionMethod).setTimeout(timeout)
+        headers.foreach { case (k, v) => builder.addHeader(k, v) }
+        builder.build()
+    }
+    // https://github.com/open-telemetry/opentelemetry-java/tree/main/sdk-extensions/autoconfigure#otlp-exporter-retry
+    if (sys.env.get("OTEL_EXPERIMENTAL_EXPORTER_OTLP_RETRY_ENABLED").contains("true")) RetryUtil.setRetryPolicyOnDelegate(d, RetryPolicy.getDefault)
+    d
   }
 
   override def exportSpans(spans: JCollection[SpanData]): Future[Unit] = {
