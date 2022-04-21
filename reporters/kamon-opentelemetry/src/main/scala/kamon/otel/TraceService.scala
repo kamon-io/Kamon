@@ -72,6 +72,7 @@ private[otel] object OtlpTraceService {
       case Array(k, v) => k -> v
     }.toSeq
     val timeout = otelExporterConfig.getDuration("timeout")
+    val retryEnabled = otelExporterConfig.getBoolean("retryEnabled")
     // See https://opentelemetry.io/docs/reference/specification/protocol/exporter/#endpoint-urls-for-otlphttp
     val url = (protocol, fullEndpoint) match {
       case ("http/protobuf", Some(full)) =>
@@ -86,22 +87,22 @@ private[otel] object OtlpTraceService {
 
     logger.info(s"Configured endpoint for OpenTelemetry trace reporting [$url] using $protocol protocol")
 
-    new OtlpTraceService(protocol, url, compression, headers, timeout)
+    new OtlpTraceService(protocol, url, compression, headers, timeout, retryEnabled)
   }
 }
 
-private[otel] class OtlpTraceService(protocol: String, endpoint: String, compressionEnabled: Boolean, headers: Seq[(String, String)], timeout: Duration) extends TraceService {
+private[otel] class OtlpTraceService(protocol: String, endpoint: String, compressionEnabled: Boolean, headers: Seq[(String, String)], timeout: Duration, retryEnabled: Boolean) extends TraceService {
   private val compressionMethod = if (compressionEnabled) "gzip" else "none"
   private val delegate: SpanExporter = protocol match {
     case "grpc" =>
       val builder = OtlpGrpcSpanExporter.builder().setEndpoint(endpoint).setCompression(compressionMethod).setTimeout(timeout)
       headers.foreach { case (k, v) => builder.addHeader(k, v) }
-      if (sys.env.get("OTEL_EXPERIMENTAL_EXPORTER_OTLP_RETRY_ENABLED").contains("true")) RetryUtil.setRetryPolicyOnDelegate(builder, RetryPolicy.getDefault)
+      if (retryEnabled) RetryUtil.setRetryPolicyOnDelegate(builder, RetryPolicy.getDefault)
       builder.build()
     case "http/protobuf" =>
       val builder = OtlpHttpSpanExporter.builder().setEndpoint(endpoint).setCompression(compressionMethod).setTimeout(timeout)
       headers.foreach { case (k, v) => builder.addHeader(k, v) }
-      if (sys.env.get("OTEL_EXPERIMENTAL_EXPORTER_OTLP_RETRY_ENABLED").contains("true")) RetryUtil.setRetryPolicyOnDelegate(builder, RetryPolicy.getDefault)
+      if (retryEnabled) RetryUtil.setRetryPolicyOnDelegate(builder, RetryPolicy.getDefault)
       builder.build()
   }
 
