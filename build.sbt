@@ -419,6 +419,7 @@ lazy val `kamon-annotation` = (project in file("instrumentation/kamon-annotation
 lazy val `kamon-system-metrics` = (project in file("instrumentation/kamon-system-metrics"))
   .disablePlugins(AssemblyPlugin)
   .settings(
+    crossScalaVersions += `scala_3_version`,
     libraryDependencies ++= Seq(
       oshiCore,
       scalatest % "test",
