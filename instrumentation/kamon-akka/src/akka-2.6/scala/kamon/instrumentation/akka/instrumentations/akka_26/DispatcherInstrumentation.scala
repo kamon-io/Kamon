@@ -110,7 +110,7 @@ object InstrumentNewExecutorServiceOnAkka26 {
     val scheduledActionName = actorSystemName + "/" + dispatcherName
     val systemTags = TagSet.of("akka.system", actorSystemName)
 
-    if(Kamon.filter(AkkaInstrumentation.TrackDispatcherFilterName).accept(dispatcherName)) {
+    if(Kamon.filter(AkkaInstrumentation.TrackDispatcherFilterName).accept(scheduledActionName)) {
       val defaultEcOption = factory.dispatcherPrerequisites.defaultExecutionContext
 
       if(dispatcherName == Dispatchers.DefaultDispatcherId && defaultEcOption.isDefined) {
