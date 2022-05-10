@@ -221,6 +221,7 @@ class HostMetricsCollector(ec: ExecutionContext) extends ScheduledAction {
 
       interfaces.asScala.foreach(interface => {
         if (_settings.trackedInterfaces.accept(interface.getName)) {
+          interface.updateAttributes()
           val interfaceInstruments = _networkActivityInstruments.interfaceInstruments(interface.getName)
           interfaceInstruments.receivedBytes.diff(interface.getBytesRecv)
           interfaceInstruments.sentBytes.diff(interface.getBytesSent)
