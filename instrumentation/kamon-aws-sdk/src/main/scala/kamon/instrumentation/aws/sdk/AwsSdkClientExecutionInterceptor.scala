@@ -21,10 +21,11 @@ import kamon.trace.Span
 import software.amazon.awssdk.core.interceptor.{Context, ExecutionAttribute, ExecutionAttributes, ExecutionInterceptor, SdkExecutionAttribute}
 
 /**
+  * Execution Interceptor for the AWS Java SDK Version 2.x
+  *
   * Bare-bones interceptor that creates Spans for all client requests made with the AWS SDK. There is no need to
   * add this interceptor by hand anywhere, the AWS SDK will pick it up automatically from the classpath because it is
   * included in the "software/amazon/awssdk/global/handlers/execution.interceptors" file shipped with this module.
-  *
   */
 class AwsSdkClientExecutionInterceptor extends ExecutionInterceptor {
   private val ClientSpanAttribute = new ExecutionAttribute[Span]("SdkClientSpan")
