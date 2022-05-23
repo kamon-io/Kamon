@@ -597,6 +597,22 @@ lazy val `kamon-finagle` = (project in file("instrumentation/kamon-finagle"))
     )
   ).dependsOn(`kamon-core`, `kamon-instrumentation-common`, `kamon-testkit` % "test")
 
+lazy val `kamon-aws-sdk` = (project in file("instrumentation/kamon-aws-sdk"))
+  .disablePlugins(AssemblyPlugin)
+  .enablePlugins(JavaAgent)
+  .settings(instrumentationSettings)
+  .settings(
+    libraryDependencies ++= Seq(
+      kanelaAgent % "provided",
+      "software.amazon.awssdk" % "dynamodb" % "2.17.191" % "provided",
+      "software.amazon.awssdk" % "sqs" % "2.17.191" % "provided",
+
+      scalatest % "test",
+      logbackClassic % "test",
+      "org.testcontainers" % "dynalite" % "1.17.1"
+    )
+  ).dependsOn(`kamon-core`, `kamon-executors`, `kamon-testkit` % "test")
+
 /**
  * Reporters
  */
