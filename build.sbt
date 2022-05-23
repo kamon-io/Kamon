@@ -143,6 +143,7 @@ val instrumentationProjects = Seq[ProjectReference](
   `kamon-caffeine`,
   `kamon-lagom`,
   `kamon-finagle`,
+  `kamon-aws-sdk`
 )
 
 lazy val instrumentation = (project in file("instrumentation"))
@@ -604,6 +605,7 @@ lazy val `kamon-aws-sdk` = (project in file("instrumentation/kamon-aws-sdk"))
   .settings(
     libraryDependencies ++= Seq(
       kanelaAgent % "provided",
+      "com.amazonaws" % "aws-java-sdk-lambda" % "1.12.225" % "provided",
       "software.amazon.awssdk" % "dynamodb" % "2.17.191" % "provided",
       "software.amazon.awssdk" % "sqs" % "2.17.191" % "provided",
 
@@ -887,7 +889,8 @@ lazy val `kamon-bundle-dependencies-all` = (project in file("bundle/kamon-bundle
     `kamon-redis`,
     `kamon-okhttp`,
     `kamon-caffeine`,
-    `kamon-lagom`
+    `kamon-lagom`,
+    `kamon-aws-sdk`
   )
 
 /**
