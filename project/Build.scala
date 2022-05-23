@@ -272,6 +272,7 @@ object AssemblyTweaks extends AutoPlugin {
     assembly / assemblyMergeStrategy := {
       case s if s.startsWith("LICENSE") => MergeStrategy.discard
       case s if s.startsWith("about") => MergeStrategy.discard
+      case "version.conf" => MergeStrategy.concat
       case x => (assembly / assemblyMergeStrategy).value(x)
     }
   ) ++ inConfig(Shaded)(Defaults.configSettings)
