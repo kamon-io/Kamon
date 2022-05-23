@@ -143,7 +143,8 @@ val instrumentationProjects = Seq[ProjectReference](
   `kamon-caffeine`,
   `kamon-lagom`,
   `kamon-finagle`,
-  `kamon-aws-sdk`
+  `kamon-aws-sdk`,
+  `kamon-alpakka-kafka`
 )
 
 lazy val instrumentation = (project in file("instrumentation"))
@@ -526,7 +527,7 @@ lazy val `kamon-tapir` = (project in file("instrumentation/kamon-tapir"))
   .enablePlugins(JavaAgent)
   .settings(
     instrumentationSettings,
-    crossScalaVersions := Seq("2.12.11", "2.13.1"),
+    crossScalaVersions := Seq(`scala_2.12_version`, `scala_2.13_version`),
     libraryDependencies ++= Seq(
       kanelaAgent % "provided",
       "com.softwaremill.sttp.tapir" %% "tapir-core" % "0.17.9" % "provided",
@@ -614,6 +615,22 @@ lazy val `kamon-aws-sdk` = (project in file("instrumentation/kamon-aws-sdk"))
       "org.testcontainers" % "dynalite" % "1.17.1"
     )
   ).dependsOn(`kamon-core`, `kamon-executors`, `kamon-testkit` % "test")
+
+lazy val `kamon-alpakka-kafka` = (project in file("instrumentation/kamon-alpakka-kafka"))
+  .disablePlugins(AssemblyPlugin)
+  .enablePlugins(JavaAgent)
+  .settings(instrumentationSettings)
+  .settings(
+    crossScalaVersions := Seq(`scala_2.12_version`, `scala_2.13_version`),
+    libraryDependencies ++= Seq(
+      kanelaAgent % "provided",
+      "com.typesafe.akka" %% "akka-stream-kafka" % "2.1.1" % "provided",
+      "com.typesafe.akka" %% "akka-stream" % "2.6.19" % "provided",
+
+      scalatest % "test",
+      logbackClassic % "test"
+    )
+  ).dependsOn(`kamon-core`, `kamon-akka`, `kamon-testkit` % "test")
 
 /**
  * Reporters
@@ -912,6 +929,7 @@ lazy val `kamon-bundle-dependencies-2-12-and-up` = (project in file("bundle/kamo
     `kamon-akka-grpc`,
     `kamon-finagle`,
     `kamon-tapir`,
+    `kamon-alpakka-kafka`
   )
 
 lazy val `kamon-bundle` = (project in file("bundle/kamon-bundle"))
