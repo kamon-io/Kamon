@@ -63,6 +63,9 @@ trait Timer extends Instrument[Timer, Metric.Settings.ForDistributionInstrument]
     */
   def record(elapsed: Long, unit: TimeUnit): Timer
 
+  /**
+    * Starts recording elapsed time for the provided function. Once the function returns, the Timer stops.
+    */
   final def timed[A](f: => A): A = {
     val startedTimer = self.start()
     try {
@@ -72,6 +75,9 @@ trait Timer extends Instrument[Timer, Metric.Settings.ForDistributionInstrument]
     }
   }
 
+  /**
+    * Starts recording elapsed time for the future. Once the future completes, the Timer stops.
+    */
   final def timedF[A](future: => Future[A])(implicit ec: ExecutionContext): Future[A] = {
     val startedTimer = self.start()
     val f = try {
@@ -85,6 +91,9 @@ trait Timer extends Instrument[Timer, Metric.Settings.ForDistributionInstrument]
     f
   }
 
+  /**
+    * Starts recording elapsed time for the partial function.
+    */
   final def timedPF[A, B](pf: PartialFunction[A, B]): PartialFunction[A, B] = new PartialFunction[A, B] {
     def apply(a: A): B = {
       val startedTimer = self.start()
