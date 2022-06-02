@@ -29,7 +29,7 @@ import kamon.trace.Span
   * included in the "software/amazon/awssdk/global/handlers/execution.interceptors" file shipped with this module.
   */
 class AwsSdkRequestHandler extends RequestHandler2 {
-  val SpanContextKey = new HandlerContextKey[Span](classOf[Span].getName)
+  import AwsSdkRequestHandler.SpanContextKey
 
   override def beforeRequest(request: Request[_]): Unit = {
     val serviceName = request.getServiceName
@@ -66,4 +66,8 @@ class AwsSdkRequestHandler extends RequestHandler2 {
         .finish()
     }
   }
+}
+
+object AwsSdkRequestHandler {
+  private val SpanContextKey = new HandlerContextKey[Span](classOf[Span].getName)
 }

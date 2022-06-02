@@ -28,7 +28,7 @@ import software.amazon.awssdk.core.interceptor.{Context, ExecutionAttribute, Exe
   * included in the "software/amazon/awssdk/global/handlers/execution.interceptors" file shipped with this module.
   */
 class AwsSdkClientExecutionInterceptor extends ExecutionInterceptor {
-  private val ClientSpanAttribute = new ExecutionAttribute[Span]("SdkClientSpan")
+  import AwsSdkClientExecutionInterceptor.ClientSpanAttribute
 
   override def afterMarshalling(context: Context.AfterMarshalling, executionAttributes: ExecutionAttributes): Unit = {
     val operationName = executionAttributes.getAttribute(SdkExecutionAttribute.OPERATION_NAME)
@@ -55,4 +55,8 @@ class AwsSdkClientExecutionInterceptor extends ExecutionInterceptor {
       kamonSpan.fail(context.exception()).finish()
     }
   }
+}
+
+object AwsSdkClientExecutionInterceptor {
+  private val ClientSpanAttribute = new ExecutionAttribute[Span]("SdkClientSpan")
 }
