@@ -612,7 +612,7 @@ lazy val `kamon-aws-sdk` = (project in file("instrumentation/kamon-aws-sdk"))
 
       scalatest % "test",
       logbackClassic % "test",
-      "org.testcontainers" % "dynalite" % "1.17.1"
+      "org.testcontainers" % "dynalite" % "1.17.1" % "test"
     )
   ).dependsOn(`kamon-core`, `kamon-executors`, `kamon-testkit` % "test")
 
