@@ -37,7 +37,8 @@ object PrometheusSettings {
 
   case class SummarySettings(
     quantiles: Seq[java.lang.Double],
-    metricMatchers: Seq[Glob]
+    metricMatchers: Seq[Glob],
+    metricExcludes: Seq[Glob]
   )
 
   case class GaugeSettings(metricMatchers: Seq[Glob])
@@ -51,7 +52,8 @@ object PrometheusSettings {
       includeEnvironmentTags = prometheusConfig.getBoolean("include-environment-tags"),
       summarySettings = SummarySettings(
         quantiles = prometheusConfig.getDoubleList("summaries.quantiles").asScala.toSeq,
-        metricMatchers = prometheusConfig.getStringList("summaries.metrics").asScala.map(Glob).toSeq
+        metricMatchers = prometheusConfig.getStringList("summaries.metrics").asScala.map(Glob).toSeq,
+        metricExcludes = prometheusConfig.getStringList("summaries.metrics-excludes").asScala.map(Glob).toSeq
       ),
       gaugeSettings = GaugeSettings(
         metricMatchers = prometheusConfig.getStringList("gauges.metrics").asScala.map(Glob).toSeq
