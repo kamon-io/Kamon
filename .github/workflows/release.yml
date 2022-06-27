@@ -13,11 +13,11 @@ jobs:
     steps:
       - uses: actions/checkout@v1
       - run: git fetch --depth=1 origin '+refs/tags/*:refs/tags/*'
-      - uses: actions/setup-java@v3
+      - uses: coursier/cache-action@v6
+      - uses: coursier/setup-action@v1
         with:
-          distribution: 'adopt'
-          java-version: '8'
-          cache: 'sbt'
+          jvm: adopt:8
+          apps: sbt
       - name: Release
         run: sbt ";+instrumentation/publishLocal; release"
         shell: bash
