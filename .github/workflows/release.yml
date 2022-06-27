@@ -17,6 +17,7 @@ jobs:
         with:
           distribution: 'adopt'
           java-version: '8'
+          cache: 'sbt'
       - name: Release
         run: sbt ";+instrumentation/publishLocal; release"
         shell: bash
