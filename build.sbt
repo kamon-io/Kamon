@@ -530,10 +530,10 @@ lazy val `kamon-tapir` = (project in file("instrumentation/kamon-tapir"))
     crossScalaVersions := Seq(`scala_2.12_version`, `scala_2.13_version`),
     libraryDependencies ++= Seq(
       kanelaAgent % "provided",
-      "com.softwaremill.sttp.tapir" %% "tapir-core" % "0.17.9" % "provided",
+      "com.softwaremill.sttp.tapir" %% "tapir-core" % "1.0.1" % "provided",
       "com.typesafe.akka" %% "akka-http" % akkaHttpVersion(scalaBinaryVersion.value) % "provided",
 
-      "com.softwaremill.sttp.tapir" %% "tapir-akka-http-server" % "0.17.9" % "test",
+      "com.softwaremill.sttp.tapir" %% "tapir-akka-http-server" % "1.0.1" % "test",
       "com.softwaremill.sttp.client3" %% "core" % "3.3.0-RC2" % "test",
       scalatest % "test",
       logbackClassic % "test",

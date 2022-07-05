@@ -36,7 +36,7 @@ object TapirToRouteInterceptor {
 
   def toRoute[I, E, O](@Argument(0) arg: Any, @SuperCall superCall: Callable[Route]): Route = {
     arg match {
-      case endpoint @ ServerEndpoint(_, _) => {
+      case endpoint : ServerEndpoint[_,_] => {
         val originalRoute = superCall.call()
 
         req => {
@@ -45,7 +45,7 @@ object TapirToRouteInterceptor {
 
           val operationName = endpoint.info.name match {
             case Some(endpointName) if useEndpointNameAsOperationName => endpointName
-            case _ => endpoint.renderPathTemplate()
+            case _ => endpoint.showPathTemplate()
           }
 
           Kamon.currentSpan()
