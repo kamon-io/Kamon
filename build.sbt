@@ -196,7 +196,6 @@ lazy val `kamon-twitter-future` = (project in file("instrumentation/kamon-twitte
   .enablePlugins(JavaAgent)
   .settings(instrumentationSettings)
   .settings(
-    bintrayPackage := "kamon-futures",
     libraryDependencies ++= Seq(
       kanelaAgent % "provided",
       "com.twitter" %% "util-core" % "20.3.0" % "provided",
@@ -211,7 +210,6 @@ lazy val `kamon-scalaz-future` = (project in file("instrumentation/kamon-scalaz-
   .enablePlugins(JavaAgent)
   .settings(instrumentationSettings)
   .settings(
-    bintrayPackage := "kamon-futures",
     libraryDependencies ++= Seq(
       kanelaAgent % "provided",
       "org.scalaz" %% "scalaz-concurrent" % "7.2.28" % "provided",
@@ -226,7 +224,6 @@ lazy val `kamon-scala-future` = (project in file("instrumentation/kamon-scala-fu
   .enablePlugins(JavaAgent)
   .settings(instrumentationSettings)
   .settings(
-    bintrayPackage := "kamon-futures",
     libraryDependencies ++=Seq(
       kanelaAgent % "provided",
       scalatest % "test",
@@ -240,7 +237,6 @@ lazy val `kamon-cats-io` = (project in file("instrumentation/kamon-cats-io"))
   .enablePlugins(JavaAgent)
   .settings(instrumentationSettings)
   .settings(
-    bintrayPackage := "kamon-futures",
     libraryDependencies ++= Seq(
       kanelaAgent % "provided",
       {
