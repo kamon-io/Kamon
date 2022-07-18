@@ -7,10 +7,12 @@ import kamon.Kamon
 import kanela.agent.api.instrumentation.InstrumentationBuilder
 import kanela.agent.libs.net.bytebuddy.asm.Advice
 
-class ClusterInstrumentation extends InstrumentationBuilder {
+class ClusterInstrumentation extends InstrumentationBuilder with VersionFiltering {
 
-  onType("akka.cluster.Cluster$")
-    .advise(method("createExtension").and(takesArguments(1)), AfterClusterInitializationAdvice)
+  onAkka("2.5", "2.6") {
+    onType("akka.cluster.Cluster$")
+      .advise(method("createExtension").and(takesArguments(1)), AfterClusterInitializationAdvice)
+  }
 }
 
 object AfterClusterInitializationAdvice {
