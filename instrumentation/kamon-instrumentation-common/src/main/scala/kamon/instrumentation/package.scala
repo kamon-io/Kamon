@@ -33,7 +33,7 @@ package object instrumentation {
     def advise[A](method: Junction[MethodDescription], advice: A)(implicit singletonEvidence: A <:< Singleton): InstrumentationBuilder.Target
   }
 
-  implicit def adviseWithCompanionObject(target: InstrumentationBuilder.Target) = new AdviseWithCompanionObject {
+  implicit def adviseWithCompanionObject(target: InstrumentationBuilder.Target): AdviseWithCompanionObject = new AdviseWithCompanionObject {
 
     override def advise[A](method: Junction[MethodDescription], advice: A)(implicit singletonEvidence: A <:< Singleton): InstrumentationBuilder.Target = {
       // Companion object instances always have the '$' sign at the end of their class name, we must remove it to get
