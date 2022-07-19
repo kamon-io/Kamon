@@ -24,7 +24,7 @@ object AfterClusterInitializationAdvice {
   @Advice.OnMethodExit
   def onClusterExtensionCreated(@Advice.Argument(0) system: ExtendedActorSystem, @Advice.Return clusterExtension: Cluster): Unit = {
     val stateExporter = system.systemActorOf(Props[ClusterInstrumentation.ClusterStateExporter], "kamon-cluster-state-exporter")
-    clusterExtension.subscribe(stateExporter, ClusterEvent.InitialStateAsSnapshot, classOf[ClusterEvent.ClusterDomainEvent])
+    clusterExtension.subscribe(stateExporter, classOf[ClusterEvent.ClusterDomainEvent])
   }
 }
 
