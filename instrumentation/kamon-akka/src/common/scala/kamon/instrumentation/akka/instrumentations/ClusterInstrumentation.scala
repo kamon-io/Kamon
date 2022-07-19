@@ -1,11 +1,15 @@
 package kamon.instrumentation
 package akka.instrumentations
 
-import _root_.akka.actor.{Actor, ExtendedActorSystem, Props}
+import _root_.akka.actor.{Actor, Address, ExtendedActorSystem, Props}
 import _root_.akka.cluster.{Cluster, ClusterEvent, MemberStatus}
 import kamon.Kamon
+import kamon.metric.Gauge
+import kamon.tag.TagSet
 import kanela.agent.api.instrumentation.InstrumentationBuilder
 import kanela.agent.libs.net.bytebuddy.asm.Advice
+
+import scala.collection.mutable
 
 class ClusterInstrumentation extends InstrumentationBuilder with VersionFiltering {
 
@@ -28,16 +32,19 @@ object ClusterInstrumentation {
 
   class ClusterStateExporter extends Actor {
     private val clusterExtension = Cluster(context.system)
-    private val joiningMembers = ClusterMembersJoining.withTag("akka.system.name", context.system.name)
-    private val weaklyUpMembers = ClusterMembersWeaklyUp.withTag("akka.system.name", context.system.name)
-    private val upMembers = ClusterMembersUp.withTag("akka.system.name", context.system.name)
-    private val leavingMembers = ClusterMembersLeaving.withTag("akka.system.name", context.system.name)
-    private val exitingMembers = ClusterMembersExiting.withTag("akka.system.name", context.system.name)
-    private val downMembers = ClusterMembersDown.withTag("akka.system.name", context.system.name)
-    private val removedMembers = ClusterMembersRemoved.withTag("akka.system.name", context.system.name)
-    private val totalMembers = ClusterMembersTotal.withTag("akka.system.name", context.system.name)
-    private val unreachableMembers = ClusterMembersUnreachable.withTag("akka.system.name", context.system.name)
-    private val unreachableDatacenters = ClusterDatacentersUnreachable.withTag("akka.system.name", context.system.name)
+    private val clusterTags = TagSet.of("akka.system.name", context.system.name)
+
+    private val joiningMembers = ClusterMembersJoining.withTags(clusterTags)
+    private val weaklyUpMembers = ClusterMembersWeaklyUp.withTags(clusterTags)
+    private val upMembers = ClusterMembersUp.withTags(clusterTags)
+    private val leavingMembers = ClusterMembersLeaving.withTags(clusterTags)
+    private val exitingMembers = ClusterMembersExiting.withTags(clusterTags)
+    private val downMembers = ClusterMembersDown.withTags(clusterTags)
+    private val removedMembers = ClusterMembersRemoved.withTags(clusterTags)
+    private val totalMembers = ClusterMembersTotal.withTags(clusterTags)
+    private val unreachableMembers = ClusterMembersUnreachable.withTags(clusterTags)
+    private val unreachableDatacenters = ClusterDatacentersUnreachable.withTags(clusterTags)
+    private val monitoredNodes = mutable.HashMap.empty[Address, (Gauge, Gauge)]
 
     override def receive: Receive = {
       case _: ClusterEvent.ClusterDomainEvent             => updateAllStates(clusterExtension.state)
@@ -60,6 +67,42 @@ object ClusterInstrumentation {
 
       unreachableMembers.update(clusterState.unreachable.size)
       unreachableDatacenters.update(clusterState.unreachableDataCenters.size)
+
+      // The status and reachability gauges will only be published for the subset of members that are currently being
+      // monitored by this node.
+      val currentlyMonitoredMembers = clusterState.members.filter(m => clusterExtension.failureDetector.isMonitoring(m.address))
+      val currentlyMonitoredAddresses = currentlyMonitoredMembers.map { member =>
+        val (statusGauge, reachabilityGauge) = monitoredNodes.getOrElseUpdate(member.address, {
+          (
+            ClusterMemberStatus.withTags(clusterTags).withTag("member", member.address.toString),
+            ClusterMemberReachability.withTags(clusterTags).withTag("member", member.address.toString)
+          )
+        })
+
+        statusGauge.update(statusToGaugeValue(member.status))
+        reachabilityGauge.update(if(clusterState.unreachable(member)) 1D else 0D)
+        member.address
+      }
+
+      // Remove any cached Gauges for members that we might not be monitoring anymore
+      monitoredNodes.keys.filterNot(a => currentlyMonitoredAddresses(a)).foreach { addressToRemove =>
+        monitoredNodes.remove(addressToRemove).foreach {
+          case (statusGauge, reachabilityGauge) =>
+            statusGauge.remove()
+            reachabilityGauge.remove()
+        }
+      }
+    }
+
+    private def statusToGaugeValue(memberStatus: MemberStatus): Double = memberStatus match {
+      case MemberStatus.Joining   => 1
+      case MemberStatus.WeaklyUp  => 2
+      case MemberStatus.Up        => 3
+      case MemberStatus.Leaving   => 4
+      case MemberStatus.Exiting   => 5
+      case MemberStatus.Down      => 6
+      case MemberStatus.Removed   => 7
+      case _ => 0 // This should never happen, but covering the bases here
     }
   }
 
@@ -111,5 +154,15 @@ object ClusterInstrumentation {
   val ClusterDatacentersUnreachable = Kamon.gauge(
     name = "akka.cluster.datacenters.unreachable.count",
     description = "Tracks the total number of cluster members marked as unreachable"
+  )
+
+  val ClusterMemberStatus = Kamon.gauge(
+    name = "akka.cluster.members.status",
+    description = "Tracks the current status of all monitored nodes by a cluster member"
+  )
+
+  val ClusterMemberReachability = Kamon.gauge(
+    name = "akka.cluster.members.reachability",
+    description = "Tracks the current reachability status of all monitored nodes by a cluster member"
   )
 }
