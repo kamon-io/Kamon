@@ -28,7 +28,7 @@ class CaptureCurrentContextOnEnter
 object CaptureCurrentContextOnEnter {
 
   @Advice.OnMethodEnter
-  def enter(@Advice.This hasContext: HasContext): Unit =
+  @static def enter(@Advice.This hasContext: HasContext): Unit =
     hasContext.setContext(Kamon.currentContext())
 
 }
