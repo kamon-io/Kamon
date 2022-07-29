@@ -824,6 +824,7 @@ lazy val bundle = (project in file("bundle"))
 
 import com.lightbend.sbt.javaagent.Modules
 import BundleKeys._
+import sbt.Keys.scalacOptions
 
 lazy val commonBundleSettings = Seq(
   moduleName := "kamon-bundle",
