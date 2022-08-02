@@ -26,7 +26,7 @@ import scala.annotation.static
 /**
   * Advice that sets the Context from a HasContext instance as the current Context while the advised method is invoked.
   */
-class InvokeWithCapturedContext
+class InvokeWithCapturedContext private()
 object InvokeWithCapturedContext {
 
   @Advice.OnMethodEnter

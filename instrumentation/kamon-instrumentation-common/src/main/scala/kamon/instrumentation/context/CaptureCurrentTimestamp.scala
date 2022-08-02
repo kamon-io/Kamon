@@ -23,7 +23,7 @@ import scala.annotation.static
   * Advise that copies the current System.nanoTime into a HasTimestamp instance when the advised method starts
   * executing.
   */
-class CaptureCurrentTimestampOnEnter
+class CaptureCurrentTimestampOnEnter private()
 object CaptureCurrentTimestampOnEnter {
 
   @Advice.OnMethodEnter
