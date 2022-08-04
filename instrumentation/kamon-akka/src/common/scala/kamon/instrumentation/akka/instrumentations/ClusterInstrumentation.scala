@@ -73,9 +73,11 @@ object ClusterInstrumentation {
       val currentlyMonitoredMembers = clusterState.members.filter(m => clusterExtension.failureDetector.isMonitoring(m.address))
       val currentlyMonitoredAddresses = currentlyMonitoredMembers.map { member =>
         val (statusGauge, reachabilityGauge) = monitoredNodes.getOrElseUpdate(member.address, {
+          val memberTags = clusterTags.withTag("member", member.address.toString)
+
           (
-            ClusterMemberStatus.withTags(clusterTags).withTag("member", member.address.toString),
-            ClusterMemberReachability.withTags(clusterTags).withTag("member", member.address.toString)
+            ClusterMemberStatus.withTags(memberTags),
+            ClusterMemberReachability.withTags(memberTags)
           )
         })
 
