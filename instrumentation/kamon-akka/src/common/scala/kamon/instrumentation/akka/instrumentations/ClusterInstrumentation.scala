@@ -4,6 +4,7 @@ package akka.instrumentations
 import _root_.akka.actor.{Actor, Address, ExtendedActorSystem, Props}
 import _root_.akka.cluster.{Cluster, ClusterEvent, MemberStatus}
 import kamon.Kamon
+import kamon.instrumentation.akka.AkkaInstrumentation
 import kamon.metric.Gauge
 import kamon.tag.TagSet
 import kanela.agent.api.instrumentation.InstrumentationBuilder
@@ -23,8 +24,11 @@ object AfterClusterInitializationAdvice {
 
   @Advice.OnMethodExit
   def onClusterExtensionCreated(@Advice.Argument(0) system: ExtendedActorSystem, @Advice.Return clusterExtension: Cluster): Unit = {
-    val stateExporter = system.systemActorOf(Props[ClusterInstrumentation.ClusterStateExporter], "kamon-cluster-state-exporter")
-    clusterExtension.subscribe(stateExporter, classOf[ClusterEvent.ClusterDomainEvent])
+    val settings = AkkaInstrumentation.settings()
+    if(settings.exposeClusterMetrics) {
+      val stateExporter = system.systemActorOf(Props[ClusterInstrumentation.ClusterStateExporter], "kamon-cluster-state-exporter")
+      clusterExtension.subscribe(stateExporter, classOf[ClusterEvent.ClusterDomainEvent])
+    }
   }
 }
 
