@@ -21,7 +21,6 @@ package context
 
 import kamon.context.Storage
 import kanela.agent.libs.net.bytebuddy.asm.Advice
-import scala.annotation.meta.param
 import scala.annotation.static
 /**
   * Advice that sets the Context from a HasContext instance as the current Context while the advised method is invoked.
@@ -30,10 +29,10 @@ class InvokeWithCapturedContext private()
 object InvokeWithCapturedContext {
 
   @Advice.OnMethodEnter
-  @static def enter(@(Advice.This@param) hasContext: HasContext): Storage.Scope =
+  @static def enter(@Advice.This hasContext: HasContext): Storage.Scope =
     Kamon.storeContext(hasContext.context)
 
   @Advice.OnMethodExit(onThrowable = classOf[Throwable])
-  @static def exit(@(Advice.Enter@param) scope: Storage.Scope): Unit =
+  @static def exit(@Advice.Enter scope: Storage.Scope): Unit =
     scope.close()
 }

@@ -160,8 +160,6 @@ lazy val `kamon-instrumentation-common` = (project in file("instrumentation/kamo
   .settings(instrumentationSettings)
   .settings(
         crossScalaVersions += `scala_3_version`,
-  ).settings(
-    scalacOptions ++= { if(scalaBinaryVersion.value.startsWith("3.")) Seq("-Xtarget:8") else Seq.empty }
   )
   .settings(
     resolvers += Resolver.mavenLocal,
@@ -826,7 +824,6 @@ lazy val bundle = (project in file("bundle"))
 
 import com.lightbend.sbt.javaagent.Modules
 import BundleKeys._
-import sbt.Keys.scalacOptions
 
 lazy val commonBundleSettings = Seq(
   moduleName := "kamon-bundle",
