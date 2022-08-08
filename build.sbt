@@ -139,6 +139,7 @@ val instrumentationProjects = Seq[ProjectReference](
   `kamon-play`,
   `kamon-okhttp`,
   `kamon-tapir`,
+  `kamon-tapir-1`,
   `kamon-redis`,
   `kamon-caffeine`,
   `kamon-lagom`,
@@ -530,6 +531,25 @@ lazy val `kamon-tapir` = (project in file("instrumentation/kamon-tapir"))
     crossScalaVersions := Seq(`scala_2.12_version`, `scala_2.13_version`),
     libraryDependencies ++= Seq(
       kanelaAgent % "provided",
+      "com.softwaremill.sttp.tapir" %% "tapir-core" % "0.20.2" % "provided",
+      "com.typesafe.akka" %% "akka-http" % akkaHttpVersion(scalaBinaryVersion.value) % "provided",
+
+      "com.softwaremill.sttp.tapir" %% "tapir-akka-http-server" % "0.20.2" % "test",
+      "com.softwaremill.sttp.client3" %% "core" % "3.3.0-RC2" % "test",
+      scalatest % "test",
+      logbackClassic % "test",
+    )
+  )
+  .dependsOn(`kamon-core`, `kamon-akka-http`, `kamon-testkit` % "test")
+
+lazy val `kamon-tapir-1` = (project in file("instrumentation/kamon-tapir-1"))
+  .disablePlugins(AssemblyPlugin)
+  .enablePlugins(JavaAgent)
+  .settings(
+    instrumentationSettings,
+    crossScalaVersions := Seq(`scala_2.12_version`, `scala_2.13_version`),
+    libraryDependencies ++= Seq(
+      kanelaAgent % "provided",
       "com.softwaremill.sttp.tapir" %% "tapir-core" % "1.0.1" % "provided",
       "com.typesafe.akka" %% "akka-http" % akkaHttpVersion(scalaBinaryVersion.value) % "provided",
 
@@ -538,7 +558,7 @@ lazy val `kamon-tapir` = (project in file("instrumentation/kamon-tapir"))
       scalatest % "test",
       logbackClassic % "test",
     )
-  ).dependsOn(`kamon-core`, `kamon-akka-http`, `kamon-testkit` % "test")
+  ).dependsOn(`kamon-core`, `kamon-akka-http`, `kamon-tapir`, `kamon-testkit` % "test")
 
 lazy val `kamon-redis` = (project in file("instrumentation/kamon-redis"))
   .disablePlugins(AssemblyPlugin)
@@ -929,6 +949,7 @@ lazy val `kamon-bundle-dependencies-2-12-and-up` = (project in file("bundle/kamo
     `kamon-akka-grpc`,
     `kamon-finagle`,
     `kamon-tapir`,
+    `kamon-tapir-1`,
     `kamon-alpakka-kafka`
   )
 
