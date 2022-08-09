@@ -21,22 +21,24 @@ import kamon.Kamon
 import kanela.agent.api.instrumentation.InstrumentationBuilder
 import kanela.agent.libs.net.bytebuddy.implementation.bind.annotation.{Argument, SuperCall}
 import sttp.tapir.server.ServerEndpoint
-
 import java.util.concurrent.Callable
 
-class TapirInstrumentation extends InstrumentationBuilder {
+import kanela.agent.api.instrumentation.classloader.ClassRefiner
+
+class TapirInstrumentation_0 extends InstrumentationBuilder {
   onTypes("sttp.tapir.server.akkahttp.EndpointToAkkaServer",
     "sttp.tapir.server.akkahttp.AkkaHttpServerInterpreter")
-    .intercept(method("toRoute"), classOf[TapirToRouteInterceptor])
+    .when(ClassRefiner.builder().mustContain("sttp.tapir.server.ServerEndpoint").withMethod("renderPathTemplate"))
+    .intercept(method("toRoute"), classOf[TapirToRouteInterceptor_0])
 }
 
-class TapirToRouteInterceptor
-
-object TapirToRouteInterceptor {
+trait InterceptorMethods {
+  type SE = ServerEndpoint[_, T forSome { type T[_] }]
+  def pathTemplate(endpoint: SE): String
 
   def toRoute[I, E, O](@Argument(0) arg: Any, @SuperCall superCall: Callable[Route]): Route = {
     arg match {
-      case endpoint : ServerEndpoint[_,_] => {
+      case endpoint: ServerEndpoint[_, _] => {
         val originalRoute = superCall.call()
 
         req => {
@@ -45,7 +47,7 @@ object TapirToRouteInterceptor {
 
           val operationName = endpoint.info.name match {
             case Some(endpointName) if useEndpointNameAsOperationName => endpointName
-            case _ => endpoint.showPathTemplate()
+            case _ => pathTemplate(endpoint)
           }
 
           Kamon.currentSpan()
@@ -60,4 +62,10 @@ object TapirToRouteInterceptor {
         superCall.call()
     }
   }
+
+}
+class TapirToRouteInterceptor_0
+
+object TapirToRouteInterceptor_0 extends InterceptorMethods {
+  override def pathTemplate(endpoint: SE): String = endpoint.renderPathTemplate()
 }
