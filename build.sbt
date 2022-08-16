@@ -122,6 +122,7 @@ val instrumentationProjects = Seq[ProjectReference](
   `kamon-twitter-future`,
   `kamon-scalaz-future`,
   `kamon-cats-io`,
+  `kamon-cats-io-3`,
   `kamon-logback`,
   `kamon-jdbc`,
   `kamon-kafka`,
@@ -245,6 +246,21 @@ lazy val `kamon-cats-io` = (project in file("instrumentation/kamon-cats-io"))
         else
           "org.typelevel" %% "cats-effect" % "2.1.2" % "provided"
       },
+      scalatest % "test",
+      logbackClassic % "test"
+    ),
+
+  ).dependsOn(`kamon-core`, `kamon-executors`, `kamon-testkit` % "test")
+
+lazy val `kamon-cats-io-3` = (project in file("instrumentation/kamon-cats-io-3"))
+  .disablePlugins(AssemblyPlugin)
+  .enablePlugins(JavaAgent)
+  .settings(instrumentationSettings)
+  .settings(
+    crossScalaVersions := Seq(`scala_2.12_version`, `scala_2.13_version`, scala_3_version),
+    libraryDependencies ++= Seq(
+      kanelaAgent % "provided",
+      "org.typelevel" %% "cats-effect" % "3.3.5" % "provided",
       scalatest % "test",
       logbackClassic % "test"
     ),
@@ -885,6 +901,7 @@ lazy val `kamon-bundle-dependencies-all` = (project in file("bundle/kamon-bundle
     `kamon-twitter-future`,
     `kamon-scalaz-future`,
     `kamon-cats-io`,
+    `kamon-cats-io-3`,
     `kamon-logback`,
     `kamon-jdbc`,
     `kamon-kafka`,
