@@ -119,6 +119,16 @@ class TracerSpec extends AnyWordSpec with Matchers with SpanInspection.Syntax wi
       Reconfigure.reset()
     }
 
+    "never sample ignored operations" in {
+      Reconfigure.sampleAlways()
+
+      Kamon.spanBuilder("/ready").start().trace.samplingDecision shouldBe(SamplingDecision.DoNotSample)
+      Kamon.spanBuilder("/status").start().trace.samplingDecision shouldBe(SamplingDecision.DoNotSample)
+      Kamon.spanBuilder("/other").start().trace.samplingDecision shouldBe(SamplingDecision.Sample)
+
+      Reconfigure.reset()
+    }
+
     "figure out the position of a Span in its trace" in {
       Kamon.spanBuilder("root").start().position shouldBe Position.Root
       Kamon.spanBuilder("localRoot").asChildOf(remoteSpan()).start().position shouldBe Position.LocalRoot
