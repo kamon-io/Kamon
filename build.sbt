@@ -159,6 +159,9 @@ lazy val `kamon-instrumentation-common` = (project in file("instrumentation/kamo
   .enablePlugins(JavaAgent)
   .settings(instrumentationSettings)
   .settings(
+        crossScalaVersions += `scala_3_version`,
+  )
+  .settings(
     resolvers += Resolver.mavenLocal,
     libraryDependencies ++= Seq(
       slf4jApi % "test",

@@ -59,7 +59,7 @@ object BaseProject extends AutoPlugin {
     val `scala_2.11_version` = "2.11.12"
     val `scala_2.12_version` = "2.12.15"
     val `scala_2.13_version` = "2.13.8"
-    val scala_3_version = "3.0.2"
+    val scala_3_version = "3.1.3"
 
     // This installs the GPG signing key from the
     setupGpg()
@@ -164,7 +164,7 @@ object BaseProject extends AutoPlugin {
       case Some((2,11)) => Seq("-Xfuture", "-Ybackend:GenASM")
       case Some((2,12)) => Seq("-Xfuture", "-opt:l:method,-closure-invocations")
       case Some((2,13)) => Seq.empty
-      case Some((3, _)) => Seq("-source:3.0-migration")
+      case Some((3, _)) => Seq("-source:3.0-migration", "-Xtarget:8")
       case _ => Seq.empty
     })
   )
