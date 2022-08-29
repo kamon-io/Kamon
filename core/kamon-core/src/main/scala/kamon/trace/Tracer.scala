@@ -366,7 +366,8 @@ class Tracer(initialConfig: Config, clock: Clock, contextStorage: ContextStorage
 
         new Span.Local(id, parentId, trace, position, _kind, localParent, _name, _spanTags, _metricTags, at, _marks, _links,
           _trackMetrics, _tagWithParentOperation, _includeErrorStacktrace, isDelayed, clock, _preFinishHooks, _onSpanFinish,
-          _sampler, _scheduler.get, _delayedSpanReportingDelay, _localTailSamplerSettings, _includeErrorType)
+          _sampler, _scheduler.get, _delayedSpanReportingDelay, _localTailSamplerSettings, _includeErrorType,
+          _ignoredOperations, _trackMetricsOnIgnoredOperations)
       }
     }
 
