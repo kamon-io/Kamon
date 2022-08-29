@@ -19,21 +19,21 @@ package kamon.instrumentation.tapir
 import akka.http.scaladsl.server.Route
 import kamon.Kamon
 import kanela.agent.api.instrumentation.InstrumentationBuilder
-import kanela.agent.api.instrumentation.classloader.ClassRefiner
 import kanela.agent.libs.net.bytebuddy.implementation.bind.annotation.{Argument, SuperCall}
 import sttp.tapir.server.ServerEndpoint
-
 import java.util.concurrent.Callable
 
-class TapirInstrumentation extends InstrumentationBuilder {
+import kanela.agent.api.instrumentation.classloader.ClassRefiner
+
+class TapirInstrumentationLegacy extends InstrumentationBuilder {
   onTypes("sttp.tapir.server.akkahttp.EndpointToAkkaServer", "sttp.tapir.server.akkahttp.AkkaHttpServerInterpreter")
-    .when(ClassRefiner.builder().mustContain("sttp.tapir.server.ServerEndpoint").withMethods("showPathTemplate"))
-    .intercept(method("toRoute"), classOf[TapirToRouteInterceptor])
+    .when(ClassRefiner.builder().mustContain("sttp.tapir.server.ServerEndpoint").withMethod("renderPathTemplate"))
+    .intercept(method("toRoute"), classOf[TapirToRouteInterceptorLegacy])
 }
 
-class TapirToRouteInterceptor
+class TapirToRouteInterceptorLegacy
+object TapirToRouteInterceptorLegacy {
 
-object TapirToRouteInterceptor  {
   def toRoute[I, E, O](@Argument(0) arg: Any, @SuperCall superCall: Callable[Route]): Route = {
     arg match {
       case endpoint: ServerEndpoint[_, _] => {
@@ -45,7 +45,7 @@ object TapirToRouteInterceptor  {
 
           val operationName = endpoint.info.name match {
             case Some(endpointName) if useEndpointNameAsOperationName => endpointName
-            case _ => endpoint.showPathTemplate()
+            case _ => endpoint.renderPathTemplate()
           }
 
           Kamon.currentSpan()

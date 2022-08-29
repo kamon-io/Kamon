@@ -139,7 +139,6 @@ val instrumentationProjects = Seq[ProjectReference](
   `kamon-play`,
   `kamon-okhttp`,
   `kamon-tapir`,
-  `kamon-tapir-1`,
   `kamon-redis`,
   `kamon-caffeine`,
   `kamon-lagom`,
@@ -530,35 +529,23 @@ lazy val `kamon-tapir` = (project in file("instrumentation/kamon-tapir"))
     instrumentationSettings,
     crossScalaVersions := Seq(`scala_2.12_version`, `scala_2.13_version`),
     libraryDependencies ++= Seq(
-      kanelaAgent % "provided",
-      "com.softwaremill.sttp.tapir" %% "tapir-core" % "0.20.2" % "provided",
-      "com.typesafe.akka" %% "akka-http" % akkaHttpVersion(scalaBinaryVersion.value) % "provided",
+      kanelaAgent % "provided,legacy",
 
-      "com.softwaremill.sttp.tapir" %% "tapir-akka-http-server" % "0.20.2" % "test",
-      "com.softwaremill.sttp.client3" %% "core" % "3.3.0-RC2" % "test",
-      scalatest % "test",
-      logbackClassic % "test",
-    )
-  )
-  .dependsOn(`kamon-core`, `kamon-akka-http`, `kamon-testkit` % "test")
-
-lazy val `kamon-tapir-1` = (project in file("instrumentation/kamon-tapir-1"))
-  .disablePlugins(AssemblyPlugin)
-  .enablePlugins(JavaAgent)
-  .settings(
-    instrumentationSettings,
-    crossScalaVersions := Seq(`scala_2.12_version`, `scala_2.13_version`),
-    libraryDependencies ++= Seq(
-      kanelaAgent % "provided",
+      // Tapir 1.x dependencies
       "com.softwaremill.sttp.tapir" %% "tapir-core" % "1.0.1" % "provided",
       "com.typesafe.akka" %% "akka-http" % akkaHttpVersion(scalaBinaryVersion.value) % "provided",
+      "com.softwaremill.sttp.tapir" %% "tapir-akka-http-server" % "1.0.5" % "test",
 
-      "com.softwaremill.sttp.tapir" %% "tapir-akka-http-server" % "1.0.1" % "test",
-      "com.softwaremill.sttp.client3" %% "core" % "3.3.0-RC2" % "test",
-      scalatest % "test",
-      logbackClassic % "test",
+      // Legacy Tapir dependencies
+      "com.softwaremill.sttp.tapir" %% "tapir-core" % "0.20.2" % "legacy",
+      "com.typesafe.akka" %% "akka-http" % akkaHttpVersion(scalaBinaryVersion.value) % "legacy",
+      "com.softwaremill.sttp.tapir" %% "tapir-akka-http-server" % "0.20.2" % "test,test-legacy",
+      "com.softwaremill.sttp.client3" %% "core" % "3.3.0-RC2" % "test,test-legacy",
+      scalatest % "test,test-legacy",
+      logbackClassic % "test,test-legacy",
     )
-  ).dependsOn(`kamon-core`, `kamon-akka-http`, `kamon-tapir`, `kamon-testkit` % "test")
+  )
+  .dependsOn(`kamon-core` % "compile,legacy", `kamon-akka-http` % "compile,legacy", `kamon-testkit` % "test,test-legacy")
 
 lazy val `kamon-redis` = (project in file("instrumentation/kamon-redis"))
   .disablePlugins(AssemblyPlugin)
@@ -949,7 +936,6 @@ lazy val `kamon-bundle-dependencies-2-12-and-up` = (project in file("bundle/kamo
     `kamon-akka-grpc`,
     `kamon-finagle`,
     `kamon-tapir`,
-    `kamon-tapir-1`,
     `kamon-alpakka-kafka`
   )
 

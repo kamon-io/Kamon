@@ -25,7 +25,7 @@ import sttp.client3.{HttpURLConnectionBackend, Identity, SttpBackend, UriContext
 
 import scala.concurrent.duration.DurationInt
 
-class TapirSpec extends AnyWordSpec with Matchers
+class TapirLegacySpec extends AnyWordSpec with Matchers
   with TestSpanReporter
   with Eventually
   with BeforeAndAfterAll
