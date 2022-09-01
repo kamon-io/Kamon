@@ -260,7 +260,7 @@ lazy val `kamon-cats-io-3` = (project in file("instrumentation/kamon-cats-io-3")
     crossScalaVersions := Seq(`scala_2.12_version`, `scala_2.13_version`, scala_3_version),
     libraryDependencies ++= Seq(
       kanelaAgent % "provided",
-      "org.typelevel" %% "cats-effect" % "3.3.5" % "provided",
+      "org.typelevel" %% "cats-effect" % "3.3.14" % "provided",
       scalatest % "test",
       logbackClassic % "test"
     ),

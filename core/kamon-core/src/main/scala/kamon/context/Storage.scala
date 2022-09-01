@@ -225,5 +225,13 @@ object Storage {
 
       contexts.result()
     }
+
+    def printNonEmptyThreads(): Unit = {
+      allThreadContexts()
+        .filter(_.currentContext.nonEmpty())
+        .foreach { tc =>
+          println(s"Thread [${tc.thread.getName}] has Context [${tc.currentContext}]. Last updated at: \n ${tc.lastUpdateStackTrace}")
+        }
+    }
   }
 }

@@ -5,7 +5,7 @@ import cats.effect.{IO, Resource, Spawn}
 import kamon.Kamon
 import kamon.context.Context
 import kamon.tag.Lookups.plain
-import org.scalatest.OptionValues
+import org.scalatest.{BeforeAndAfterEach, OptionValues}
 import org.scalatest.concurrent.{Eventually, PatienceConfiguration, ScalaFutures}
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
@@ -19,11 +19,10 @@ import kamon.trace.Identifier.Scheme
 import kamon.trace.{Identifier, Span, Trace}
 
 class CatsIoInstrumentationSpec extends AnyWordSpec with Matchers with ScalaFutures with PatienceConfiguration
-    with OptionValues with Eventually {
+    with OptionValues with Eventually with BeforeAndAfterEach {
 
-  // NOTE: We have this test just to ensure that the Context propagation is working, but starting with Kamon 2.0 there
-  //       is no need to have explicit Runnable/Callable instrumentation because the instrumentation brought by the
-  //       kamon-executors module should take care of all non-JDK Runnable/Callable implementations.
+  System.setProperty("kamon.context.debug", "true")
+
   "an cats.effect IO created when instrumentation is active" should {
     "capture the active span available when created" which {
 
@@ -31,15 +30,18 @@ class CatsIoInstrumentationSpec extends AnyWordSpec with Matchers with ScalaFutu
         val runtime = IORuntime.global
         val anotherExecutionContext: ExecutionContext = ExecutionContext.fromExecutorService(Executors.newFixedThreadPool(10))
         val context = Context.of("key", "value")
+
         val test =
           for {
             _ <- IO.delay(Kamon.storeContext(context))
-            _ <- Spawn[IO].evalOn(IO.sleep(0.seconds), anotherExecutionContext)
+            _ <- Spawn[IO].evalOn(IO.sleep(10.millis), anotherExecutionContext)
+            beforeCleaning <- IO.delay(Kamon.currentContext())
             _ <- IO.delay(Kamon.storeContext(Context.Empty))
-            _ <- Spawn[IO].evalOn(IO.sleep(0.seconds), anotherExecutionContext)
+            _ <- Spawn[IO].evalOn(IO.sleep(10.millis), anotherExecutionContext)
             afterCleaning <- IO.delay(Kamon.currentContext())
           } yield {
             afterCleaning shouldBe Context.Empty
+            beforeCleaning shouldBe context
           }
 
         test.unsafeRunSync()(runtime)
@@ -57,7 +59,7 @@ class CatsIoInstrumentationSpec extends AnyWordSpec with Matchers with ScalaFutu
         val context = Context.of("key", "value")
         val test =
           for {
-            scope <- IO.delay({println("Context will be set"); Kamon.storeContext(context);})
+            scope <- IO.delay(Kamon.storeContext(context))
             len <- IO("Hello Kamon!").map(_.length)
             _ <- IO(len.toString)
             beforeChanging <- getKey()
@@ -120,10 +122,17 @@ class CatsIoInstrumentationSpec extends AnyWordSpec with Matchers with ScalaFutu
         val result = scala.concurrent.Future.sequence(
           (1 to 100).toList.map(_ => (IO.delay(Kamon.init()) *> IO.delay(Kamon.storeContext(context)) *> test).unsafeToFuture()(runtime))
         )
-        Await.result(result, 10.seconds)
+        Await.result(result, 100.seconds)
       }
     }
   }
+
+  override protected def afterEach(): Unit = {
+    super.afterEach()
+
+    kamon.context.Storage.Debug.printNonEmptyThreads()
+  }
+
   private def getKey(): IO[String] = {
     IO.delay(Kamon.currentContext().getTag(plain("key")))
   }
@@ -145,7 +154,4 @@ class CatsIoInstrumentationSpec extends AnyWordSpec with Matchers with ScalaFutu
       }
       .use(_ => (IO.delay(Kamon.currentSpan()), io).parBisequence)
   }
-
-
-
 }
