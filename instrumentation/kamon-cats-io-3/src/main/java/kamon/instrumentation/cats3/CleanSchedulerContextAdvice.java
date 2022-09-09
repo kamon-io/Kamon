@@ -24,15 +24,9 @@ public class CleanSchedulerContextAdvice {
 
     @Override
     public void run() {
-      final Storage.Scope scope = Kamon.storeContext(context);
-
-      try {
+      try (Storage.Scope ignored = Kamon.storeContext(context)) {
         runnable.run();
-      } catch (Throwable e) {
-        scope.close();
       }
-
-      Kamon.storeContext(Context.Empty());
     }
   }
 }
