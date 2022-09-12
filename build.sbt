@@ -175,6 +175,7 @@ lazy val `kamon-instrumentation-common` = (project in file("instrumentation/kamo
 lazy val `kamon-executors` = (project in file("instrumentation/kamon-executors"))
   .disablePlugins(AssemblyPlugin)
   .settings(
+    crossScalaVersions += `scala_3_version`,
     libraryDependencies ++= Seq(
       kanelaAgent % "provided",
       scalatest % "test",
