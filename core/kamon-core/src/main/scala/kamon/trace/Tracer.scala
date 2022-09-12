@@ -55,6 +55,8 @@ class Tracer(initialConfig: Config, clock: Clock, contextStorage: ContextStorage
   @volatile private var _localTailSamplerSettings: LocalTailSamplerSettings = LocalTailSamplerSettings(false, Int.MaxValue, Long.MaxValue)
   @volatile private var _scheduler: Option[ScheduledExecutorService] = None
   @volatile private var _includeErrorType: Boolean = false
+  @volatile private var _ignoredOperations: Set[String] = Set.empty
+  @volatile private var _trackMetricsOnIgnoredOperations: Boolean = false
   private val _onSpanFinish: Span.Finished => Unit = _spanBuffer.offer
 
   reconfigure(initialConfig)
@@ -364,12 +366,20 @@ class Tracer(initialConfig: Config, clock: Clock, contextStorage: ContextStorage
 
         new Span.Local(id, parentId, trace, position, _kind, localParent, _name, _spanTags, _metricTags, at, _marks, _links,
           _trackMetrics, _tagWithParentOperation, _includeErrorStacktrace, isDelayed, clock, _preFinishHooks, _onSpanFinish,
-          _sampler, _scheduler.get, _delayedSpanReportingDelay, _localTailSamplerSettings, _includeErrorType)
+          _sampler, _scheduler.get, _delayedSpanReportingDelay, _localTailSamplerSettings, _includeErrorType,
+          _ignoredOperations, _trackMetricsOnIgnoredOperations)
       }
     }
 
-    private def suggestedOrSamplerDecision(): SamplingDecision =
-      _suggestedSamplingDecision.getOrElse(_sampler.decide(this))
+    private def suggestedOrSamplerDecision(): SamplingDecision = {
+      if(_ignoredOperations.contains(_name)) {
+        if(!_trackMetricsOnIgnoredOperations)
+          doNotTrackMetrics()
+
+        SamplingDecision.DoNotSample
+      } else
+        _suggestedSamplingDecision.getOrElse(_sampler.decide(this))
+    }
 
     private def suggestedOrGeneratedTraceId(): Identifier =
       if(_suggestedTraceId.isEmpty) identifierScheme.traceIdFactory.generate() else _suggestedTraceId
@@ -430,6 +440,8 @@ class Tracer(initialConfig: Config, clock: Clock, contextStorage: ContextStorage
       val tagWithUpstreamService = traceConfig.getBoolean("span-metric-tags.upstream-service")
       val tagWithParentOperation = traceConfig.getBoolean("span-metric-tags.parent-operation")
       val includeErrorStacktrace = traceConfig.getBoolean("include-error-stacktrace")
+      val ignoredOperations = traceConfig.getStringList("ignored-operations").asScala.toSet
+      val trackMetricsOnIgnoredOperations = traceConfig.getBoolean("track-metrics-on-ignored-operations")
       val includeErrorType = traceConfig.getBoolean("include-error-type")
       val delayedSpanReportingDelay = traceConfig.getDuration("span-reporting-delay")
       val localTailSamplerSettings = LocalTailSamplerSettings(
@@ -457,6 +469,8 @@ class Tracer(initialConfig: Config, clock: Clock, contextStorage: ContextStorage
       _joinRemoteParentsWithSameSpanID = joinRemoteParentsWithSameSpanID
       _includeErrorStacktrace = includeErrorStacktrace
       _includeErrorType = includeErrorType
+      _ignoredOperations = ignoredOperations
+      _trackMetricsOnIgnoredOperations = trackMetricsOnIgnoredOperations
       _tagWithUpstreamService = tagWithUpstreamService
       _tagWithParentOperation = tagWithParentOperation
       _traceReporterQueueSize = traceReporterQueueSize

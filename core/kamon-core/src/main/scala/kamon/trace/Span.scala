@@ -412,7 +412,8 @@ object Span {
       createdAt: Instant, initialMarks: List[Mark], initialLinks: List[Link], initialTrackMetrics: Boolean, tagWithParentOperation: Boolean,
       includeErrorStacktrace: Boolean, isDelayed: Boolean, clock: Clock, preFinishHooks: Array[Tracer.PreFinishHook],
       onFinish: Span.Finished => Unit, sampler: Sampler, scheduler: ScheduledExecutorService, reportingDelay: Duration,
-      localTailSamplerSettings: LocalTailSamplerSettings, includeErrorType: Boolean) extends Span.Delayed {
+      localTailSamplerSettings: LocalTailSamplerSettings, includeErrorType: Boolean, ignoredOperations: Set[String],
+      trackMetricsOnIgnoredOperations: Boolean) extends Span.Delayed {
 
     private val _metricTags = metricTags
     private val _spanTags = spanTags
@@ -574,10 +575,18 @@ object Span {
 
     override def takeSamplingDecision(): Span = synchronized {
       if(trace.samplingDecision == SamplingDecision.Unknown) {
-        sampler.decide(this) match {
-          case SamplingDecision.Sample      => trace.keep()
-          case SamplingDecision.DoNotSample => trace.drop()
-          case SamplingDecision.Unknown     => // We should never get to this point!
+        if(ignoredOperations.contains(operationName())) {
+          if(!trackMetricsOnIgnoredOperations)
+            doNotTrackMetrics()
+
+          trace.drop()
+        }
+        else {
+          sampler.decide(this) match {
+            case SamplingDecision.Sample => trace.keep()
+            case SamplingDecision.DoNotSample => trace.drop()
+            case SamplingDecision.Unknown => // We should never get to this point!
+          }
         }
       }
 
