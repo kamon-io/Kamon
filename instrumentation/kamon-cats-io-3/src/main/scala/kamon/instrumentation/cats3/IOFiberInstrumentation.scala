@@ -1,12 +1,12 @@
 package kamon.instrumentation.cats3
 
 import kamon.Kamon
-import kamon.context.{Context, Storage}
 import kamon.context.Storage.Scope
 import kamon.instrumentation.context.HasContext
 import kanela.agent.api.instrumentation.InstrumentationBuilder
 import kanela.agent.libs.net.bytebuddy.asm.Advice
 
+import scala.annotation.static
 
 class IOFiberInstrumentation extends InstrumentationBuilder {
 
@@ -44,24 +44,26 @@ class IOFiberInstrumentation extends InstrumentationBuilder {
     .advise(method("sleep"), classOf[CleanSchedulerContextAdvice])
 }
 
+class AfterFiberInit
 object AfterFiberInit {
 
   @Advice.OnMethodExit
-  def exit(@Advice.This fiber: HasContext): Unit ={
-    fiber.setContext(Kamon.currentContext())
+  @static def exit(@Advice.This fiber: Any): Unit ={
+    fiber.asInstanceOf[HasContext].setContext(Kamon.currentContext())
   }
 }
 
+class RunLoopWithContext
 object RunLoopWithContext {
 
   @Advice.OnMethodEnter()
-  def enter(@Advice.This fiber: Any): Scope = {
+  @static def enter(@Advice.This fiber: Any): Scope = {
     val ctxFiber = fiber.asInstanceOf[HasContext].context
     Kamon.storeContext(ctxFiber)
   }
 
   @Advice.OnMethodExit()
-  def exit(@Advice.Enter scope: Scope, @Advice.This fiber: Any): Unit = {
+  @static def exit(@Advice.Enter scope: Scope, @Advice.This fiber: Any): Unit = {
     val leftContext = Kamon.currentContext()
     scope.close()
 
@@ -69,10 +71,11 @@ object RunLoopWithContext {
   }
 }
 
+class RestoreContextOnSuccessfulResume
 object RestoreContextOnSuccessfulResume {
 
   @Advice.OnMethodExit()
-  def exit(@Advice.This fiber: Any, @Advice.Return wasSuspended: Boolean): Unit = {
+  @static def exit(@Advice.This fiber: Any, @Advice.Return wasSuspended: Boolean): Unit = {
     if(wasSuspended) {
       val ctxFiber = fiber.asInstanceOf[HasContext].context
       Kamon.storeContext(ctxFiber)
@@ -80,25 +83,28 @@ object RestoreContextOnSuccessfulResume {
   }
 }
 
+class SaveCurrentContextOnExit
 object SaveCurrentContextOnExit {
+
   @Advice.OnMethodExit()
-  def exit(@Advice.This fiber: Any): Unit = {
+  @static def exit(@Advice.This fiber: Any): Unit = {
     fiber.asInstanceOf[HasContext].setContext(Kamon.currentContext())
   }
 }
 
-
+class SetContextOnNewFiber
 object SetContextOnNewFiber {
 
   @Advice.OnMethodEnter()
-  def enter(@Advice.Argument(1) fiber: Any): Unit =
+  @static def enter(@Advice.Argument(1) fiber: Any): Unit =
     fiber.asInstanceOf[HasContext].setContext(Kamon.currentContext())
 }
 
+class SetContextOnNewFiberForWSTP
 object SetContextOnNewFiberForWSTP {
 
   @Advice.OnMethodEnter()
-  def enter(@Advice.Argument(0) fiber: Any): Unit = {
+  @static def enter(@Advice.Argument(0) fiber: Any): Unit = {
     fiber.asInstanceOf[HasContext].setContext(Kamon.currentContext())
   }
 }
