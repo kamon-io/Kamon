@@ -912,7 +912,6 @@ lazy val `kamon-bundle-dependencies-all` = (project in file("bundle/kamon-bundle
     `kamon-twitter-future`,
     `kamon-scalaz-future`,
     `kamon-cats-io`,
-    `kamon-cats-io-3`,
     `kamon-logback`,
     `kamon-jdbc`,
     `kamon-kafka`,
@@ -951,6 +950,7 @@ lazy val `kamon-bundle-dependencies-2-12-and-up` = (project in file("bundle/kamo
   .dependsOn(
     `kamon-bundle-dependencies-all`,
     `kamon-akka-grpc`,
+    `kamon-cats-io-3`,
     `kamon-finagle`,
     `kamon-tapir`,
     `kamon-alpakka-kafka`
