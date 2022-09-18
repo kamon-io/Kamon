@@ -93,14 +93,4 @@ object KamonArmeriaMessageConverter {
     override def statusCode: Int = reqLog.responseHeaders().status().code()
   }
 
-  trait HeaderHandler extends HeaderWriter {
-    private val _headers = mutable.Map[String, String]()
-
-    override def write(header: String, value: String): Unit = {
-      _headers += (header -> value)
-    }
-
-    def headers: mutable.Map[String, String] = _headers
-  }
-
 }
