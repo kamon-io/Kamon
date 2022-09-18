@@ -44,10 +44,10 @@ class ArmeriaServerBuilderAdvisor
   * some things are done with the ports field, so we aren't entirely sure that this ports are gonna to be final
   */
 object ArmeriaServerBuilderAdvisor extends JavaConverter {
-  lazy val httpServerConfig: Config = Kamon.config().getConfig("kamon.instrumentation.armeria.server")
 
   @Advice.OnMethodEnter
   def addKamonDecorator(@Advice.This builder: ServerBuilder): Unit = {
+    lazy val httpServerConfig: Config = Kamon.config().getConfig("kamon.instrumentation.armeria.server")
 
     def getPortsFrom(builder: ServerBuilder): util.List[ServerPort] = {
       val ports = classOf[ServerBuilder].getDeclaredField("ports")
@@ -71,7 +71,6 @@ object ArmeriaServerBuilderAdvisor extends JavaConverter {
 class HandleNotFoundMethodAdvisor
 
 object HandleNotFoundMethodAdvisor {
-  lazy val unhandledOperationName: String = Kamon.config().getConfig("kamon.instrumentation.armeria.server").getString("tracing.operations.unhandled")
 
   /**
     * When an HttpStatusException is thrown in {@link com.linecorp.armeria.server.FallbackService.handleNotFound( )} is because the route doesn't  exist
@@ -81,6 +80,8 @@ object HandleNotFoundMethodAdvisor {
   def around(@Advice.Argument(0) ctx: ServiceRequestContext,
              @Advice.Argument(2) statusException: HttpStatusException,
              @Advice.Thrown throwable: Throwable): Unit = {
+    lazy val unhandledOperationName: String = Kamon.config().getConfig("kamon.instrumentation.armeria.server").getString("tracing.operations.unhandled")
+
     if (throwable != null && statusException.httpStatus.code() == HttpStatus.NOT_FOUND.code()) {
       val requestHandler = ctx.attr(REQUEST_HANDLER_TRACE_KEY)
         requestHandler.span.name(unhandledOperationName)
