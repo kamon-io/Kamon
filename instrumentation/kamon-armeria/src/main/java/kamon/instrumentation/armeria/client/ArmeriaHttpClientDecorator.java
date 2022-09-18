@@ -20,16 +20,12 @@ import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.SimpleDecoratingHttpClient;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
-import io.netty.util.AttributeKey;
 import kamon.Kamon;
-import kamon.context.Storage;
 import kamon.instrumentation.armeria.client.timing.Timing;
 import kamon.instrumentation.armeria.converters.KamonArmeriaMessageConverter;
 import kamon.instrumentation.http.HttpClientInstrumentation;
 
 public class ArmeriaHttpClientDecorator extends SimpleDecoratingHttpClient {
-  private static final AttributeKey<Storage.Scope> CLIENT_TRACE_SCOPE_KEY = AttributeKey.valueOf(Storage.Scope.class, "CLIENT_TRACE_SCOPE");
-
   private final HttpClientInstrumentation clientInstrumentation;
 
   protected ArmeriaHttpClientDecorator(HttpClient delegate, HttpClientInstrumentation clientInstrumentation) {
@@ -46,14 +42,11 @@ public class ArmeriaHttpClientDecorator extends SimpleDecoratingHttpClient {
     ctx.log()
         .whenComplete()
         .thenAccept(log -> {
-          try (Storage.Scope ignored = Kamon.storeContext(ctx.attr(CLIENT_TRACE_SCOPE_KEY).context())) {
             Timing.takeTimings(log, requestHandler.span());
             requestHandler.processResponse(KamonArmeriaMessageConverter.toKamonResponse(log));
-          }
         });
 
-    try (Storage.Scope scope = Kamon.storeContext(Kamon.currentContext())) {
-      ctx.setAttr(CLIENT_TRACE_SCOPE_KEY, scope);
+    try {
       return unwrap().execute(ctx, requestHandler.request());
     } catch (Exception exception) {
       requestHandler.span().fail(exception.getMessage(), exception).finish();

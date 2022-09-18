@@ -22,6 +22,7 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingHttpService;
 import io.netty.util.AttributeKey;
 import kamon.Kamon;
+import kamon.context.Context;
 import kamon.context.Storage;
 import kamon.instrumentation.armeria.converters.KamonArmeriaMessageConverter;
 import kamon.instrumentation.http.HttpServerInstrumentation;
@@ -51,10 +52,9 @@ public class ArmeriaHttpServerDecorator extends SimpleDecoratingHttpService {
       ctx.log()
           .whenComplete()
           .thenAccept(log -> {
-            try (Storage.Scope scope = Kamon.storeContext(ctx.attr(REQUEST_HANDLER_TRACE_KEY).context())) {
-              requestHandler.buildResponse(KamonArmeriaMessageConverter.toResponse(log), scope.context());
+              final Context context = ctx.attr(REQUEST_HANDLER_TRACE_KEY).context();
+              requestHandler.buildResponse(KamonArmeriaMessageConverter.toResponse(log),context);
               requestHandler.responseSent();
-            }
           });
 
       try (Storage.Scope ignored = Kamon.storeContext(requestHandler.context())) {
