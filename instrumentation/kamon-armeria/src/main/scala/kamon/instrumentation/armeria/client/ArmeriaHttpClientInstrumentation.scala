@@ -31,10 +31,11 @@ class ArmeriaHttpClientInstrumentation extends InstrumentationBuilder {
 class ArmeriaHttpClientBuilderAdvisor
 
 object ArmeriaHttpClientBuilderAdvisor extends JavaConverter {
-  lazy val httpClientConfig: Config = Kamon.config().getConfig("kamon.instrumentation.armeria.client")
 
   @Advice.OnMethodExit(suppress = classOf[Throwable])
   def addKamonDecorator(@Advice.This builder: ClientBuilder): Unit = {
+    lazy val httpClientConfig: Config = Kamon.config().getConfig("kamon.instrumentation.armeria.client")
+
     val clientInstrumentation = HttpClientInstrumentation.from(httpClientConfig, "armeria.http.client")
     builder.decorator(toJavaFunction((delegate: HttpClient) => new ArmeriaHttpClientDecorator(delegate, clientInstrumentation)))
   }
