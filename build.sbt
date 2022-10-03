@@ -761,7 +761,7 @@ lazy val `kamon-jaeger` = (project in file("reporters/kamon-jaeger"))
   .settings(
     crossScalaVersions += `scala_3_version`,
     libraryDependencies ++= Seq(
-      "io.jaegertracing" % "jaeger-thrift" % "1.1.0",
+      "io.jaegertracing" % "jaeger-thrift" % "1.8.1",
       scalatest % "test"
     )
   ).dependsOn(`kamon-core`)
