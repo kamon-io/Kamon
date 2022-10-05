@@ -45,6 +45,12 @@ object JvmMetrics {
     unit = MeasurementUnit.information.bytes
   )
 
+  val MemoryUtilization = Kamon.histogram(
+    name = "jvm.memory.utilization",
+    description = "Tracks the percentage of heap used across old/tenured/single memory regions after GC events",
+    unit = MeasurementUnit.percentage
+  )
+
   val MemoryFree = Kamon.histogram(
     name = "jvm.memory.free",
     description = "Samples the free space in a memory region",
@@ -148,7 +154,7 @@ object JvmMetrics {
   class GarbageCollectionInstruments(tags: TagSet) extends InstrumentGroup(tags) {
     private val _collectorCache = mutable.Map.empty[String, Histogram]
 
-    val allocation = register(MemoryAllocation)
+    val memoryUtilization = register(MemoryUtilization)
     val promotionToOld = register(GcPromotion, "space", "old")
 
     def garbageCollectionTime(collector: Collector): Histogram =
@@ -163,6 +169,8 @@ object JvmMetrics {
   }
 
   class MemoryUsageInstruments(tags: TagSet) extends InstrumentGroup(tags) {
+    val allocation = register(MemoryAllocation)
+
     private val _memoryRegionsCache = mutable.Map.empty[String, MemoryRegionInstruments]
     private val _memoryPoolsCache = mutable.Map.empty[String, MemoryRegionInstruments]
     private val _memoryBuffersCache = mutable.Map.empty[String, BufferPoolInstruments]
