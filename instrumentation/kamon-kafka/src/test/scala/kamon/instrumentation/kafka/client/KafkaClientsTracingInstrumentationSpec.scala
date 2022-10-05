@@ -21,14 +21,15 @@ import kamon.tag.Lookups._
 import kamon.testkit.{InitAndStopKamonAfterAll, Reconfigure}
 import kamon.trace.Span
 import net.manub.embeddedkafka.{EmbeddedKafka, EmbeddedKafkaConfig}
-import org.apache.kafka.common.serialization.StringDeserializer
+import org.apache.kafka.common.serialization.{Deserializer, StringDeserializer}
 import org.scalatest.concurrent.Eventually
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.time.SpanSugar
 import org.scalatest.wordspec.AnyWordSpec
 import org.scalatest.{BeforeAndAfter, BeforeAndAfterAll, OptionValues}
-
 import scala.util.Try
+
+import org.scalatest.concurrent.PatienceConfiguration.Timeout
 
 class KafkaClientsTracingInstrumentationSpec extends AnyWordSpec with Matchers
   with Eventually
@@ -47,8 +48,8 @@ class KafkaClientsTracingInstrumentationSpec extends AnyWordSpec with Matchers
       + ("auto.create.topics.enable" -> "false")
     )
 
-  implicit val stringDeser = new StringDeserializer
-  implicit val patienceConfigTimeout = timeout(20 seconds)
+  implicit val stringDeser: Deserializer[String] = new StringDeserializer
+  implicit val patienceConfigTimeout: Timeout = timeout(20 seconds)
 
   override def beforeAll(): Unit = {
     super.beforeAll()
@@ -56,6 +57,7 @@ class KafkaClientsTracingInstrumentationSpec extends AnyWordSpec with Matchers
     sampleAlways()
     EmbeddedKafka.start()(defaultConfig)
   }
+
   override def afterAll(): Unit = {
     EmbeddedKafka.stop()
     super.afterAll()
@@ -83,11 +85,11 @@ class KafkaClientsTracingInstrumentationSpec extends AnyWordSpec with Matchers
       awaitNumReportedSpans(1)
 
       assertReportedSpan(_.operationName == "producer.send") { span =>
-        span.hasError should be (true)
+        span.hasError should be(true)
       }
     }
 
-    "create a Producer/Consumer Span when publish/consume a message" in new SpanReportingTestScope(reporter) with TestTopicScope  {
+    "create a Producer/Consumer Span when publish/consume a message" in new SpanReportingTestScope(reporter) with TestTopicScope {
 
       publishStringMessageToKafka(testTopicName, "Hello world!!!")
       val consumedRecord = consumeFirstRawRecord[String, String](testTopicName)
@@ -152,7 +154,8 @@ class KafkaClientsTracingInstrumentationSpec extends AnyWordSpec with Matchers
     }
 
     "create a Producer/Consumer Span when publish/consume a message with delayed spans" in new SpanReportingTestScope(reporter) with TestTopicScope {
-      Kamon.reconfigure(ConfigFactory.parseString("""
+      Kamon.reconfigure(ConfigFactory.parseString(
+        """
           |kamon.instrumentation.kafka.client.tracing.use-delayed-spans = true
           |kamon.instrumentation.kafka.client.tracing.continue-trace-on-consumer = false
       """.stripMargin).withFallback(Kamon.config()))
