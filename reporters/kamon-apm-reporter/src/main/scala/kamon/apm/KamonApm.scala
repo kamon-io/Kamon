@@ -19,7 +19,6 @@ package apm
 
 import java.nio.ByteBuffer
 import java.time.Duration
-
 import com.google.protobuf
 import com.typesafe.config.Config
 import kamino.IngestionV1
@@ -35,10 +34,11 @@ import kamon.trace.Span
 import kamon.util.{Clock, UnitConverter}
 
 import scala.collection.JavaConverters.seqAsJavaListConverter
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Try
 
 
-class KamonApm(configPath: String) extends CombinedReporter {
+class KamonApm(configPath: String, executionContext: ExecutionContext) extends CombinedReporter {
   private val _maxSnapshotAge = Duration.ofMinutes(30)
   private var _settings = readSettings(Kamon.config(), configPath)
   private var _httpClient: Option[KamonApmApiClient] = Option(new KamonApmApiClient(_settings))
@@ -49,13 +49,15 @@ class KamonApm(configPath: String) extends CombinedReporter {
   if(isAcceptableApiKey(_settings.apiKey)) {
     val serviceName = Kamon.environment.service
     _logger.info(s"Starting the Kamon APM Reporter. Your service will be displayed as [${serviceName}] at https://apm.kamon.io/")
-    Try(reportBoot(Kamon.clock().millis())).failed.foreach(t => _logger.error("Failed boot", t))
+    Future {
+      reportBoot(Kamon.clock().millis())
+    }(executionContext).failed.foreach(t => _logger.error("Failed boot", t))(executionContext)
   } else {
     _logger.warn(s"The Kamon APM Reporter was started with an invalid API key [${_settings.apiKey}]")
   }
 
-  def this() =
-    this("kamon.apm")
+  def this(executionContext: ExecutionContext) =
+    this("kamon.apm", executionContext)
 
   override def stop(): Unit = {
     reportShutdown(Kamon.clock().millis())
@@ -285,7 +287,7 @@ object KamonApm {
 
   class Factory extends ModuleFactory {
     override def create(settings: ModuleFactory.Settings): Module =
-      new KamonApm()
+      new KamonApm(settings.executionContext)
   }
 }
 
