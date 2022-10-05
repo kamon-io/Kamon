@@ -165,17 +165,10 @@ object BinaryPropagation {
 
     override def read(reader: ByteStreamReader): Context = {
       if(reader.available() > 0) {
-        val contextData = Try {
-          val cContext = new ColferContext()
-          cContext.unmarshal(reader.readAll(), 0)
-          cContext
-        }
+        try {
+          val colferContext = new ColferContext()
+          colferContext.unmarshal(reader.readAll(), 0)
 
-        contextData.failed.foreach {
-          case NonFatal(t) => _logger.warn("Failed to read Context from ByteStreamReader", t)
-        }
-
-        contextData.map { colferContext =>
 
           // Context tags
           val tagsBuilder = Map.newBuilder[String, Any]
@@ -184,6 +177,7 @@ object BinaryPropagation {
             colferContext.tags.longs.foreach(t => tagsBuilder += (t.key -> t.value))
             colferContext.tags.booleans.foreach(t => tagsBuilder += (t.key -> t.value))
           }
+
           val tags = TagSet.from(tagsBuilder.result())
 
           // Only reads the entries for which there is a registered reader
@@ -191,6 +185,7 @@ object BinaryPropagation {
             case (context, entryData) =>
               settings.incomingEntries.get(entryData.key).map { entryReader =>
                 var contextWithEntry = context
+
                 try {
                   contextWithEntry = entryReader.read(ByteStreamReader.of(entryData.value), context)
                 } catch {
@@ -200,7 +195,11 @@ object BinaryPropagation {
                 contextWithEntry
               }.getOrElse(context)
           }
-        } getOrElse(Context.Empty)
+        } catch {
+          case NonFatal(t) =>
+            _logger.warn("Failed to read Context from ByteStreamReader", t)
+            Context.Empty
+        }
       } else Context.Empty
     }
 
