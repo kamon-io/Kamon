@@ -270,7 +270,7 @@ lazy val `kamon-cats-io-3` = (project in file("instrumentation/kamon-cats-io-3")
       logbackClassic % "test"
     ),
 
-  ).dependsOn(`kamon-core`, `kamon-executors`, `kamon-testkit` % "test")
+  ).dependsOn(`kamon-core`, `kamon-executors`, `kamon-scala-future` % "test", `kamon-testkit` % "test")
 
 
 lazy val `kamon-logback` = (project in file("instrumentation/kamon-logback"))

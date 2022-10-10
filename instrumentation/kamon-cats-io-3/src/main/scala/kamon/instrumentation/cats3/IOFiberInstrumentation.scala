@@ -14,7 +14,6 @@ class IOFiberInstrumentation extends InstrumentationBuilder {
     .mixin(classOf[HasContext.Mixin])
     .advise(isConstructor.and(takesArguments(9)), AfterFiberInit)
     .advise(method("suspend"), SaveCurrentContextOnExit)
-    .advise(method("resume"), RestoreContextOnSuccessfulResume)
     .advise(method("run"), RunLoopWithContext)
 
 
@@ -68,18 +67,6 @@ object RunLoopWithContext {
     scope.close()
 
     fiber.asInstanceOf[HasContext].setContext(leftContext)
-  }
-}
-
-class RestoreContextOnSuccessfulResume
-object RestoreContextOnSuccessfulResume {
-
-  @Advice.OnMethodExit()
-  @static def exit(@Advice.This fiber: Any, @Advice.Return wasSuspended: Boolean): Unit = {
-    if(wasSuspended) {
-      val ctxFiber = fiber.asInstanceOf[HasContext].context
-      Kamon.storeContext(ctxFiber)
-    }
   }
 }
 

@@ -9,11 +9,12 @@ import org.scalatest.{BeforeAndAfterEach, OptionValues}
 import org.scalatest.concurrent.{Eventually, PatienceConfiguration, ScalaFutures}
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
-
 import java.util.concurrent.Executors
+import java.util.UUID
 import scala.concurrent.{Await, ExecutionContext}
 import scala.concurrent.ExecutionContext.global
 import scala.concurrent.duration._
+import cats.effect.std.Dispatcher
 import cats.implicits._
 import kamon.trace.Identifier.Scheme
 import kamon.trace.{Identifier, Span, Trace}
@@ -124,6 +125,28 @@ class CatsIoInstrumentationSpec extends AnyWordSpec with Matchers with ScalaFutu
         )
         Await.result(result, 100.seconds)
       }
+    }
+
+    "must correctly propagate context across thread boundaries using parallel dispatcher" in {
+      Dispatcher[IO].use { parallelDispatcher =>
+        IO {
+          val txIdKey = Context.key[String]("txId", "")
+
+          def getFromContext: String = Kamon.currentContext().get(txIdKey)
+
+          parallelDispatcher.unsafeRunSync {
+            (0 to 100).toList
+              .parTraverse { _ =>
+                val initialTxId = UUID.randomUUID.toString
+                val newContext = Context.of(txIdKey, initialTxId)
+                IO(Kamon.storeContext(newContext)).bracket(_ =>
+                  IO.fromFuture(IO(parallelDispatcher.unsafeToFuture(IO("response"))))
+                    .map(_ => getFromContext -> initialTxId))(IO delay _.close())
+                  .map { case (real, expected) => real shouldEqual expected }
+              }
+          }
+        }
+      }.unsafeRunSync()(IORuntime.global)
     }
   }
 
