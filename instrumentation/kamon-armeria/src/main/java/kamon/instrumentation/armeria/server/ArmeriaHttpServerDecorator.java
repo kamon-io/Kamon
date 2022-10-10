@@ -31,7 +31,7 @@ import java.util.Map;
 
 public class ArmeriaHttpServerDecorator extends SimpleDecoratingHttpService {
   public static final AttributeKey<HttpServerInstrumentation.RequestHandler> REQUEST_HANDLER_TRACE_KEY =
-      AttributeKey.valueOf(HttpServerInstrumentation.RequestHandler.class, "REQUEST_HANDLER_TRACE");
+          AttributeKey.valueOf(HttpServerInstrumentation.RequestHandler.class, "REQUEST_HANDLER_TRACE");
 
   private final Map<Integer, HttpServerInstrumentation> serverInstrumentationMap;
 
@@ -47,15 +47,23 @@ public class ArmeriaHttpServerDecorator extends SimpleDecoratingHttpService {
     if (httpServerInstrumentation != null) {
 
       final HttpServerInstrumentation.RequestHandler requestHandler =
-          httpServerInstrumentation.createHandler(KamonArmeriaMessageConverter.toRequest(req));
+              httpServerInstrumentation.createHandler(KamonArmeriaMessageConverter.toRequest(req));
 
       ctx.log()
-          .whenComplete()
-          .thenAccept(log -> {
-              final Context context = ctx.attr(REQUEST_HANDLER_TRACE_KEY).context();
-              requestHandler.buildResponse(KamonArmeriaMessageConverter.toResponse(log),context);
-              requestHandler.responseSent();
-          });
+              .whenComplete()
+              .thenAccept(log -> {
+                final Context context = ctx.attr(REQUEST_HANDLER_TRACE_KEY).context();
+                /**
+                 * This is true only when no configured Route was matched.
+                 * Cases where the route is fallback should be managed here {@link kamon.instrumentation.armeria.server.HandleNotFoundMethodAdvisor#around}
+                 */
+                if (!ctx.config().route().isFallback()) {
+                  requestHandler.span().name(ctx.config().route().patternString());
+                }
+
+                requestHandler.buildResponse(KamonArmeriaMessageConverter.toResponse(log), context);
+                requestHandler.responseSent();
+              });
 
       try (Storage.Scope ignored = Kamon.storeContext(requestHandler.context())) {
         ctx.setAttr(REQUEST_HANDLER_TRACE_KEY, requestHandler);

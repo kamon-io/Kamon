@@ -16,7 +16,6 @@
 package kamon.instrumentation.armeria.server
 
 import java.util
-
 import com.linecorp.armeria.common.HttpStatus
 import com.linecorp.armeria.server._
 import com.typesafe.config.Config
@@ -78,13 +77,27 @@ object HandleNotFoundMethodAdvisor {
     */
   @Advice.OnMethodExit(onThrowable = classOf[Throwable])
   def around(@Advice.Argument(0) ctx: ServiceRequestContext,
+             @Advice.Argument(1) routingCtx: RoutingContext,
              @Advice.Argument(2) statusException: HttpStatusException,
              @Advice.Thrown throwable: Throwable): Unit = {
     lazy val unhandledOperationName: String = Kamon.config().getConfig("kamon.instrumentation.armeria.server").getString("tracing.operations.unhandled")
 
+    val requestHandler = ctx.attr(REQUEST_HANDLER_TRACE_KEY)
+
     if (throwable != null && statusException.httpStatus.code() == HttpStatus.NOT_FOUND.code()) {
-      val requestHandler = ctx.attr(REQUEST_HANDLER_TRACE_KEY)
-        requestHandler.span.name(unhandledOperationName)
+      requestHandler.span.name(unhandledOperationName)
+    } else {
+      /**
+        * If no exception was thrown then probably the request will be redirected because it doesn't ends with '/'.
+        * So here we are trying to find the Service config that will handle the request if we add a '/' to the end because Armeria will do that.
+        * This is the same strategy as the one Armeria uses here {@link com.linecorp.armeria.server.FallbackService# handleNotFound}
+        */
+      val oldPath = routingCtx.path
+      val newPath = oldPath + '/'
+      val serviceConfig = ctx.config.virtualHost.findServiceConfig(routingCtx.overridePath(newPath))
+      if (serviceConfig.isPresent) {
+        requestHandler.span.name(serviceConfig.value().route().patternString())
+      }
     }
   }
 }

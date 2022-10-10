@@ -47,7 +47,7 @@ class ArmeriaGrpcServerTracingSpec extends AnyWordSpec
 
       eventually(timeout(3 seconds)) {
         val span = testSpanReporter().nextSpan().value
-        span.operationName shouldBe "ArmeriaHelloService/Hello"
+        span.operationName shouldBe "/kamon.armeria.instrumentation.grpc.ArmeriaHelloService/Hello"
         span.hasError shouldBe false
         span.metricTags.get(plain("component")) shouldBe "armeria.http.server"
         span.metricTags.get(plain("http.method")) shouldBe "POST"

@@ -47,7 +47,7 @@ class ArmeriaHttpServerTracingSpec extends AnyWordSpec
 
   private def testSuite(protocol: String, interface: String, port: Int): Unit = {
 
-    val webClient = newWebClient(protocol,port)
+    val webClient = newWebClient(protocol, port)
 
     s"The Armeria $protocol server" when {
 
@@ -75,8 +75,8 @@ class ArmeriaHttpServerTracingSpec extends AnyWordSpec
             val target = s"$protocol://$interface:$port/$pathNotFoundEndpoint"
             val expected = "unhandled"
 
-              val request = HttpRequest.of(RequestHeaders.of(HttpMethod.GET, pathNotFoundEndpoint))
-              webClient.execute(request)
+            val request = HttpRequest.of(RequestHeaders.of(HttpMethod.GET, pathNotFoundEndpoint))
+            webClient.execute(request)
 
             eventually(timeout(3 seconds)) {
               val span = testSpanReporter().nextSpan().value
@@ -91,12 +91,12 @@ class ArmeriaHttpServerTracingSpec extends AnyWordSpec
         }
 
         "set operation name with path + http method" when {
-            "resource doesn't exist" in {
-              val target = s"$protocol://$interface:$port/$usersEndpoint/not-found"
-              val expected = "/users/{}"
+          "resource doesn't exist" in {
+            val target = s"$protocol://$interface:$port/$usersEndpoint/not-found"
+            val expected = "/users/:userId"
 
-              val request = HttpRequest.of(RequestHeaders.of(HttpMethod.GET, s"$usersEndpoint/not-found"))
-              webClient.execute(request)
+            val request = HttpRequest.of(RequestHeaders.of(HttpMethod.GET, s"$usersEndpoint/not-found"))
+            webClient.execute(request)
 
             eventually(timeout(3 seconds)) {
               val span = testSpanReporter().nextSpan().value
@@ -111,7 +111,7 @@ class ArmeriaHttpServerTracingSpec extends AnyWordSpec
         }
 
         "not include path variables names" in {
-          val expected = "/users/{}/accounts/{}"
+          val expected = "/users/:userId/accounts/:accountId"
 
           val request = HttpRequest.of(RequestHeaders.of(HttpMethod.GET, userAccountEndpoint))
           webClient.execute(request)
@@ -123,7 +123,7 @@ class ArmeriaHttpServerTracingSpec extends AnyWordSpec
         }
 
         "not fail when request url contains special regexp chars" in {
-          val expected = "/users/{}/accounts/{}"
+          val expected = "/users/:userId/accounts/:accountId"
 
           val request = HttpRequest.of(RequestHeaders.of(HttpMethod.GET, s"$userAccountEndpoint**"))
           val response = webClient.execute(request).aggregate().get()
@@ -137,7 +137,7 @@ class ArmeriaHttpServerTracingSpec extends AnyWordSpec
 
         "mark spans as failed when request fails" in {
           val target = s"$protocol://$interface:$port/$usersEndpoint/error"
-          val expected = "/users/{}"
+          val expected = "/users/:userId"
 
           val request = HttpRequest.of(RequestHeaders.of(HttpMethod.GET, s"$usersEndpoint/error"))
           webClient.execute(request)
@@ -156,9 +156,9 @@ class ArmeriaHttpServerTracingSpec extends AnyWordSpec
         "return a redirect status code" when {
           "a request to /docs is redirected to /docs/" in {
             val target = s"$protocol://$interface:$port/$docsEndpoint"
-            val expected = s"/docs"
+            val expected = s"/docs/*"
 
-            val request = HttpRequest.of(RequestHeaders.of(HttpMethod.GET, docsEndpoint))
+            val request = HttpRequest.of(RequestHeaders.of(HttpMethod.GET, s"$docsEndpoint"))
             webClient.execute(request)
 
             eventually(timeout(3 seconds)) {
@@ -172,10 +172,10 @@ class ArmeriaHttpServerTracingSpec extends AnyWordSpec
           }
         }
 
-        "return a ok status code " when {
+        "return a ok status code" when {
           "a request to /docs/ is done" in {
             val target = s"$protocol://$interface:$port/$docsEndpoint/"
-            val expected = s"/docs"
+            val expected = s"/docs/*"
 
             val request = HttpRequest.of(RequestHeaders.of(HttpMethod.GET, s"$docsEndpoint/"))
             webClient.execute(request)
