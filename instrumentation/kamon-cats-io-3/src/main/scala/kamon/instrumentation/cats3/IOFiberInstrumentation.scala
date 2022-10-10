@@ -12,8 +12,6 @@ class IOFiberInstrumentation extends InstrumentationBuilder {
 
   onType("cats.effect.IOFiber")
     .mixin(classOf[HasContext.Mixin])
-    .advise(isConstructor.and(takesArguments(9)), AfterFiberInit)
-    .advise(method("suspend"), SaveCurrentContextOnExit)
     .advise(method("run"), RunLoopWithContext)
 
 
@@ -43,15 +41,6 @@ class IOFiberInstrumentation extends InstrumentationBuilder {
     .advise(method("sleep"), classOf[CleanSchedulerContextAdvice])
 }
 
-class AfterFiberInit
-object AfterFiberInit {
-
-  @Advice.OnMethodExit
-  @static def exit(@Advice.This fiber: Any): Unit ={
-    fiber.asInstanceOf[HasContext].setContext(Kamon.currentContext())
-  }
-}
-
 class RunLoopWithContext
 object RunLoopWithContext {
 
@@ -69,16 +58,6 @@ object RunLoopWithContext {
     fiber.asInstanceOf[HasContext].setContext(leftContext)
   }
 }
-
-class SaveCurrentContextOnExit
-object SaveCurrentContextOnExit {
-
-  @Advice.OnMethodExit()
-  @static def exit(@Advice.This fiber: Any): Unit = {
-    fiber.asInstanceOf[HasContext].setContext(Kamon.currentContext())
-  }
-}
-
 class SetContextOnNewFiber
 object SetContextOnNewFiber {
 
