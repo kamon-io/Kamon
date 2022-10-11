@@ -1,7 +1,7 @@
 package kamon.instrumentation.futures.cats3
 
 import cats.effect.unsafe.{IORuntime, IORuntimeConfig, Scheduler}
-import cats.effect.{IO, Resource, Spawn}
+import cats.effect.{Deferred, IO, Resource, Spawn}
 import kamon.Kamon
 import kamon.context.Context
 import kamon.tag.Lookups.plain
@@ -11,16 +11,18 @@ import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import java.util.concurrent.Executors
 import java.util.UUID
+
 import scala.concurrent.{Await, ExecutionContext}
 import scala.concurrent.ExecutionContext.global
 import scala.concurrent.duration._
+
 import cats.effect.std.Dispatcher
 import cats.implicits._
 import kamon.trace.Identifier.Scheme
 import kamon.trace.{Identifier, Span, Trace}
 
 class CatsIoInstrumentationSpec extends AnyWordSpec with Matchers with ScalaFutures with PatienceConfiguration
-    with OptionValues with Eventually with BeforeAndAfterEach {
+  with OptionValues with Eventually with BeforeAndAfterEach {
 
   System.setProperty("kamon.context.debug", "true")
 
@@ -86,7 +88,7 @@ class CatsIoInstrumentationSpec extends AnyWordSpec with Matchers with ScalaFutu
         test.unsafeRunSync()(runtime)
       }
 
-     "must allow complex Span topologies to be created" in {
+      "must allow complex Span topologies to be created" in {
         val parentSpan = Span.Remote(
           Scheme.Single.spanIdFactory.generate(),
           Identifier.Empty,
@@ -147,6 +149,45 @@ class CatsIoInstrumentationSpec extends AnyWordSpec with Matchers with ScalaFutu
           }
         }
       }.unsafeRunSync()(IORuntime.global)
+    }
+
+    "retain state when resuming from completed deferred" in {
+      val txIdKey = Context.key[String]("txId", "")
+
+      def getFromContext: String = Kamon.currentContext().get(txIdKey)
+
+      def withDeferred(d: Deferred[IO, Unit]) = {
+        val initialTxId = UUID.randomUUID.toString
+        for {
+          initContext <- IO(Context.of(txIdKey, initialTxId))
+          scope <- IO(Kamon.storeContext(initContext))
+          _ <- d.get
+          fromCtx <- IO(getFromContext)
+          _ <- IO(scope.close())
+        } yield (fromCtx, initialTxId)
+      }
+
+      def test = for {
+        txId1 <- IO(UUID.randomUUID.toString)
+        txId2 <- IO(UUID.randomUUID.toString)
+        d <- IO.deferred[Unit]
+        c1 <- IO(Context.of(txIdKey, txId1))
+        s1 <- IO(Kamon.storeContext(c1))
+        t <- withDeferred(d).start
+        c2 <- IO(Context.of(txIdKey, txId2))
+        s2 <- IO(Kamon.storeContext(c2))
+        _ <- IO.sleep(100.millis)
+        _ <- d.complete(())
+        r <- t.joinWith(IO("" -> "nomatch"))
+        _ <- IO(s2.close())
+        _ <- IO(s1.close())
+//        _ <- IO(println(r._1 + ":"))
+//        _ <- IO(println(txId1, txId2, r._2))
+        // before: r._1 == r._2
+        // now: r._1 == txId2
+      } yield r._1 shouldEqual r._2
+
+      test.unsafeRunSync()(IORuntime.global)
     }
   }
 
