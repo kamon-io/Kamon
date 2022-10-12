@@ -12,7 +12,7 @@ class IOFiberInstrumentation extends InstrumentationBuilder {
 
   onType("cats.effect.IOFiber")
     .mixin(classOf[HasContext.Mixin])
-    .advise(isConstructor.and(takesArguments(9)), AfterFiberInit)
+    .advise(isConstructor.and(takesArguments(5).or(takesArguments(3))), AfterFiberInit)
     .advise(method("suspend"), SaveCurrentContextOnExit)
     .advise(method("resume"), RestoreContextOnSuccessfulResume)
     .advise(method("run"), RunLoopWithContext)
