@@ -26,6 +26,38 @@ class CatsIoInstrumentationSpec extends AnyWordSpec with Matchers with ScalaFutu
   "an cats.effect IO created when instrumentation is active" should {
     "capture the active span available when created" which {
 
+      "must capture the current context when creating and running fibers" in {
+        val runtime = IORuntime.global
+        val anotherExecutionContext: ExecutionContext = ExecutionContext.fromExecutorService(Executors.newFixedThreadPool(10))
+        val context = Context.of("tool", "kamon")
+
+
+        val effect = for {
+          contextOnAnotherThread <- IO.delay(Kamon.currentContext())
+          _ <- IO.delay(Seq("hello", "world"))
+          _ <- Spawn[IO].evalOn(IO.sleep(10.millis), anotherExecutionContext)
+          _ <- IO.cede
+          _ <- IO.cede
+        } yield {
+          val currentContext = Kamon.currentContext()
+          currentContext shouldBe context
+          contextOnAnotherThread shouldBe context
+          currentContext
+        }
+
+        val contextInsideYield = Kamon.runWithContext(context) {
+          // This is what would happen at the edges of the system, when Kamon has already
+          // started a Span in an outer layer (usually the HTTP server instrumentation) and
+          // when processing gets to user-level code, the users want to run their business
+          // logic as an effect. We should always propagate the context that was available
+          // at this point to the moment when the effect runs.
+
+          Await.result(effect.unsafeToFuture()(runtime), 100.seconds)
+        }
+
+        context shouldBe contextInsideYield
+      }
+
       "must allow the context to be cleaned" in {
         val runtime = IORuntime.global
         val anotherExecutionContext: ExecutionContext = ExecutionContext.fromExecutorService(Executors.newFixedThreadPool(10))
