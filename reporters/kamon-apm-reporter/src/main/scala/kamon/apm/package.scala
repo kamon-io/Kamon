@@ -18,8 +18,6 @@ package kamon
 
 import java.time.Duration
 import com.typesafe.config.Config
-import _root_.kamino.IngestionV1.Plan
-import kamon.tag.Tag.unwrapValue
 import org.slf4j.LoggerFactory
 
 import java.net.Proxy
@@ -36,22 +34,15 @@ package object apm {
     if(apiKey.equals("none"))
       _logger.error("No API key defined in the kamon.apm.api-key setting")
 
-    val environmentTagsMap = new java.util.HashMap[String, String]()
-    Kamon.environment.tags.all().foreach(t => environmentTagsMap.put(t.key, String.valueOf(unwrapValue(t))))
-
     Settings (
       apiKey            = apiKey,
-      plan              = if(apmConfig.getBoolean("enable-tracing")) Plan.METRIC_TRACING else Plan.METRIC_ONLY,
       connectionTimeout = apmConfig.getDuration("client.timeouts.connection"),
       readTimeout       = apmConfig.getDuration("client.timeouts.read"),
-      appVersion        = apmConfig.getString("app-version"),
-      ingestionApi      = apmConfig.getString("ingestion-api"),
-      agent             = apmConfig.getString("agent"),
+      baseUrl           = apmConfig.getString("base-url"),
       bootRetries       = apmConfig.getInt("retries.boot"),
       ingestionRetries  = apmConfig.getInt("retries.ingestion"),
       shutdownRetries   = apmConfig.getInt("retries.shutdown"),
       tracingRetries    = apmConfig.getInt("retries.tracing"),
-      retryBackoff      = apmConfig.getDuration("retries.backoff"),
       clientBackoff     = apmConfig.getDuration("client.backoff"),
       proxyHost         = apmConfig.getString("proxy.host"),
       proxyPort         = apmConfig.getInt("proxy.port"),
@@ -59,8 +50,7 @@ package object apm {
         case "system" => None
         case "socks"  => Some(Proxy.Type.SOCKS)
         case "https"  => Some(Proxy.Type.HTTP)
-      },
-      environmentTags = environmentTagsMap
+      }
     )
   }
 
@@ -69,27 +59,22 @@ package object apm {
 
   case class Settings (
     apiKey: String,
-    plan: Plan,
     connectionTimeout: Duration,
     readTimeout: Duration,
-    appVersion: String,
-    ingestionApi: String,
-    agent: String,
+    baseUrl: String,
     bootRetries: Int,
     ingestionRetries: Int,
     shutdownRetries: Int,
     tracingRetries: Int,
-    retryBackoff: Duration,
     clientBackoff: Duration,
     proxy: Option[Proxy.Type],
     proxyHost: String,
-    proxyPort: Int,
-    environmentTags: java.util.Map[String, String]
+    proxyPort: Int
   ) {
-    def ingestionRoute  = s"$ingestionApi/ingest"
-    def bootMark        = s"$ingestionApi/hello"
-    def shutdownMark    = s"$ingestionApi/goodbye"
-    def tracingRoute    = s"$ingestionApi/tracing/ingest"
+    def metricsRoute  = s"$baseUrl/metrics"
+    def helloRoute    = s"$baseUrl/hello"
+    def goodbyeRoute  = s"$baseUrl/goodbye"
+    def spansRoute    = s"$baseUrl/spans"
   }
 
   /*
