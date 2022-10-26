@@ -726,7 +726,7 @@ lazy val `kamon-apm-reporter` = (project in file("reporters/kamon-apm-reporter")
     libraryDependencies ++= Seq(
       scalatest % "test",
       okHttp % "provided,shaded",
-      "com.google.protobuf"   % "protobuf-java" % "3.8.0" % "provided,shaded",
+      "com.google.protobuf"   % "protobuf-java"   % "3.21.7"  % "provided,shaded",
 
       "ch.qos.logback"    %  "logback-classic"  % "1.2.3" % "test",
       "org.scalatest"     %% "scalatest"        % "3.2.9" % "test",

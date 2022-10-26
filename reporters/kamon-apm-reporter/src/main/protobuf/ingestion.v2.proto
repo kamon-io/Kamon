@@ -1,0 +1,148 @@
+syntax = "proto2";
+
+package kamon.apm.ingestion.v2;
+option java_package = "kamon.apm.ingestion.v2";
+
+// Represents a metric and all data points associated with it in a reporting interval.
+message Metric {
+
+  required string name = 1;
+  optional string unit = 2;
+  optional string description = 3;
+
+  // A list of data points for this metric. All data points included for this metric
+  // should be of the same type (counter, gauge, or histogram).
+  repeated DataPoint data_points = 4;
+
+  // Represents the state of a metric instrument identified by a given set of tags at
+  // the end of a reporting interval. Note that Kamon APM doesn't keep track of the
+  // beginning of each reporting interval, only the end time. It is assumed that the
+  // reporting intervals are 1-minute long or less.
+  message DataPoint {
+
+    // The end time of the reporting interval as seconds since the UNIX Epoch.
+    optional int64 period_start_epoch = 1;
+    required int64 period_end_epoch = 2;
+
+    // The tags associated with the metric instrument that generated these data points.
+    repeated Tag tags = 3;
+
+    oneof data {
+
+      // The number of times a counter instrument was incremented during the reporting
+      // interval that finished at end_epoch_seconds.
+      int64 counter = 4;
+
+      // The latest value of a gauge instrument during the reporting interval that
+      // finished at end_epoch_seconds.
+      double gauge = 5;
+
+      // The distribution of values recorded in a histogram instrument during the reporting
+      // interval that finished at end_epoch_seconds.
+      Histogram histogram = 6;
+    }
+
+    // Stores the non-zero bucket indexes and counts of an HDR Histogram with the default
+    // configuration supported by Kamon APM: 2 significant value digits and smallest
+    // discernible value of 1.
+    message Histogram {
+      repeated int32 bucket_index = 1;
+      repeated int64 bucket_count = 2;
+    }
+  }
+}
+
+// Represents a single operation performed by an application that participates in
+// distributed tracing. Spans form a parent-child relationship using their id and
+// parent_id fields. All spans belonging to the same logical trace must have the
+// same trace_id value.
+message Span {
+  required bytes id = 1;
+  required bytes parent_id = 2;
+  required bytes trace_id = 3;
+  required int64 start_epoch_nanos = 4;
+  required int64 end_epoch_nanos = 5;
+
+  // A low cardinality name that describes the operation performed by this Span.
+  // It is important to keep operation names free from user/session/request ids
+  // because they might be used for generating metrics out of Spans.
+  required string name = 6;
+  required Kind kind = 7;
+  required Status status = 8;
+  repeated Tag tags = 9;
+  repeated Event events = 10;
+  repeated Link links = 11;
+
+  enum Kind {
+    Unknown = 1;
+    Client = 2;
+    Server = 3;
+    Producer = 4;
+    Consumer = 5;
+    Internal = 6;
+  }
+
+  enum Status {
+    Unset = 1;
+    Ok = 2;
+    Error = 3;
+  }
+
+  message Event {
+    required string name = 1;
+    required int64 happened_at_epoch_nanos = 2;
+    repeated Tag tags = 3;
+  }
+
+  message Link {
+    required bytes trace_id = 1;
+    optional bytes span_id = 2;
+    repeated Tag tags = 3;
+  }
+}
+
+message Resource {
+  repeated Tag tags = 1;
+}
+
+// A key-value pair that can be attached to any telemetry data type, including metrics, spans,
+// events, links, resources, etc. Tags are the equivalent of attributes in OpenTelemetry or labels
+// in Prometheus-based systems, although we limit the value types to String, Boolean, Long,
+// and Double.
+message Tag {
+
+  // The tag name for the
+  required string key = 1;
+
+  oneof value {
+    string string_value = 2;
+    bool bool_value = 3;
+    int64 long_value = 4;
+    double double_value = 5;
+  }
+}
+
+// Signals that an application has started, even though it didn't produce any telemetry data yet.
+message Hello {
+  required string api_key = 1;
+  required Resource resource = 2;
+}
+
+message MetricsBatch {
+  required string api_key = 1;
+  required Resource resource = 2;
+  repeated Metric metrics = 3;
+}
+
+message SpansBatch {
+  required string api_key = 1;
+  required Resource resource = 2;
+  repeated Span spans = 3;
+}
+
+// Signals that an application is shutting down, even though it didn't produce any telemetry data yet.
+message Goodbye {
+  required string api_key = 1;
+  required Resource resource = 2;
+}
+
