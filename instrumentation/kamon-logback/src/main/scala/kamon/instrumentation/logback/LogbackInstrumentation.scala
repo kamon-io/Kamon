@@ -114,7 +114,6 @@ object ContextToMdcPropertyMapAppender {
         }
       }
 
-      // Returning an immutable map to reproduce what Logback does since 1.3.2
       mdcWithKamonContext
     } else {
       mdc
