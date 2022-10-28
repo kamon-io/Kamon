@@ -595,7 +595,7 @@ lazy val `kamon-caffeine` = (project in file("instrumentation/kamon-caffeine"))
       scalatest % "test",
       logbackClassic % "test",
     )
-  ).dependsOn(`kamon-core`, `kamon-testkit` % "test")
+  ).dependsOn(`kamon-core`, `kamon-instrumentation-common`, `kamon-testkit` % "test")
 
 
 lazy val `kamon-lagom` = (project in file("instrumentation/kamon-lagom"))

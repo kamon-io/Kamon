@@ -23,20 +23,20 @@ class CaffeineCacheInstrumentation extends InstrumentationBuilder {
 class SyncCacheAdvice
 object SyncCacheAdvice {
   @Advice.OnMethodEnter()
-  @static def enter(@Advice.Origin("#m") methodName: String): Span = {
+  @static def enter(@Advice.Origin("#m") methodName: String) = {
     Kamon.clientSpanBuilder(s"caffeine.$methodName", "caffeine").start()
   }
 
   @Advice.OnMethodExit(suppress = classOf[Throwable])
-  @static def exit(@Advice.Enter enter: Span): Unit = {
-    enter.finish()
+  @static def exit(@Advice.Enter span: Span): Unit = {
+    span.finish()
   }
 }
 
 class GetIfPresentAdvice
 object GetIfPresentAdvice {
   @Advice.OnMethodEnter()
-  @static def enter(@Advice.Origin("#m") methodName: String): Span = {
+  @static def enter(@Advice.Origin("#m") methodName: String) = {
     Kamon.clientSpanBuilder(s"caffeine.$methodName", "caffeine").start()
   }
 
