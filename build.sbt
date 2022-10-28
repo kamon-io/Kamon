@@ -418,6 +418,7 @@ lazy val `kamon-annotation` = (project in file("instrumentation/kamon-annotation
   .enablePlugins(AssemblyPlugin)
   .settings(instrumentationSettings: _*)
   .settings(
+    crossScalaVersions += `scala_3_version`,
     assembly / assemblyShadeRules := Seq(
       ShadeRule.rename("javax.el.**"    -> "kamon.lib.@0").inAll,
       ShadeRule.rename("com.sun.el.**"  -> "kamon.lib.@0").inAll,
@@ -586,6 +587,7 @@ lazy val `kamon-caffeine` = (project in file("instrumentation/kamon-caffeine"))
   .enablePlugins(JavaAgent)
   .settings(instrumentationSettings)
   .settings(
+    crossScalaVersions += `scala_3_version`,
     libraryDependencies ++= Seq(
       kanelaAgent % "provided",
       "com.github.ben-manes.caffeine" % "caffeine" % "2.8.5" % "provided",
