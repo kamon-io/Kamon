@@ -569,17 +569,18 @@ lazy val `kamon-redis` = (project in file("instrumentation/kamon-redis"))
   .enablePlugins(JavaAgent)
   .settings(instrumentationSettings)
   .settings(
+    crossScalaVersions += `scala_3_version`,
     libraryDependencies ++= Seq(
       kanelaAgent % "provided",
       "redis.clients" % "jedis"  % "3.6.0" % "provided",
       "io.lettuce" % "lettuce-core"  % "6.1.2.RELEASE" % "provided",
-      "com.github.etaty" %% "rediscala" % "1.9.0" % "provided",
 
       scalatest % "test",
       logbackClassic % "test",
       "org.testcontainers" % "testcontainers" % "1.15.3" % "test",
-    )
-  ).dependsOn(`kamon-core`, `kamon-testkit` % "test")
+    ) :+ (if (scalaVersion.value.startsWith("2.11")) "com.github.etaty" %% "rediscala" % "1.9.0" % "provided"
+          else "io.github.rediscala" %% "rediscala" % "1.13.0" % "provided")
+  ).dependsOn(`kamon-core`, `kamon-instrumentation-common`, `kamon-testkit` % "test")
 
 lazy val `kamon-caffeine` = (project in file("instrumentation/kamon-caffeine"))
   .disablePlugins(AssemblyPlugin)

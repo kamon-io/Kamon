@@ -6,6 +6,8 @@ import kamon.trace.Span
 import kanela.agent.api.instrumentation.InstrumentationBuilder
 import kanela.agent.libs.net.bytebuddy.asm.Advice
 
+import scala.annotation.static
+
 class LettuceInstrumentation extends InstrumentationBuilder {
   onType("io.lettuce.core.AbstractRedisAsyncCommands")
     .advise(method("dispatch")
@@ -15,14 +17,14 @@ class LettuceInstrumentation extends InstrumentationBuilder {
 class AsyncCommandAdvice
 object AsyncCommandAdvice {
   @Advice.OnMethodEnter()
-  def enter(@Advice.Argument(0) command: RedisCommand[_, _, _]): Span = {
+  @static def enter(@Advice.Argument(0) command: RedisCommand[_, _, _]): Span = {
     val spanName = s"redis.command.${command.getType}"
     Kamon.clientSpanBuilder(spanName, "redis.client.lettuce")
       .start();
   }
 
   @Advice.OnMethodExit(onThrowable = classOf[Throwable],suppress = classOf[Throwable])
-  def exit(@Advice.Enter span: Span,
+  @static def exit(@Advice.Enter span: Span,
            @Advice.Thrown t: Throwable,
            @Advice.Return asyncCommand: AsyncCommand[_, _, _]) = {
     if (t != null) {

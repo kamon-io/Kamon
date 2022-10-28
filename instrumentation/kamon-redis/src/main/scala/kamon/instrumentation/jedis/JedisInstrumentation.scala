@@ -26,6 +26,8 @@ import kanela.agent.libs.net.bytebuddy.asm.Advice
 import kanela.agent.libs.net.bytebuddy.description.method.MethodDescription
 import kanela.agent.libs.net.bytebuddy.matcher.ElementMatchers.{isMethod, isPublic, isStatic, namedOneOf, not}
 
+import scala.annotation.static
+
 class JedisInstrumentation extends InstrumentationBuilder {
 
   /**
@@ -87,7 +89,7 @@ object ClientOperationsAdvice {
   private val currentRedisOperationKey = "redis.current"
 
   @Advice.OnMethodEnter(suppress = classOf[Throwable])
-  def enter(@Advice.Origin("#m") methodName: String): Scope = {
+  @static def enter(@Advice.Origin("#m") methodName: String): Scope = {
     val currentContext = Kamon.currentContext()
 
     if(currentContext.getTag(plain(currentRedisOperationKey)) == null) {
@@ -106,7 +108,7 @@ object ClientOperationsAdvice {
   }
 
   @Advice.OnMethodExit(onThrowable = classOf[Throwable], suppress = classOf[Throwable])
-  def exit(@Advice.Enter scope: Scope, @Advice.Thrown t: Throwable): Unit = {
+  @static def exit(@Advice.Enter scope: Scope, @Advice.Thrown t: Throwable): Unit = {
     if(scope != Scope.Empty) {
       val span = scope.context.get(Span.Key)
       if (t != null) {
@@ -123,7 +125,7 @@ class SendCommandAdvice
 object SendCommandAdvice {
 
   @Advice.OnMethodEnter
-  def sendCommand(@Advice.Argument(1) command: Any): Unit = {
+  @static def sendCommand(@Advice.Argument(1) command: Any): Unit = {
     // The command object should actually be an Enum and its toString() produces
     // the actual command name sent to Redis
     Kamon.currentSpan()
@@ -136,7 +138,7 @@ class SendCommandAdviceForJedis4
 object SendCommandAdviceForJedis4 {
 
   @Advice.OnMethodEnter
-  def sendCommand(@Advice.Argument(1) commandArguments: Any): Unit = {
+  @static def sendCommand(@Advice.Argument(1) commandArguments: Any): Unit = {
     val firstArgument = commandArguments.asInstanceOf[java.lang.Iterable[Any]].iterator().next()
 
     // The command object should actually be an Enum and its toString() produces
