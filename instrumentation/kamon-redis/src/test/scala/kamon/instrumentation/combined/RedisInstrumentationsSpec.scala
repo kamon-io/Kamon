@@ -6,6 +6,9 @@ import kamon.tag.Lookups
 import kamon.tag.Lookups._
 import kamon.testkit.{InitAndStopKamonAfterAll, MetricInspection, TestSpanReporter}
 import kamon.trace.Span.Kind
+import org.redisson.Redisson
+import org.redisson.api.RBloomFilter
+import org.redisson.config.Config
 import org.scalatest.concurrent.{Eventually, ScalaFutures}
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
@@ -126,6 +129,82 @@ class RedisInstrumentationsSpec extends AnyWordSpec
         testSpanReporter().spans() shouldBe empty
       }
       client.shutdown()
+    }
+  }
+
+  "the Redisson instrumentation" should {
+    "generate a client span for set operation" in {
+      val config: Config = new Config()
+      config.useSingleServer().setAddress(s"redis://${container.getHost}:${container.getFirstMappedPort}")
+      val redisson = Redisson.create(config)
+
+      val mySet = redisson.getSet[String]("redisson:foo")
+      mySet.add("bar")
+
+      eventually(timeout(30.seconds)) {
+        val span = testSpanReporter().nextSpan().get
+        span.kind shouldBe Kind.Client
+        span.operationName shouldBe "redis.command.SADD"
+        span.metricTags.get(plain("db.system")) shouldBe "redis"
+        testSpanReporter().spans() shouldBe empty
+        testSpanReporter().clear()
+      }
+      redisson.shutdown()
+    }
+
+    "generate a client span for blocking queue operation" in {
+      val config: Config = new Config()
+      config.useSingleServer().setAddress(s"redis://${container.getHost}:${container.getFirstMappedPort}")
+      val redisson = Redisson.create(config)
+
+      val queue = redisson.getBlockingQueue[String]("myQueue")
+      queue.add("1")
+      queue.add("2")
+      queue.add("3")
+      queue.add("4")
+
+      queue.contains("1")
+      queue.peek()
+      queue.poll()
+      queue.element()
+
+      eventually(timeout(30.seconds)) {
+        val span = testSpanReporter().nextSpan().get
+        span.kind shouldBe Kind.Client
+        span.metricTags.get(plain("db.system")) shouldBe "redis"
+        testSpanReporter().spans() shouldBe empty
+        testSpanReporter().clear()
+      }
+      redisson.shutdown()
+    }
+
+    "generate a client span for bloom filter operation" in {
+      val config: Config = new Config()
+      config.useSingleServer().setAddress(s"redis://${container.getHost}:${container.getFirstMappedPort}")
+      val redisson = Redisson.create(config)
+
+      val bloomFilter: RBloomFilter[String] = redisson.getBloomFilter("bloomFilter")
+      bloomFilter.tryInit(100000000, 0.03)
+
+      bloomFilter.add("a")
+      bloomFilter.add("b")
+      bloomFilter.add("c")
+      bloomFilter.add("d")
+
+      bloomFilter.getExpectedInsertions
+      bloomFilter.getFalseProbability
+      bloomFilter.getHashIterations
+
+      bloomFilter.contains("a")
+
+      eventually(timeout(30.seconds)) {
+        val span = testSpanReporter().nextSpan().get
+        span.kind shouldBe Kind.Client
+        span.metricTags.get(plain("db.system")) shouldBe "redis"
+        testSpanReporter().spans() shouldBe empty
+        testSpanReporter().clear()
+      }
+      redisson.shutdown()
     }
   }
 
