@@ -73,6 +73,10 @@ class ApiClient(settings: Settings) {
 
     tryPosting match {
       case Success(response) =>
+        // The response body must be closed (even if there is no body in the response),
+        // otherwise OkHttp leaks connections.
+        response.body().close()
+
         response.code() match {
           case 200 =>
             _logger.trace("Request to the Kamon APM [{}] endpoint succeeded", endpointName)
