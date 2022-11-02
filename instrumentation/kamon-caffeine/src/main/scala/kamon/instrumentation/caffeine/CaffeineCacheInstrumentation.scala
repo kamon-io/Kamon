@@ -5,6 +5,8 @@ import kamon.trace.Span
 import kanela.agent.api.instrumentation.InstrumentationBuilder
 import kanela.agent.libs.net.bytebuddy.asm.Advice
 
+import scala.annotation.static
+
 class CaffeineCacheInstrumentation extends InstrumentationBuilder {
   onType("com.github.benmanes.caffeine.cache.LocalCache")
     .advise(method("computeIfAbsent"), classOf[SyncCacheAdvice])
@@ -21,12 +23,12 @@ class CaffeineCacheInstrumentation extends InstrumentationBuilder {
 class SyncCacheAdvice
 object SyncCacheAdvice {
   @Advice.OnMethodEnter()
-  def enter(@Advice.Origin("#m") methodName: String) = {
+  @static def enter(@Advice.Origin("#m") methodName: String) = {
     Kamon.clientSpanBuilder(s"caffeine.$methodName", "caffeine").start()
   }
 
   @Advice.OnMethodExit(suppress = classOf[Throwable])
-  def exit(@Advice.Enter span: Span): Unit = {
+  @static def exit(@Advice.Enter span: Span): Unit = {
     span.finish()
   }
 }
@@ -34,12 +36,12 @@ object SyncCacheAdvice {
 class GetIfPresentAdvice
 object GetIfPresentAdvice {
   @Advice.OnMethodEnter()
-  def enter(@Advice.Origin("#m") methodName: String) = {
+  @static def enter(@Advice.Origin("#m") methodName: String) = {
     Kamon.clientSpanBuilder(s"caffeine.$methodName", "caffeine").start()
   }
 
   @Advice.OnMethodExit(suppress = classOf[Throwable])
-  def exit(@Advice.Enter span: Span,
+  @static def exit(@Advice.Enter span: Span,
            @Advice.Return ret: Any,
            @Advice.Argument(0) key: Any): Unit = {
     if (ret == null) {
