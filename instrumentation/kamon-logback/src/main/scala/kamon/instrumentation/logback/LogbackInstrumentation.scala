@@ -89,10 +89,15 @@ object ContextToMdcPropertyMapAppender {
   def appendContext(mdc: java.util.Map[String, String]): java.util.Map[String, String] = {
     val settings = LogbackInstrumentation.settings()
 
-    if (settings.propagateContextToMDC && mdc != null) {
+    if (settings.propagateContextToMDC) {
       val currentContext = Kamon.currentContext()
       val span = currentContext.get(Span.Key)
-      val mdcWithKamonContext = new util.HashMap[String, String](mdc)
+      val mdcWithKamonContext = {
+        if(mdc == null)
+          new util.HashMap[String, String]()
+        else
+          new util.HashMap[String, String](mdc)
+      }
 
       if (span.trace.id != Identifier.Empty) {
         mdcWithKamonContext.put(settings.mdcTraceIdKey, span.trace.id.string)
