@@ -35,6 +35,10 @@ class AkkaGrpcServerInstrumentation extends InstrumentationBuilder {
     */
   onType("akka.grpc.internal.NoOpTelemetry$")
     .advise(method("onRequest"), AkkaGRPCServerRequestHandler)
+
+
+  onType("akka.grpc.javadsl.GrpcMarshalling")
+    .advise(method("unmarshal"), classOf[AkkaGRPCUnmarshallingContextPropagation])
 }
 
 object AkkaGRPCServerRequestHandler {
