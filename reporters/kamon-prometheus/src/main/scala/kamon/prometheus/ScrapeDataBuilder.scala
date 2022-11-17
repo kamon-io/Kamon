@@ -119,7 +119,9 @@ class ScrapeDataBuilder(prometheusConfig: PrometheusSettings.Generic, environmen
   }
 
   private def appendDistributionMetric(metric: MetricSnapshot.Distributions): Unit = {
-    val reportAsSummary = prometheusConfig.summarySettings.metricMatchers.exists(_.accept(metric.name))
+    val reportAsSummary = prometheusConfig.summarySettings.metricMatchers.exists(_.accept(metric.name)) &&
+      !prometheusConfig.summarySettings.metricExcludes.exists(_.accept(metric.name))
+
     if (reportAsSummary) {
         appendDistributionMetricAsSummary(metric)
     } else {
