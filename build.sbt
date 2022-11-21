@@ -531,7 +531,7 @@ lazy val `kamon-okhttp` = (project in file("instrumentation/kamon-okhttp"))
   .settings(
     libraryDependencies ++= Seq(
       kanelaAgent % "provided",
-      "com.squareup.okhttp3"      % "okhttp"                    % "3.14.9" % "provided",
+      "com.squareup.okhttp3"      % "okhttp"                    % "4.10.0" % "provided",
 
       scalatest % "test",
       logbackClassic % "test",
