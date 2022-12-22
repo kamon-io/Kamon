@@ -50,8 +50,8 @@ public class SendMethodAdvisor {
                     .start();
 
             Context ctx = recordContext.withEntry(Span.Key(), span);
-            record.headers().add(KafkaInstrumentation.Keys$.MODULE$.ContextHeader(), ContextSerializationHelper.toByteArray(ctx));
-
+            KafkaInstrumentation.settings().propagator().write(ctx, record.headers());
+            
             callback = new ProducerCallback(callback, span, ctx);
         }
     }

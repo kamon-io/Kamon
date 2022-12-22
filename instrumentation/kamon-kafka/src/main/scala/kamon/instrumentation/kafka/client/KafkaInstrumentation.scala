@@ -22,6 +22,7 @@ import kamon.context.Context
 import kamon.instrumentation.context.HasContext
 import kamon.trace.Span
 import org.apache.kafka.clients.consumer.ConsumerRecord
+import org.slf4j.LoggerFactory
 
 import scala.util.control.NonFatal
 
@@ -29,16 +30,28 @@ object KafkaInstrumentation {
   @volatile private var _settings: Settings = readSettings(Kamon.config())
   Kamon.onReconfigure((newConfig: Config) => _settings = readSettings(newConfig))
 
+  private val log = LoggerFactory.getLogger(classOf[KafkaInstrumentation.Settings])
+
   def settings: Settings =
     _settings
 
   private def readSettings(config: Config): Settings = {
     val kafkaConfig = config.getConfig("kamon.instrumentation.kafka.client")
+    val identifierScheme = config.getString("kamon.trace.identifier-scheme")
 
     Settings(
       startTraceOnProducer = kafkaConfig.getBoolean("tracing.start-trace-on-producer"),
       continueTraceOnConsumer = kafkaConfig.getBoolean("tracing.continue-trace-on-consumer"),
-      useDelayedSpans = kafkaConfig.getBoolean("tracing.use-delayed-spans")
+      useDelayedSpans = kafkaConfig.getBoolean("tracing.use-delayed-spans"),
+      propagator = kafkaConfig.getString("tracing.propagator") match {
+        case "kctx" => SpanPropagation.KCtxHeader()
+        case "w3c" =>
+          if (identifierScheme != "double") {
+            log.warn("W3C TraceContext propagation should be used only with identifier-scheme = double")
+          }
+          SpanPropagation.W3CTraceContext()
+        case other => sys.error(s"Unrecognized option [$other] for the kamon.instrumentation.kafka.client.tracing.propagator config.")
+      }
     )
   }
 
@@ -49,10 +62,10 @@ object KafkaInstrumentation {
   /**
     * Syntactical sugar to extract a Context from a ConsumerRecord instance.
     */
-  implicit class Syntax(val cr: ConsumerRecord[_, _]) extends AnyVal{
+  implicit class Syntax(val cr: ConsumerRecord[_, _]) extends AnyVal {
     def context: Context = cr match {
       case hc: HasContext => hc.context
-      case _              => Context.Empty
+      case _ => Context.Empty
     }
   }
 
@@ -109,7 +122,7 @@ object KafkaInstrumentation {
     */
   def runWithConsumerSpan[T](record: ConsumerRecord[_, _], operationName: String, finishSpan: Boolean)(f: => T): T = {
     val incomingContext = record.context
-    val operationContext = if(incomingContext.nonEmpty()) incomingContext else Kamon.currentContext()
+    val operationContext = if (incomingContext.nonEmpty()) incomingContext else Kamon.currentContext()
     val span = consumerSpan(record, operationName)
     val scope = Kamon.storeContext(operationContext.withEntry(Span.Key, span))
 
@@ -121,7 +134,7 @@ object KafkaInstrumentation {
         throw t
 
     } finally {
-      if(finishSpan)
+      if (finishSpan)
         span.finish()
 
       scope.close()
@@ -166,7 +179,7 @@ object KafkaInstrumentation {
     Option(record.key()).foreach(k => consumerSpan.tag("kafka.key", k.toString()))
 
     // The additional context information will only be available when instrumentation is enabled.
-    if(record.isInstanceOf[ConsumedRecordData]) {
+    if (record.isInstanceOf[ConsumedRecordData]) {
       val consumerRecordData = record.asInstanceOf[ConsumedRecordData]
       val incomingContext = consumerRecordData.incomingContext()
       val incomingSpan = incomingContext.get(Span.Key)
@@ -176,7 +189,7 @@ object KafkaInstrumentation {
         .tag("kafka.client-id", consumerRecordData.consumerInfo().clientId)
         .tag("kafka.poll-time", consumerRecordData.nanosSincePollStart())
 
-      if(!incomingSpan.isEmpty) {
+      if (!incomingSpan.isEmpty) {
         if (settings.continueTraceOnConsumer)
           consumerSpan.asChildOf(incomingSpan)
         else
@@ -194,12 +207,13 @@ object KafkaInstrumentation {
 
   object Keys {
     val Null = "NULL"
-    val ContextHeader = "kctx"
   }
 
-  case class Settings (
+  case class Settings(
     startTraceOnProducer: Boolean,
     continueTraceOnConsumer: Boolean,
-    useDelayedSpans: Boolean
+    useDelayedSpans: Boolean,
+    propagator: KafkaPropagator,
   )
+
 }
