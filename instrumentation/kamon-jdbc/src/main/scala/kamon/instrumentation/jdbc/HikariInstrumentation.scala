@@ -18,12 +18,12 @@ package kamon.instrumentation.jdbc
 
 import java.sql.{Connection, Statement}
 import java.util.concurrent.atomic.AtomicReference
-
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.pool.{HikariPool, PoolEntry, PoolEntryProtectedAccess}
 import kamon.Kamon
 import kamon.context.Storage.Scope
 import kamon.instrumentation.jdbc.JdbcMetrics.ConnectionPoolInstruments
+import kamon.instrumentation.jdbc.utils.Obfuscator
 import kamon.tag.TagSet
 import kamon.trace.Hooks
 import kanela.agent.api.instrumentation.InstrumentationBuilder
@@ -95,7 +95,7 @@ object HikariPoolConstructorAdvice {
       .build()
 
     val spanTags = TagSet.builder()
-      .add("db.url", url)
+      .add("db.url", Obfuscator.obfuscateUrl(url))
       .build()
 
     val poolInstruments = JdbcMetrics.poolInstruments(metricTags)

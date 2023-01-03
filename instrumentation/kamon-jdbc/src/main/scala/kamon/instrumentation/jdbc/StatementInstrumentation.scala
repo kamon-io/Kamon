@@ -18,10 +18,10 @@ package kamon.instrumentation.jdbc
 
 import java.sql.PreparedStatement
 import java.util.Properties
-
 import kamon.Kamon
 import kamon.context.Storage.Scope
 import kamon.instrumentation.jdbc.advisor._
+import kamon.instrumentation.jdbc.utils.Obfuscator
 import kamon.tag.TagSet
 import kamon.trace.Hooks
 import kanela.agent.api.instrumentation.InstrumentationBuilder
@@ -142,7 +142,7 @@ object DriverConnectAdvice {
     // TODO: Include some logic to figure out the actual database name based on the URL and/or properties.
     DatabaseTags(
       metricTags = TagSet.of("db.vendor", vendorPrefix),
-      spanTags = TagSet.of("db.url", url)
+      spanTags = TagSet.of("db.url", Obfuscator.obfuscateUrl(url))
     )
   }
 }
