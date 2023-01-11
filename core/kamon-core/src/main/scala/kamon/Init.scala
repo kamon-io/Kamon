@@ -37,10 +37,15 @@ trait Init { self: ModuleManagement with Configuration with CurrentStatus with M
     * Attempts to attach the instrumentation agent and start all registered modules.
     */
   def init(): Unit = {
-    self.attachInstrumentation()
-    self.initScheduler()
-    self.loadModules()
-    self.moduleRegistry().init()
+    if(enabled()) {
+      self.attachInstrumentation()
+      self.initScheduler()
+      self.loadModules()
+      self.moduleRegistry().init()
+    } else {
+      self.disableInstrumentation()
+      self.disabledWarning()
+    }
   }
 
   /**
@@ -48,11 +53,17 @@ trait Init { self: ModuleManagement with Configuration with CurrentStatus with M
     * start all registered modules.
     */
   def init(config: Config): Unit = {
-    self.attachInstrumentation()
-    self.initScheduler()
     self.reconfigure(config)
-    self.loadModules()
-    self.moduleRegistry().init()
+
+    if(enabled()) {
+      self.attachInstrumentation()
+      self.initScheduler()
+      self.loadModules()
+      self.moduleRegistry().init()
+    } else {
+      self.disableInstrumentation()
+      self.disabledWarning()
+    }
 
   }
 
@@ -60,9 +71,14 @@ trait Init { self: ModuleManagement with Configuration with CurrentStatus with M
     * Initializes Kamon without trying to attach the instrumentation agent from the Kamon Bundle.
     */
   def initWithoutAttaching(): Unit = {
-    self.initScheduler()
-    self.loadModules()
-    self.moduleRegistry().init()
+    if(enabled()) {
+      self.initScheduler()
+      self.loadModules()
+      self.moduleRegistry().init()
+    } else {
+      self.disableInstrumentation()
+      self.disabledWarning()
+    }
   }
 
   /**
@@ -70,7 +86,13 @@ trait Init { self: ModuleManagement with Configuration with CurrentStatus with M
     */
   def initWithoutAttaching(config: Config): Unit = {
     self.reconfigure(config)
-    self.initWithoutAttaching()
+
+    if(enabled()) {
+      self.initWithoutAttaching()
+    } else {
+      self.disableInstrumentation()
+      self.disabledWarning()
+    }
   }
 
 
@@ -79,7 +101,6 @@ trait Init { self: ModuleManagement with Configuration with CurrentStatus with M
     self.stopScheduler()
     self.moduleRegistry().shutdown()
     self.stopModules()
-
   }
 
   /**
@@ -103,6 +124,35 @@ trait Init { self: ModuleManagement with Configuration with CurrentStatus with M
         case t: Throwable =>
           _logger.error("Failed to attach the Kanela agent included in the kamon-bundle", t)
       }
+    }
+  }
+
+  private def disabledWarning(): Unit = {
+    _logger.warn("Kamon is DISABLED. No instrumentation, reporters, or context propagation will be applied on this " +
+                 "process. Restart the process with kamon.enabled=yes to restore Kamon's functionality")
+  }
+
+  /**
+    * Tries to disable the Kanela agent, in case it was attached via the -javaagent:... option. The agent is always
+    * attached to the System Classloader so we try to find it there and call "disable" on it.
+    */
+  private def disableInstrumentation(): Unit = {
+    try {
+      Class.forName("kanela.agent.Kanela", true, ClassLoader.getSystemClassLoader)
+        .getDeclaredMethod("disable")
+        .invoke(null)
+
+      _logger.info("Disabled the Kanela instrumentation agent. Classes will not be instrumented in this process")
+
+    } catch {
+      case _: ClassNotFoundException =>
+        // Do nothing. This means that Kanela wasn't loaded so there was no need to do anything.
+
+      case _: NoSuchMethodException =>
+        _logger.error("Failed to disable the Kanela instrumentation agent. Please ensure you are using Kanela >=1.0.17")
+
+      case t: Throwable =>
+        _logger.error("Failed to disable the Kanela instrumentation agent", t)
     }
   }
 
