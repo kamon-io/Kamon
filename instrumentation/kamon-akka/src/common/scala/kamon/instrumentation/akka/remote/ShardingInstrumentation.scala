@@ -11,7 +11,7 @@ import kanela.agent.libs.net.bytebuddy.asm.Advice
 
 class ShardingInstrumentation extends InstrumentationBuilder with VersionFiltering {
 
-  onAkka("2.5", "2.6") {
+  onAkka("2.5", "2.6", "2.7") {
 
     /**
       * The ShardRegion instrumentation just takes care of counting the Region messages and, when stopped, cleans up the
@@ -50,6 +50,11 @@ class ShardingInstrumentation extends InstrumentationBuilder with VersionFilteri
   }
 
   afterAkkaVersion("2.6", 11) {
+    onType("akka.cluster.sharding.Shard")
+      .advise(method("shardInitialized"), ShardInitializedAdvice)
+  }
+
+  afterAkkaVersion("2.7", 0) {
     onType("akka.cluster.sharding.Shard")
       .advise(method("shardInitialized"), ShardInitializedAdvice)
   }

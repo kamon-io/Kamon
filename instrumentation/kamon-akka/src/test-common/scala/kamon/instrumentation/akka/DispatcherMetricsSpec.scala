@@ -43,12 +43,14 @@ class DispatcherMetricsSpec extends TestKit(ActorSystem("DispatcherMetricsSpec")
       "tracked-pinned-dispatcher",
       "tracked-fjp",
       "tracked-tpe"
-    ) ++ (if(Version.current.startsWith("2.6")) Seq("akka.actor.internal-dispatcher") else Seq.empty)
+    ) ++ (if(Version.current.startsWith("2.6") || Version.current.startsWith("2.7"))
+      Seq("akka.actor.internal-dispatcher") else Seq.empty)
 
     val excluded = "explicitly-excluded"
     val allDispatchers = trackedDispatchers :+ excluded
     val builtInDispatchers = Seq("akka.actor.default-dispatcher") ++ {
-      if(Version.current.startsWith("2.6")) Seq("akka.actor.internal-dispatcher") else Seq.empty
+      if(Version.current.startsWith("2.6") || Version.current.startsWith("2.7"))
+        Seq("akka.actor.internal-dispatcher") else Seq.empty
     }
 
 

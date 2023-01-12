@@ -17,7 +17,7 @@ import kanela.agent.libs.net.bytebuddy.asm.Advice
 
 class RemotingInstrumentation extends InstrumentationBuilder with VersionFiltering {
 
-  onAkka("2.6") {
+  onAkka("2.6", "2.7") {
 
     /**
       * Send messages might be buffered if they reach the EndpointWriter before it has been initialized and the current
