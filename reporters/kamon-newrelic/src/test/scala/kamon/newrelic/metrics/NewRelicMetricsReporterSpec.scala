@@ -146,26 +146,31 @@ class NewRelicMetricsReporterSpec extends AnyWordSpec with Matchers {
   }
 
   "The metrics reporter builder" should {
-    "default the url when config not provided" in {
-      val newrelicConfig: ConfigValue = ConfigValueFactory.fromMap(Map(
-        "enable-audit-logging" -> false,
-        "nr-insights-insert-key" -> "secret"
-      ).asJava)
-      val config: Config = Kamon.config().withValue("kamon.newrelic", newrelicConfig)
-
-      val result = NewRelicMetricsReporter.buildSenderConfig(config)
-      assert(new URL("https://metric-api.newrelic.com/metric/v1") == result.getEndpointUrl)
+    def createSenderConfiguration(configMap: Map[String, AnyRef]) = {
+      val nrConfig = ConfigValueFactory.fromMap((Map("enable-audit-logging" -> false) ++ configMap).asJava)
+      val config = Kamon.config().withValue("kamon.newrelic", nrConfig)
+      NewRelicMetricsReporter.buildSenderConfig(config)
     }
 
+    "use insights insert key" in {
+      val result = createSenderConfiguration(Map("nr-insights-insert-key" -> "insights"))
+      assert("insights" == result.getApiKey)
+      assert(!result.useLicenseKey)
+    }
+    "use licence key" in {
+      val result = createSenderConfiguration(Map("licence-key" -> "licence"))
+      assert("licence" == result.getApiKey)
+      assert(result.useLicenseKey)
+    }
+    "default the url when config not provided" in {
+      val result = createSenderConfiguration(Map("nr-insights-insert-key" -> "secret"))
+      assert(new URL("https://metric-api.newrelic.com/metric/v1") == result.getEndpointUrl)
+    }
     "use config to override the URI" in {
-      val newrelicConfig: ConfigValue = ConfigValueFactory.fromMap(Map(
-        "enable-audit-logging" -> false,
-        "nr-insights-insert-key" -> "secret",
+      val result = createSenderConfiguration(Map(
+        "nr-insights-insert-key" -> "none",
         "metric-ingest-uri" -> "https://example.com/foo"
-      ).asJava)
-      val config: Config = Kamon.config().withValue("kamon.newrelic", newrelicConfig)
-
-      val result = NewRelicMetricsReporter.buildSenderConfig(config)
+      ))
       assert(new URL("https://example.com/foo") == result.getEndpointUrl)
     }
   }
