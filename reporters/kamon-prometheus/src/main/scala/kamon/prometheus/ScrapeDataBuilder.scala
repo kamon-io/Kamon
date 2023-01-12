@@ -268,8 +268,15 @@ class ScrapeDataBuilder(prometheusConfig: PrometheusSettings.Generic, environmen
 
     while(tagIterator.hasNext) {
       val pair = tagIterator.next()
-      if(tagCount > 0) buffer.append(",")
-      buffer.append(normalizeLabelName(pair.key)).append("=\"").append(pair.value).append('"')
+      if(tagCount > 0)
+        buffer.append(",")
+
+      buffer
+        .append(normalizeLabelName(pair.key))
+        .append("=\"")
+        .append(normalizeLabelValue(pair.value))
+        .append('"')
+
       tagCount += 1
     }
 
@@ -306,6 +313,10 @@ class ScrapeDataBuilder(prometheusConfig: PrometheusSettings.Generic, environmen
 
   private def validNameChar(char: Char): Char =
     if(char.isLetterOrDigit || char == '_' || char == ':') char else '_'
+
+  private def normalizeLabelValue(value: String): String = {
+    if(value.contains("\\")) value.replace("\\", "\\\\") else value
+  }
 
   private def format(value: Double): String =
     _numberFormat.format(value)

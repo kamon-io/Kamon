@@ -63,6 +63,22 @@ class ScrapeDataBuilderSpec extends AnyWordSpec with Matchers {
         """.stripMargin.trim()
       }
     }
+
+    "escape backslash in tag values" in {
+      val counter = MetricSnapshotBuilder.counter("counter.with.backslash", "", TagSet.of("path", "c:\\users\\temp"), time.seconds, 10)
+
+      builder()
+        .appendCounters(Seq(counter))
+        .build() should include {
+
+        """
+          |# TYPE counter_with_backslash_seconds_total counter
+          |counter_with_backslash_seconds_total{path="c:\\users\\temp"} 10.0
+        """.stripMargin.trim()
+      }
+    }
+
+
     "not add extra '_total' postfix if metric name already ends with it when using units" in {
       val counterOne = MetricSnapshotBuilder.counter("app:counter-one-seconds-total", "", TagSet.of("tag.with.dots", "value"), time.seconds, 10)
       val gaugeOne = MetricSnapshotBuilder.gauge("gauge-one-seconds", "", TagSet.of("tag-with-dashes", "value"), time.seconds, 20)
@@ -327,7 +343,7 @@ class ScrapeDataBuilderSpec extends AnyWordSpec with Matchers {
       val result = builder(withGauges = Seq("first*"))
         .appendDistributionMetricsAsGauges(Seq(histogramWithHundredEntries, histogramWithHundredEntriesTwo))
         .build()
-      println(result)
+
       result should include {
         """|# TYPE firstMetric_min gauge
            |firstMetric_min 1.0
