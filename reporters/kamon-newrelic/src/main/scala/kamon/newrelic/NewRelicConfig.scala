@@ -39,11 +39,11 @@ private object NewRelicConfig {
     val nrConfig = config.getConfig("kamon.newrelic")
 
     // TODO maybe some validation around these values?
-    val apiKey = if (nrConfig.hasPath("license-key")) {
-      LicenseKey(nrConfig.getString("license-key"))
-    } else {
-      InsightsInsertKey(nrConfig.getString("nr-insights-insert-key"))
+    val apiKey = (nrConfig.getString("license-key"), nrConfig.getString("nr-insights-insert-key")) match {
+      case (licenseKey, "none") if licenseKey != "none" => LicenseKey(licenseKey)
+      case (_, insightsInsertKey) => InsightsInsertKey(insightsInsertKey)
     }
+
     val enableAuditLogging = nrConfig.getBoolean("enable-audit-logging")
     val userAgent = s"newrelic-kamon-reporter/${LibraryVersion.version}"
     val callTimeout = Duration.ofSeconds(5)

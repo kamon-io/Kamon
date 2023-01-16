@@ -146,22 +146,40 @@ class NewRelicMetricsReporterSpec extends AnyWordSpec with Matchers {
   }
 
   "The metrics reporter builder" should {
+    val defaultConfig = Map(
+      "enable-audit-logging" -> false,
+      "license-key" -> "none",
+      "nr-insights-insert-key" -> "none"
+    )
+
     def createSenderConfiguration(configMap: Map[String, AnyRef]) = {
-      val nrConfig = ConfigValueFactory.fromMap((Map("enable-audit-logging" -> false) ++ configMap).asJava)
+      val nrConfig = ConfigValueFactory.fromMap((defaultConfig ++ configMap).asJava)
       val config = Kamon.config().withValue("kamon.newrelic", nrConfig)
       NewRelicMetricsReporter.buildSenderConfig(config)
     }
 
-    "use insights insert key" in {
+    "use \"none\" insights insert key by default" in {
+      val result = createSenderConfiguration(Map.empty)
+      assert("none" == result.getApiKey)
+      assert(!result.useLicenseKey)
+    }
+    "be able to use insights insert key" in {
       val result = createSenderConfiguration(Map("nr-insights-insert-key" -> "insights"))
       assert("insights" == result.getApiKey)
       assert(!result.useLicenseKey)
     }
-    "use license key" in {
+    "be able to use license key" in {
       val result = createSenderConfiguration(Map("license-key" -> "license"))
       assert("license" == result.getApiKey)
       assert(result.useLicenseKey)
     }
+    "use insights insert key if both configured" in {
+      val result = createSenderConfiguration(Map("license-key" -> "license", "nr-insights-insert-key" -> "insights"))
+      assert("insights" == result.getApiKey)
+      assert(!result.useLicenseKey)
+    }
+
+
     "default the url when config not provided" in {
       val result = createSenderConfiguration(Map("nr-insights-insert-key" -> "secret"))
       assert(new URL("https://metric-api.newrelic.com/metric/v1") == result.getEndpointUrl)
