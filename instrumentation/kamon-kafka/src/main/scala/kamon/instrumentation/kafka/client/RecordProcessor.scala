@@ -40,11 +40,7 @@ private[kafka] object RecordProcessor {
       val consumerInfo = ConsumerInfo(resolve(groupId), clientId)
 
       records.iterator().asScala.foreach(record => {
-        val header = Option(record.headers.lastHeader(KafkaInstrumentation.Keys.ContextHeader))
-
-        val incomingContext = header.map { h =>
-          ContextSerializationHelper.fromByteArray(h.value())
-        }.getOrElse(Context.Empty)
+        val incomingContext = KafkaInstrumentation.settings.propagator.read(record.headers(), Context.Empty)
 
         record.asInstanceOf[ConsumedRecordData].set(
           incomingContext,
