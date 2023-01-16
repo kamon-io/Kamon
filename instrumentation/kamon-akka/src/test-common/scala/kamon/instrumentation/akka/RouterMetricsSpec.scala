@@ -89,6 +89,9 @@ class RouterMetricsSpec extends TestKit(ActorSystem("RouterMetricsSpec")) with A
 
     "record the time-in-mailbox for pool routers" in new RouterMetricsFixtures {
       val timingsListener = TestProbe()
+      // If we don't initialize the listener upfront the timings might be wrong.
+      timingsListener.testActor.tell("hello", timingsListener.ref)
+      timingsListener.expectMsg("hello")
       val router = createTestPoolRouter("measuring-time-in-mailbox-in-pool-router", true)
 
       router.tell(RouterTrackTimings(sleep = Some(1 second)), timingsListener.ref)
@@ -104,6 +107,9 @@ class RouterMetricsSpec extends TestKit(ActorSystem("RouterMetricsSpec")) with A
 
     "record the time-in-mailbox for balancing pool routers" in new RouterMetricsFixtures {
       val timingsListener = TestProbe()
+      // If we don't initialize the listener upfront the timings might be wrong.
+      timingsListener.testActor.tell("hello", timingsListener.ref)
+      timingsListener.expectMsg("hello")
       val router = createTestBalancingPoolRouter("measuring-time-in-mailbox-in-balancing-pool-router", true)
 
       router.tell(RouterTrackTimings(sleep = Some(1 second)), timingsListener.ref)

@@ -31,7 +31,7 @@ import kanela.agent.libs.net.bytebuddy.implementation.bind.annotation.{Argument,
 
 class DispatcherInstrumentation extends InstrumentationBuilder with VersionFiltering  {
 
-  onAkka("2.6") {
+  onAkka("2.6", "2.7") {
 
     /**
       * This is where the actual ExecutorService instances are being created, but at this point we don't have access to

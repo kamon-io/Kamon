@@ -12,7 +12,7 @@ import scala.util.control.NonFatal
 
 class ActorMonitorInstrumentation extends InstrumentationBuilder with VersionFiltering {
 
-  onAkka("2.6") {
+  onAkka("2.6", "2.7") {
     /*
      * Changes implementation of extractMessageClass for our ActorMonitor.
      * In akka 2.6, all typed messages are converted to AdaptMessage,
