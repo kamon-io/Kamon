@@ -213,7 +213,7 @@ object KafkaInstrumentation {
     startTraceOnProducer: Boolean,
     continueTraceOnConsumer: Boolean,
     useDelayedSpans: Boolean,
-    propagator: KafkaPropagator,
+    propagator: KafkaPropagator
   )
 
 }
