@@ -90,10 +90,9 @@ object NewRelicMetricsReporter {
 
   def buildSenderConfig(config: Config): SenderConfiguration = {
     val nrConfig = NewRelicConfig.fromConfig(config)
-    val (apiKey, useLicenseKey) = nrConfig.apiKey.apiKeyAndUseLicenseKey
     val senderConfig = MetricBatchSender.configurationBuilder()
-      .apiKey(apiKey)
-      .useLicenseKey(useLicenseKey)
+      .apiKey(nrConfig.apiKey.value)
+      .useLicenseKey(nrConfig.apiKey.isLicenseKey)
       .httpPoster(new OkHttpPoster(nrConfig.callTimeout))
       .auditLoggingEnabled(nrConfig.enableAuditLogging)
       .secondaryUserAgent(nrConfig.userAgent)

@@ -57,9 +57,14 @@ private object NewRelicConfig {
   }
 
   sealed trait NewRelicApiKey {
-    def apiKeyAndUseLicenseKey: (String, Boolean) = this match {
-      case LicenseKey(licenceKey) => (licenceKey, true)
-      case InsightsInsertKey(insightsInsertKey) => (insightsInsertKey, false)
+    def value: String = this match {
+      case LicenseKey(licenseKey) => licenseKey
+      case InsightsInsertKey(insightsInsertKey) => insightsInsertKey
+    }
+
+    def isLicenseKey: Boolean = this match {
+      case LicenseKey(_) => true
+      case _ => false
     }
   }
 

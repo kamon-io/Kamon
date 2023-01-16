@@ -49,10 +49,9 @@ class SimpleSpanBatchSenderBuilder() extends SpanBatchSenderBuilder {
       logger.error("No Insights Insert API Key defined for the kamon.newrelic.nr-insights-insert-key config setting. " +
         "No spans will be sent to New Relic.")
     }
-    val (apiKey, useLicenseKey) = nrConfig.apiKey.apiKeyAndUseLicenseKey
     val senderConfig = SpanBatchSender.configurationBuilder()
-      .apiKey(apiKey)
-      .useLicenseKey(useLicenseKey)
+      .apiKey(nrConfig.apiKey.value)
+      .useLicenseKey(nrConfig.apiKey.isLicenseKey)
       .httpPoster(new OkHttpPoster(nrConfig.callTimeout))
       .secondaryUserAgent(nrConfig.userAgent)
       .auditLoggingEnabled(nrConfig.enableAuditLogging)

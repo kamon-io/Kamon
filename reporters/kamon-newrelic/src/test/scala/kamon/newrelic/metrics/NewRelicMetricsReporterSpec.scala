@@ -157,9 +157,9 @@ class NewRelicMetricsReporterSpec extends AnyWordSpec with Matchers {
       assert("insights" == result.getApiKey)
       assert(!result.useLicenseKey)
     }
-    "use licence key" in {
-      val result = createSenderConfiguration(Map("licence-key" -> "licence"))
-      assert("licence" == result.getApiKey)
+    "use license key" in {
+      val result = createSenderConfiguration(Map("license-key" -> "license"))
+      assert("license" == result.getApiKey)
       assert(result.useLicenseKey)
     }
     "default the url when config not provided" in {
