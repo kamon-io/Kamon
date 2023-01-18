@@ -40,8 +40,8 @@ class LogbackInstrumentation extends InstrumentationBuilder {
   onType("ch.qos.logback.core.spi.AppenderAttachableImpl")
     .advise(method("appendLoopOnAppenders"), AppendLoopOnAppendersAdvice)
 
-  onType("ch.qos.logback.classic.util.LogbackMDCAdapter")
-    .intercept(method("getPropertyMap"), GetPropertyMapMethodInterceptor)
+  onType("ch.qos.logback.classic.spi.LoggingEvent")
+    .intercept(method("getMDCPropertyMap"), GetPropertyMapMethodInterceptor)
 }
 
 object LogbackInstrumentation {
