@@ -25,8 +25,10 @@ import kamon.tag.Tag
 import kamon.trace.{Identifier, Span}
 import kanela.agent.api.instrumentation.InstrumentationBuilder
 import kanela.agent.libs.net.bytebuddy.asm.Advice
+import kanela.agent.libs.net.bytebuddy.implementation.bind.annotation.{RuntimeType, SuperCall}
+import org.slf4j.MDC
 
-import java.util
+import java.util.concurrent.Callable
 import scala.collection.JavaConverters._
 
 
@@ -39,7 +41,7 @@ class LogbackInstrumentation extends InstrumentationBuilder {
     .advise(method("appendLoopOnAppenders"), AppendLoopOnAppendersAdvice)
 
   onType("ch.qos.logback.classic.util.LogbackMDCAdapter")
-    .advise(method("getPropertyMap"), classOf[MdcPropertyMapAdvice])
+    .intercept(method("getPropertyMap"), GetPropertyMapMethodInterceptor)
 }
 
 object LogbackInstrumentation {
@@ -84,39 +86,46 @@ object AppendLoopOnAppendersAdvice {
     scope.close()
 }
 
-object ContextToMdcPropertyMapAppender {
+object GetPropertyMapMethodInterceptor {
 
-  def appendContext(mdc: java.util.Map[String, String]): java.util.Map[String, String] = {
+  @RuntimeType
+  def aroundGetMDCPropertyMap(@SuperCall callable: Callable[_]): Any = {
     val settings = LogbackInstrumentation.settings()
 
-    if (settings.propagateContextToMDC && mdc != null) {
+    if (settings.propagateContextToMDC) {
+      val mdcContextMapBeforePropagation = MDC.getCopyOfContextMap
       val currentContext = Kamon.currentContext()
       val span = currentContext.get(Span.Key)
-      val mdcWithKamonContext = new util.HashMap[String, String](mdc)
 
       if (span.trace.id != Identifier.Empty) {
-        mdcWithKamonContext.put(settings.mdcTraceIdKey, span.trace.id.string)
-        mdcWithKamonContext.put(settings.mdcSpanIdKey, span.id.string)
-        mdcWithKamonContext.put(settings.mdcSpanOperationNameKey, span.operationName())
+        MDC.put(settings.mdcTraceIdKey, span.trace.id.string)
+        MDC.put(settings.mdcSpanIdKey, span.id.string)
+        MDC.put(settings.mdcSpanOperationNameKey, span.operationName())
       }
 
       if (settings.mdcCopyTags) {
         currentContext.tags.iterator().foreach(t => {
-          mdcWithKamonContext.put(t.key, Tag.unwrapValue(t).toString)
+          MDC.put(t.key, Tag.unwrapValue(t).toString)
         })
       }
 
       settings.mdcCopyKeys.foreach { key =>
         currentContext.get(Context.key[Any](key, "")) match {
-          case Some(value) if value.toString.nonEmpty => mdcWithKamonContext.put(key, value.toString)
-          case keyValue if keyValue != null && keyValue.toString.nonEmpty => mdcWithKamonContext.put(key, keyValue.toString)
+          case Some(value) if value.toString.nonEmpty => MDC.put(key, value.toString)
+          case keyValue if keyValue != null && keyValue.toString.nonEmpty => MDC.put(key, keyValue.toString)
           case _ => // Just ignore the nulls and empty strings
         }
       }
 
-      mdcWithKamonContext
+      try callable.call() finally {
+        if (mdcContextMapBeforePropagation != null) {
+          MDC.setContextMap(mdcContextMapBeforePropagation)
+        } else { // a null contextMap is possible and means 'empty'
+          MDC.clear()
+        }
+      }
     } else {
-      mdc
+      callable.call()
     }
   }
 }
