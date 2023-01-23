@@ -113,6 +113,7 @@ object Status {
     */
   case class Instrumentation (
     present: Boolean,
+    kanelaVersion: Option[String],
     modules: Seq[Status.Instrumentation.ModuleInfo],
     errors: Seq[Status.Instrumentation.TypeError]
   )

@@ -17,7 +17,8 @@
 package kamon
 
 import com.typesafe.config.Config
-import kamon.status.InstrumentationStatus
+import kamon.module.Module
+import kamon.status.{BuildInfo, InstrumentationStatus}
 import org.slf4j.LoggerFactory
 
 import java.util.concurrent.{ScheduledExecutorService, ScheduledThreadPoolExecutor}
@@ -44,8 +45,9 @@ trait Init { self: ModuleManagement with Configuration with CurrentStatus with M
       self.moduleRegistry().init()
     } else {
       self.disableInstrumentation()
-      self.disabledWarning()
     }
+
+    self.logInitStatusInfo()
   }
 
   /**
@@ -62,8 +64,9 @@ trait Init { self: ModuleManagement with Configuration with CurrentStatus with M
       self.moduleRegistry().init()
     } else {
       self.disableInstrumentation()
-      self.disabledWarning()
     }
+
+    self.logInitStatusInfo()
 
   }
 
@@ -77,8 +80,9 @@ trait Init { self: ModuleManagement with Configuration with CurrentStatus with M
       self.moduleRegistry().init()
     } else {
       self.disableInstrumentation()
-      self.disabledWarning()
     }
+
+    self.logInitStatusInfo()
   }
 
   /**
@@ -91,8 +95,9 @@ trait Init { self: ModuleManagement with Configuration with CurrentStatus with M
       self.initWithoutAttaching()
     } else {
       self.disableInstrumentation()
-      self.disabledWarning()
     }
+
+    self.logInitStatusInfo()
   }
 
 
@@ -127,9 +132,40 @@ trait Init { self: ModuleManagement with Configuration with CurrentStatus with M
     }
   }
 
-  private def disabledWarning(): Unit = {
-    _logger.warn("Kamon is DISABLED. No instrumentation, reporters, or context propagation will be applied on this " +
-                 "process. Restart the process with kamon.enabled=yes to restore Kamon's functionality")
+  private def logInitStatusInfo(): Unit = {
+    def bold(text: String) = s"\u001b[1m${text}\u001b[0m"
+    def red(text: String) = bold(s"\u001b[31m${text}\u001b[0m")
+    def green(text: String) = bold(s"\u001b[32m${text}\u001b[0m")
+
+    val isEnabled = enabled()
+    val showBanner = !config().getBoolean("kamon.init.hide-banner")
+
+    if(isEnabled) {
+      val instrumentationStatus = status().instrumentation()
+      val kanelaVersion = instrumentationStatus.kanelaVersion
+        .map(v => green("v" + v))
+        .getOrElse(red("not found"))
+
+      if (showBanner) {
+        _logger.info(
+          s"""
+             | _
+             || |
+             || | ____ _ _ __ ___   ___  _ __
+             || |/ / _  |  _ ` _ \\ / _ \\|  _ \\
+             ||   < (_| | | | | | | (_) | | | |
+             ||_|\\_\\__,_|_| |_| |_|\\___/|_| |_|
+             |=====================================
+             |Initializing Kamon Telemetry ${green("v" + BuildInfo.version)} / Kanela ${kanelaVersion}
+             |""".stripMargin
+        )
+      } else
+        _logger.info(s"Initializing Kamon Telemetry v${BuildInfo.version} / Kanela ${kanelaVersion}")
+    } else {
+      _logger.warn(s"Kamon is ${red("DISABLED")}. No instrumentation, reporters, or context propagation will be applied on this " +
+        "process. Restart the process with kamon.enabled=yes to restore Kamon's functionality")
+    }
+
   }
 
   /**

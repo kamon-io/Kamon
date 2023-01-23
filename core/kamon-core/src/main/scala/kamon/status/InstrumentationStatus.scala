@@ -53,6 +53,11 @@ object InstrumentationStatus {
       // then Kanela must be present.
       val present = (registryClass != null) && kanelaLoaded
 
+      val kanelaVersion = Class.forName("kanela.agent.util.BuildInfo", false, ClassLoader.getSystemClassLoader)
+        .getMethod("version")
+        .invoke(null)
+        .asInstanceOf[String]
+
       val modules = registryClass.getMethod("shareModules")
         .invoke(null)
         .asInstanceOf[JavaList[JavaMap[String, String]]]
@@ -66,7 +71,7 @@ object InstrumentationStatus {
         .map(toTypeError)
         .toSeq
 
-      Status.Instrumentation(present, modules.toSeq, errors)
+      Status.Instrumentation(present, Option(kanelaVersion), modules.toSeq, errors)
     } catch {
       case t: Throwable =>
 
@@ -80,7 +85,7 @@ object InstrumentationStatus {
           }
         }
 
-        Status.Instrumentation(false, Seq.empty, Seq.empty)
+        Status.Instrumentation(false, None, Seq.empty, Seq.empty)
     }
   }
 
