@@ -55,6 +55,7 @@ object LogbackInstrumentation {
     mdcTraceIdKey: String,
     mdcSpanIdKey: String,
     mdcSpanOperationNameKey: String,
+    mdcSourceThreadKey: String,
     mdcCopyTags: Boolean,
     mdcCopyKeys: Seq[String]
   )
@@ -67,6 +68,7 @@ object LogbackInstrumentation {
       logbackConfig.getString("mdc.trace-id-key"),
       logbackConfig.getString("mdc.span-id-key"),
       logbackConfig.getString("mdc.span-operation-name-key"),
+      logbackConfig.getString("mdc.source-thread-key"),
       logbackConfig.getBoolean("mdc.copy.tags"),
       logbackConfig.getStringList("mdc.copy.entries").asScala.toSeq
     )
@@ -104,6 +106,8 @@ object ContextToMdcPropertyMapAppender {
         mdcWithKamonContext.put(settings.mdcSpanIdKey, span.id.string)
         mdcWithKamonContext.put(settings.mdcSpanOperationNameKey, span.operationName())
       }
+
+      mdcWithKamonContext.put(settings.mdcSourceThreadKey, Thread.currentThread().getName)
 
       if (settings.mdcCopyTags) {
         currentContext.tags.iterator().foreach(t => {
