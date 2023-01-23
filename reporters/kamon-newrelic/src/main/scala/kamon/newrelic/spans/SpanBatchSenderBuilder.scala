@@ -16,13 +16,11 @@
 
 package kamon.newrelic.spans
 
-import java.net.URL
-import java.time.Duration
-
 import com.newrelic.telemetry.{OkHttpPoster, SenderConfiguration}
 import com.newrelic.telemetry.spans.SpanBatchSender
 import com.typesafe.config.Config
-import kamon.newrelic.LibraryVersion
+import kamon.newrelic.NewRelicConfig.NewRelicApiKey.InsightsInsertKey
+import kamon.newrelic.NewRelicConfig
 import org.slf4j.LoggerFactory
 
 trait SpanBatchSenderBuilder {
@@ -46,30 +44,18 @@ class SimpleSpanBatchSenderBuilder() extends SpanBatchSenderBuilder {
   }
 
   def buildConfig(config: Config): SenderConfiguration = {
-    val nrConfig = config.getConfig("kamon.newrelic")
-    // TODO maybe some validation around these values?
-    val nrInsightsInsertKey = nrConfig.getString("nr-insights-insert-key")
-
-    if (nrInsightsInsertKey.equals("none")) {
-      logger.error("No Insights Insert API Key defined for the kamon.newrelic.nr-insights-insert-key config setting. " +
+    val nrConfig = NewRelicConfig.fromConfig(config)
+    if (nrConfig.apiKey == InsightsInsertKey("none")) {
+      logger.error("One of kamon.newrelic.license-key or kamon.newrelic.nr-insights-insert-key config settings should be defined. " +
         "No spans will be sent to New Relic.")
     }
-    val enableAuditLogging = nrConfig.getBoolean("enable-audit-logging")
-
-    val userAgent = s"newrelic-kamon-reporter/${LibraryVersion.version}"
-    val callTimeout = Duration.ofSeconds(5)
-
     val senderConfig = SpanBatchSender.configurationBuilder()
-      .apiKey(nrInsightsInsertKey)
-      .httpPoster(new OkHttpPoster(callTimeout))
-      .secondaryUserAgent(userAgent)
-      .auditLoggingEnabled(enableAuditLogging)
-
-    if (nrConfig.hasPath("span-ingest-uri")) {
-      val uriOverride = nrConfig.getString("span-ingest-uri")
-      senderConfig.endpoint(new URL(uriOverride))
-    }
-
+      .apiKey(nrConfig.apiKey.value)
+      .useLicenseKey(nrConfig.apiKey.isLicenseKey)
+      .httpPoster(new OkHttpPoster(nrConfig.callTimeout))
+      .secondaryUserAgent(nrConfig.userAgent)
+      .auditLoggingEnabled(nrConfig.enableAuditLogging)
+    nrConfig.spanIngestUri.foreach(senderConfig.endpoint)
     senderConfig.build
   }
 }

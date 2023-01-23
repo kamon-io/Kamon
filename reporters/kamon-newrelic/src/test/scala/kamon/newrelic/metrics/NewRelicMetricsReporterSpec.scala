@@ -146,26 +146,49 @@ class NewRelicMetricsReporterSpec extends AnyWordSpec with Matchers {
   }
 
   "The metrics reporter builder" should {
-    "default the url when config not provided" in {
-      val newrelicConfig: ConfigValue = ConfigValueFactory.fromMap(Map(
-        "enable-audit-logging" -> false,
-        "nr-insights-insert-key" -> "secret"
-      ).asJava)
-      val config: Config = Kamon.config().withValue("kamon.newrelic", newrelicConfig)
+    val defaultConfig = Map(
+      "enable-audit-logging" -> false,
+      "license-key" -> "none",
+      "nr-insights-insert-key" -> "none"
+    )
 
-      val result = NewRelicMetricsReporter.buildSenderConfig(config)
-      assert(new URL("https://metric-api.newrelic.com/metric/v1") == result.getEndpointUrl)
+    def createSenderConfiguration(configMap: Map[String, AnyRef]) = {
+      val nrConfig = ConfigValueFactory.fromMap((defaultConfig ++ configMap).asJava)
+      val config = Kamon.config().withValue("kamon.newrelic", nrConfig)
+      NewRelicMetricsReporter.buildSenderConfig(config)
     }
 
-    "use config to override the URI" in {
-      val newrelicConfig: ConfigValue = ConfigValueFactory.fromMap(Map(
-        "enable-audit-logging" -> false,
-        "nr-insights-insert-key" -> "secret",
-        "metric-ingest-uri" -> "https://example.com/foo"
-      ).asJava)
-      val config: Config = Kamon.config().withValue("kamon.newrelic", newrelicConfig)
+    "use \"none\" insights insert key by default" in {
+      val result = createSenderConfiguration(Map.empty)
+      assert("none" == result.getApiKey)
+      assert(!result.useLicenseKey)
+    }
+    "be able to use insights insert key" in {
+      val result = createSenderConfiguration(Map("nr-insights-insert-key" -> "insights"))
+      assert("insights" == result.getApiKey)
+      assert(!result.useLicenseKey)
+    }
+    "be able to use license key" in {
+      val result = createSenderConfiguration(Map("license-key" -> "license"))
+      assert("license" == result.getApiKey)
+      assert(result.useLicenseKey)
+    }
+    "use insights insert key if both configured" in {
+      val result = createSenderConfiguration(Map("license-key" -> "license", "nr-insights-insert-key" -> "insights"))
+      assert("insights" == result.getApiKey)
+      assert(!result.useLicenseKey)
+    }
 
-      val result = NewRelicMetricsReporter.buildSenderConfig(config)
+
+    "default the url when config not provided" in {
+      val result = createSenderConfiguration(Map("nr-insights-insert-key" -> "secret"))
+      assert(new URL("https://metric-api.newrelic.com/metric/v1") == result.getEndpointUrl)
+    }
+    "use config to override the URI" in {
+      val result = createSenderConfiguration(Map(
+        "nr-insights-insert-key" -> "none",
+        "metric-ingest-uri" -> "https://example.com/foo"
+      ))
       assert(new URL("https://example.com/foo") == result.getEndpointUrl)
     }
   }

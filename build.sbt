@@ -799,8 +799,8 @@ lazy val `kamon-newrelic` = (project in file("reporters/kamon-newrelic"))
   .settings(
     crossScalaVersions += `scala_3_version`,
     libraryDependencies ++= Seq(
-      "com.newrelic.telemetry" % "telemetry-core" % "0.12.0",
-      "com.newrelic.telemetry" % "telemetry-http-okhttp" % "0.12.0",
+      "com.newrelic.telemetry" % "telemetry-core" % "0.15.0",
+      "com.newrelic.telemetry" % "telemetry-http-okhttp" % "0.15.0",
       scalatest % "test",
       "org.mockito" % "mockito-core" % "3.12.4" % "test"
     )
