@@ -105,8 +105,6 @@ object GetPropertyMapMethodInterceptor {
         MDC.put(settings.mdcSpanOperationNameKey, span.operationName())
       }
 
-      mdcWithKamonContext.put(settings.mdcSourceThreadKey, Thread.currentThread().getName)
-
       if (settings.mdcCopyTags) {
         currentContext.tags.iterator().foreach(t => {
           MDC.put(t.key, Tag.unwrapValue(t).toString)
