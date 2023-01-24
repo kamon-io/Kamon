@@ -31,28 +31,34 @@ class AwsSdkClientExecutionInterceptor extends ExecutionInterceptor {
   import AwsSdkClientExecutionInterceptor.ClientSpanAttribute
 
   override def afterMarshalling(context: Context.AfterMarshalling, executionAttributes: ExecutionAttributes): Unit = {
-    val operationName = executionAttributes.getAttribute(SdkExecutionAttribute.OPERATION_NAME)
-    val serviceName = executionAttributes.getAttribute(SdkExecutionAttribute.SERVICE_NAME)
-    val clientType = executionAttributes.getAttribute(SdkExecutionAttribute.CLIENT_TYPE)
+    if(Kamon.enabled()) {
+      val operationName = executionAttributes.getAttribute(SdkExecutionAttribute.OPERATION_NAME)
+      val serviceName = executionAttributes.getAttribute(SdkExecutionAttribute.SERVICE_NAME)
+      val clientType = executionAttributes.getAttribute(SdkExecutionAttribute.CLIENT_TYPE)
 
-    val clientSpan = Kamon.clientSpanBuilder(operationName, serviceName)
-      .tag("aws.sdk.client_type", clientType.name())
-      .start()
+      val clientSpan = Kamon.clientSpanBuilder(operationName, serviceName)
+        .tag("aws.sdk.client_type", clientType.name())
+        .start()
 
-    executionAttributes.putAttribute(ClientSpanAttribute, clientSpan)
+      executionAttributes.putAttribute(ClientSpanAttribute, clientSpan)
+    }
   }
 
   override def afterExecution(context: Context.AfterExecution, executionAttributes: ExecutionAttributes): Unit = {
-    val kamonSpan = executionAttributes.getAttribute(ClientSpanAttribute)
-    if(kamonSpan != null) {
-      kamonSpan.finish()
+    if(Kamon.enabled()) {
+      val kamonSpan = executionAttributes.getAttribute(ClientSpanAttribute)
+      if(kamonSpan != null) {
+        kamonSpan.finish()
+      }
     }
   }
 
   override def onExecutionFailure(context: Context.FailedExecution, executionAttributes: ExecutionAttributes): Unit = {
-    val kamonSpan = executionAttributes.getAttribute(ClientSpanAttribute)
-    if(kamonSpan != null) {
-      kamonSpan.fail(context.exception()).finish()
+    if(Kamon.enabled()) {
+      val kamonSpan = executionAttributes.getAttribute(ClientSpanAttribute)
+      if (kamonSpan != null) {
+        kamonSpan.fail(context.exception()).finish()
+      }
     }
   }
 }
