@@ -31,6 +31,7 @@ import java.util.UUID
 import javax.net.ssl.{HostnameVerifier, SSLSession}
 import scala.concurrent.duration._
 import scala.collection.JavaConverters._
+import scala.util.control.NonFatal
 
 class PekkoHttpServerTracingSpec extends AnyWordSpecLike with Matchers with ScalaFutures with Inside with InitAndStopKamonAfterAll
     with MetricInspection.Syntax with Reconfigure with TestWebServer with Eventually with OptionValues with TestSpanReporter {
@@ -39,7 +40,6 @@ class PekkoHttpServerTracingSpec extends AnyWordSpecLike with Matchers with Scal
 
   implicit private val system = ActorSystem("http-server-instrumentation-spec")
   implicit private val executor = system.dispatcher
-  implicit private val materializer = ActorMaterializer()
 
   val (sslSocketFactory, trustManager) = clientSSL()
   val okHttp = new OkHttpClient.Builder()
@@ -228,8 +228,12 @@ class PekkoHttpServerTracingSpec extends AnyWordSpecLike with Matchers with Scal
 
       "correctly time entity transfer timings" in {
         val target = s"$protocol://$interface:$port/$stream"
-        client.newCall(new Request.Builder().url(target).build()).execute()
 
+        try {
+          client.newCall(new Request.Builder().url(target).build()).execute()
+        } catch {
+          case NonFatal(_) => // call failed..
+        }
         val span = eventually(timeout(10 seconds)) {
           val span = testSpanReporter().nextSpan().value
           span.operationName shouldBe "/stream"

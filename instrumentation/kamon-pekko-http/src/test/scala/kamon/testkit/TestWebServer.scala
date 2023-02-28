@@ -18,9 +18,8 @@ package kamon.testkit
 
 import java.security.cert.{Certificate, CertificateFactory}
 import java.security.{KeyStore, SecureRandom}
-
 import org.apache.pekko.actor.ActorSystem
-import org.apache.pekko.http.scaladsl.{Http, HttpsConnectionContext}
+import org.apache.pekko.http.scaladsl.{ConnectionContext, Http, HttpsConnectionContext}
 import org.apache.pekko.http.scaladsl.model.{ContentTypes, HttpEntity, HttpResponse}
 import com.github.pjfanning.pekkohttpjson4s.Json4sSupport
 import org.apache.pekko.http.scaladsl.model.StatusCodes.{BadRequest, InternalServerError, OK}
@@ -30,6 +29,7 @@ import org.apache.pekko.http.scaladsl.server.{RequestContext, Route}
 import org.apache.pekko.stream.ActorMaterializer
 import org.apache.pekko.stream.scaladsl.Source
 import org.apache.pekko.util.ByteString
+
 import javax.net.ssl.{KeyManagerFactory, SSLContext, SSLSocketFactory, TrustManagerFactory, X509TrustManager}
 import kamon.Kamon
 import kamon.instrumentation.pekko.http.TracingDirectives
@@ -47,7 +47,6 @@ trait TestWebServer extends TracingDirectives {
     import Endpoints._
 
     implicit val ec: ExecutionContext = system.dispatcher
-    implicit val materializer = ActorMaterializer()
 
     val routes = logRequest("routing-request") {
       get {
@@ -180,9 +179,9 @@ trait TestWebServer extends TracingDirectives {
     }
 
     if(https)
-      new WebServer(interface, port, "https", Http().bindAndHandleAsync(Route.asyncHandler(routes), interface, port, httpContext()))
+      new WebServer(interface, port, "https", Http().newServerAt(interface, port).enableHttps(httpContext()).bind(Route.toFunction(routes)))
     else
-      new WebServer(interface, port, "http", Http().bindAndHandle(routes, interface, port))
+      new WebServer(interface, port, "http", Http().newServerAt(interface, port).bindFlow(routes))
   }
 
   def httpContext() = {
@@ -196,7 +195,7 @@ trait TestWebServer extends TracingDirectives {
     val context = SSLContext.getInstance("TLS")
     context.init(keyManagerFactory.getKeyManagers, null, new SecureRandom)
 
-    new HttpsConnectionContext(context)
+    ConnectionContext.httpsServer(context)
   }
 
   def clientSSL(): (SSLSocketFactory, X509TrustManager) = {

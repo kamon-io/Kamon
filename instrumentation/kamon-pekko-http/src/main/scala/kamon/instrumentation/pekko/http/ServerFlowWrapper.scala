@@ -108,8 +108,8 @@ object ServerFlowWrapper {
         override def onPull(): Unit =
           pull(requestIn)
 
-        override def onDownstreamFinish(): Unit =
-          cancel(requestIn)
+        override def onDownstreamFinish(t: Throwable): Unit =
+          cancel(requestIn, t)
       })
 
       setHandler(responseIn, new InHandler {
@@ -177,8 +177,8 @@ object ServerFlowWrapper {
         override def onPull(): Unit =
           pull(responseIn)
 
-        override def onDownstreamFinish(): Unit =
-          cancel(responseIn)
+        override def onDownstreamFinish(t: Throwable): Unit =
+          cancel(responseIn, t)
       })
 
       override def preStart(): Unit =
