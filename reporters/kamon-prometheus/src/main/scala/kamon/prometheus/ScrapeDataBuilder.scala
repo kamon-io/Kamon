@@ -189,6 +189,7 @@ class ScrapeDataBuilder(prometheusConfig: PrometheusSettings.Generic, environmen
       unit.dimension match {
         case Time         => prometheusConfig.timeBuckets
         case Information  => prometheusConfig.informationBuckets
+        case Percentage   => prometheusConfig.percentageBuckets
         case _            => prometheusConfig.defaultBuckets
       }
     )
