@@ -317,7 +317,7 @@ lazy val `kamon-kafka` = (project in file("instrumentation/kamon-kafka"))
   .settings(
     libraryDependencies ++= Seq(
       kanelaAgent                 % "provided",
-      "org.apache.kafka"          % "kafka-clients"     % "2.4.0" % "provided",
+      "org.apache.kafka"          % "kafka-clients"     % "3.4.0" % "provided",
 
       scalatest                   % "test",
       logbackClassic              % "test",
