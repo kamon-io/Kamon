@@ -177,23 +177,28 @@ object KafkaInstrumentation {
       .tag("kafka.timestamp-type", record.timestampType.name)
 
     Option(record.key()).foreach(k => consumerSpan.tag("kafka.key", k.toString()))
+    val incomingContext = KafkaInstrumentation.settings.propagator.read(record.headers(), Context.Empty)
+    val incomingSpan = incomingContext.get(Span.Key)
+
+    if (!incomingSpan.isEmpty) {
+      if (settings.continueTraceOnConsumer)
+        consumerSpan.asChildOf(incomingSpan)
+      else
+        consumerSpan.link(incomingSpan, Span.Link.Kind.FollowsFrom)
+    }
+
 
     // The additional context information will only be available when instrumentation is enabled.
     if (record.isInstanceOf[ConsumedRecordData]) {
       val consumerRecordData = record.asInstanceOf[ConsumedRecordData]
-      val incomingContext = consumerRecordData.incomingContext()
-      val incomingSpan = incomingContext.get(Span.Key)
 
-      consumerSpan
-        .tag("kafka.group-id", consumerRecordData.consumerInfo().groupId.getOrElse("unknown"))
-        .tag("kafka.client-id", consumerRecordData.consumerInfo().clientId)
-        .tag("kafka.poll-time", consumerRecordData.nanosSincePollStart())
-
-      if (!incomingSpan.isEmpty) {
-        if (settings.continueTraceOnConsumer)
-          consumerSpan.asChildOf(incomingSpan)
-        else
-          consumerSpan.link(incomingSpan, Span.Link.Kind.FollowsFrom)
+      // The consumer record data might be missing if the `ConsumerRecord` instance is created outside
+      // of the instrumented paths.
+      if(consumerRecordData.consumerInfo() != null) {
+        consumerSpan
+          .tag("kafka.group-id", consumerRecordData.consumerInfo().groupId.getOrElse("unknown"))
+          .tag("kafka.client-id", consumerRecordData.consumerInfo().clientId)
+          .tag("kafka.poll-time", consumerRecordData.nanosSincePollStart())
       }
     }
 

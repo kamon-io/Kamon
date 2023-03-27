@@ -48,10 +48,9 @@ class ConsumerInstrumentation extends InstrumentationBuilder {
 }
 
 trait ConsumedRecordData {
-  def incomingContext(): Context
   def nanosSincePollStart(): Long
   def consumerInfo(): ConsumerInfo
-  def set(incomingContext: Context, nanosSincePollStart: Long, consumerInfo: ConsumerInfo): Unit
+  def set(nanosSincePollStart: Long, consumerInfo: ConsumerInfo): Unit
 }
 
 object ConsumedRecordData {
@@ -59,12 +58,8 @@ object ConsumedRecordData {
   case class ConsumerInfo(groupId: Option[String], clientId: String)
 
   class Mixin extends ConsumedRecordData {
-    private var _incomingContext: Context = _
     private var _nanosSincePollStart: Long = _
     private var _consumerInfo: ConsumerInfo = _
-
-    override def incomingContext(): Context =
-      _incomingContext
 
     override def nanosSincePollStart(): Long =
       _nanosSincePollStart
@@ -72,8 +67,7 @@ object ConsumedRecordData {
     override def consumerInfo(): ConsumerInfo =
       _consumerInfo
 
-    override def set(incomingContext: Context, nanosSincePollStart: Long, consumerInfo: ConsumerInfo): Unit = {
-      _incomingContext = incomingContext
+    override def set(nanosSincePollStart: Long, consumerInfo: ConsumerInfo): Unit = {
       _nanosSincePollStart = nanosSincePollStart
       _consumerInfo = consumerInfo
     }
