@@ -210,6 +210,24 @@ object KafkaInstrumentation {
       consumerSpan.start()
   }
 
+  /**
+    * Copies internal state managed by Kamon from one consumer record to another, if possible. This utility is only
+    * necessary when there is custom code that creates ConsumerRecord instances which "forget" the consumer data
+    * that was injected by Kamon while calling the poll method.
+    */
+  def copyHiddenState(from: ConsumerRecord[_, _], to: ConsumerRecord[_, _]): ConsumerRecord[_, _] = {
+    if(from != null && to != null && from.isInstanceOf[ConsumedRecordData]) {
+      val fromRecordData = from.asInstanceOf[ConsumedRecordData]
+      val toRecordData = to.asInstanceOf[ConsumedRecordData]
+      toRecordData.set(
+        fromRecordData.nanosSincePollStart(),
+        fromRecordData.consumerInfo()
+      )
+    }
+
+    to
+  }
+
   object Keys {
     val Null = "NULL"
   }
