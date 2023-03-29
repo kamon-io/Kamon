@@ -95,9 +95,8 @@ trait Init { self: ModuleManagement with Configuration with CurrentStatus with M
       self.initWithoutAttaching()
     } else {
       self.disableInstrumentation()
+      self.logInitStatusInfo()
     }
-
-    self.logInitStatusInfo()
   }
 
 
