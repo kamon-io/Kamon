@@ -419,6 +419,7 @@ class ScrapeDataBuilderSpec extends AnyWordSpec with Matchers {
         buckets,
         buckets,
         buckets,
+        buckets,
         customBuckets,
         false,
         SummarySettings(Seq(0.5, 0.75, 0.95, 0.99), withSummary.map(Glob)),
