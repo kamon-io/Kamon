@@ -317,11 +317,12 @@ lazy val `kamon-kafka` = (project in file("instrumentation/kamon-kafka"))
   .settings(
     libraryDependencies ++= Seq(
       kanelaAgent                 % "provided",
-      "org.apache.kafka"          % "kafka-clients"     % "2.4.0" % "provided",
+      "org.apache.kafka"          % "kafka-clients"     % "3.4.0" % "provided",
 
       scalatest                   % "test",
       logbackClassic              % "test",
-      "io.github.embeddedkafka"   %% "embedded-kafka"   % "2.4.1.1" % "test" cross CrossVersion.for3Use2_13)
+      "org.testcontainers"        % "kafka"             % "1.17.6" % "test"
+    )
   ).dependsOn(`kamon-core`, `kamon-executors`, `kamon-testkit` % "test")
 
 
