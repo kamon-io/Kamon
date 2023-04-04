@@ -102,7 +102,7 @@ package object datadog {
         .connectTimeout(connectTimeout.toMillis, TimeUnit.MILLISECONDS)
         .readTimeout(readTimeout.toMillis, TimeUnit.MILLISECONDS)
         .writeTimeout(writeTimeout.toMillis, TimeUnit.MILLISECONDS)
-        .retryOnConnectionFailure(false)
+        .retryOnConnectionFailure(true)
 
       if (usingCompression) builder.addInterceptor(new DeflateInterceptor).build()
       else builder.build()
