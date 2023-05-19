@@ -39,7 +39,10 @@ trait Init { self: ModuleManagement with Configuration with CurrentStatus with M
     */
   def init(): Unit = {
     if(enabled()) {
-      self.attachInstrumentation()
+      if(shouldAttachInstrumentation()) {
+        self.attachInstrumentation()
+      }
+
       self.initScheduler()
       self.loadModules()
       self.moduleRegistry().init()
@@ -58,7 +61,10 @@ trait Init { self: ModuleManagement with Configuration with CurrentStatus with M
     self.reconfigure(config)
 
     if(enabled()) {
-      self.attachInstrumentation()
+      if (shouldAttachInstrumentation()) {
+        self.attachInstrumentation()
+      }
+
       self.initScheduler()
       self.loadModules()
       self.moduleRegistry().init()
