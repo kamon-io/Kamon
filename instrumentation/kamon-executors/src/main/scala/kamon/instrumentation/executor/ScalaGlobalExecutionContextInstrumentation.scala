@@ -17,12 +17,6 @@
 package kamon.instrumentation.executor
 
 import kanela.agent.api.instrumentation.InstrumentationBuilder
-
-/**
-  * Captures the current Context upon creation of all Runnable/Callable implementations and sets that Context as current
-  * while their run/call methods are executed. See the module's exclude configuration for more info on what packages and
-  * implementations will not be targeted by this instrumentation (e.g. it does not target any java.* class by default).
-  */
 class ScalaGlobalExecutionContextInstrumentation extends InstrumentationBuilder {
 
   onTypes("scala.concurrent.ExecutionContext$", "scala.concurrent.ExecutionContext$Implicits$")
