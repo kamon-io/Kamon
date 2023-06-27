@@ -12,7 +12,7 @@ jobs:
       JVM_OPTS: -Xms5120M -Xmx5120M -Xss6M -XX:ReservedCodeCacheSize=256M -Dfile.encoding=UTF-8
     steps:
       - uses: actions/checkout@v1
-      - run: git fetch --depth=1 origin '+refs/tags/*:refs/tags/*'
+      - run: git fetch -f --depth=1 origin '+refs/tags/*:refs/tags/*'
       - uses: coursier/cache-action@v6
       - uses: coursier/setup-action@v1
         with:
