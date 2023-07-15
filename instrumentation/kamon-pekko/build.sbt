@@ -1,12 +1,10 @@
-resolvers += "Apache OSS Snapshots" at "https://repository.apache.org/content/repositories/snapshots"
-
-// The Common configuration should always depend on the latest version of Akka. All code in the Common configuration
-// should be source compatible with all Akka versions.
+// The Common configuration should always depend on the latest version of Pekko. All code in the Common configuration
+// should be source compatible with all Pekko versions.
 inConfig(Compile)(Defaults.compileSettings ++ Seq(
   crossScalaVersions := Seq(`scala_2.12_version`, `scala_2.13_version`)
 ))
 
-val pekkoVersion = "0.0.0+26601-29800df0-SNAPSHOT"
+val pekkoVersion = "1.0.0"
 libraryDependencies ++= { if(scalaBinaryVersion.value == "2.11") Seq.empty else Seq(
   kanelaAgent,
   scalatest % Test,
