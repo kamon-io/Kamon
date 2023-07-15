@@ -510,9 +510,8 @@ lazy val `kamon-pekko-http` = (project in file("instrumentation/kamon-pekko-http
     javaAgents += "org.mortbay.jetty.alpn" % "jetty-alpn-agent" % "2.0.10" % "test",
     libraryDependencies ++= Seq(
       kanelaAgent % "provided",
-      "org.apache.pekko" %% "pekko-http"           % pekkoHttpVersion % "provided",
-      "org.apache.pekko" %% "pekko-http2-support"  % "0.0.0+4272-045c925b-SNAPSHOT" % "provided",
-      "org.apache.pekko" %% "pekko-stream"         % "1.0.0" % "provided",
+      "org.apache.pekko" %% "pekko-http"          % pekkoHttpVersion % "provided",
+      "org.apache.pekko" %% "pekko-stream"        % "1.0.0" % "provided",
 
       scalatest % "test",
       slf4jApi % "test",
