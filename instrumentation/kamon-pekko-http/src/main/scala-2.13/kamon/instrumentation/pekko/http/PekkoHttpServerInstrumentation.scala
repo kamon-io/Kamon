@@ -79,13 +79,6 @@ class PekkoHttpServerInstrumentation extends InstrumentationBuilder {
 
 
   /**
-    * Akka-http 10.1.x compatibility.
-    */
-
-  onType("org.apache.pekko.http.scaladsl.Http2Ext")
-    .advise(method("bindAndHandleAsync") and isPublic(), classOf[Http2ExtBindAndHandleAdvice])
-
-  /**
     * Support for HTTP/1 and HTTP/2 at the same time.
     *
     */
