@@ -29,7 +29,7 @@ class RemotingInstrumentation extends InstrumentationBuilder {
       .advise(method("writeSend"), WriteSendWithContext)
 
     /**
-      * Reads and writes the Akka PDU using a modified version of the Protobuf that has an extra field for a Context
+      * Reads and writes the Pekko PDU using a modified version of the Protobuf that has an extra field for a Context
       * instance.
       */
     onType("org.apache.pekko.remote.transport.PekkoPduProtobufCodec$")

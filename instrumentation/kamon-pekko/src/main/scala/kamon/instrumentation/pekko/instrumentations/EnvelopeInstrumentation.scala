@@ -24,7 +24,7 @@ import kanela.agent.libs.net.bytebuddy.asm.Advice
 class EnvelopeInstrumentation extends InstrumentationBuilder {
 
   /**
-    * Ensures that the Akka Envelope is able to carry around a Context and a Timestamp.
+    * Ensures that the Pekko Envelope is able to carry around a Context and a Timestamp.
     */
   onType("org.apache.pekko.dispatch.Envelope")
     .mixin(classOf[HasContext.Mixin])

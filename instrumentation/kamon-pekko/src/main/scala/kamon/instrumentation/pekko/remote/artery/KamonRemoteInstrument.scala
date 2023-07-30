@@ -34,7 +34,7 @@ class KamonRemoteInstrument(system: ExtendedActorSystem) extends RemoteInstrumen
 
       // We need to figure out the length of the incoming Context before passing it to BinaryPropagation and
       // the only way we can do so at this point is to go back a few positions on `buffer` to read the key/length
-      // Integer stored by Akka and figure out the length from there.
+      // Integer stored by Pekko and figure out the length from there.
       val keyLength = buffer.getInt(buffer.position() - 4)
       val contextLength = getLength(keyLength)
       val contextData = Array.ofDim[Byte](contextLength)

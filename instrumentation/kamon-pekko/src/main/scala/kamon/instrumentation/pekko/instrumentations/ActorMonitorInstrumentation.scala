@@ -12,7 +12,7 @@ import scala.util.control.NonFatal
 class ActorMonitorInstrumentation extends InstrumentationBuilder {
    /*
      * Changes implementation of extractMessageClass for our ActorMonitor.
-     * In akka 2.6, all typed messages are converted to AdaptMessage,
+     * In Pekko, all typed messages are converted to AdaptMessage,
      * so we're forced to extract the original message type.
      */
     onSubTypesOf("kamon.instrumentation.pekko.instrumentations.ActorMonitor")

@@ -52,7 +52,7 @@ class PekkoPduProtobufCodecConstructMessageMethodInterceptor {
     ByteString.ByteString1C(ackAndEnvelopeBuilder.build.toByteArray) //Reuse Byte Array (naughty!)
   }
 
-  // Copied from akka.remote.transport.AkkaPduProtobufCodec because of private access.
+  // Copied from org.apache.pekko.remote.transport.PekkoPduProtobufCodec because of private access.
   private def ackBuilder(ack: Ack): AcknowledgementInfo.Builder = {
     val ackBuilder = AcknowledgementInfo.newBuilder()
     ackBuilder.setCumulativeAck(ack.cumulativeAck.rawValue)
@@ -60,14 +60,14 @@ class PekkoPduProtobufCodecConstructMessageMethodInterceptor {
     ackBuilder
   }
 
-  // Copied from akka.remote.transport.AkkaPduProtobufCodec because of private access.
+  // Copied from org.apache.pekko.remote.transport.PekkoPduProtobufCodec because of private access.
   private def serializeActorRef(defaultAddress: Address, ref: ActorRef): ActorRefData = {
     ActorRefData.newBuilder.setPath(
       if (ref.path.address.host.isDefined) ref.path.toSerializationFormat
       else ref.path.toSerializationFormatWithAddress(defaultAddress)).build()
   }
 
-  // Copied from akka.remote.transport.AkkaPduProtobufCodec because of private access.
+  // Copied from org.apache.pekko.remote.transport.PekkoPduProtobufCodec because of private access.
   private def serializeAddress(address: Address): AddressData = address match {
     case Address(protocol, system, Some(host), Some(port)) =>
       AddressData.newBuilder
