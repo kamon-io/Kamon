@@ -121,17 +121,17 @@ object JvmMetrics {
 
   val ClassesLoaded = Kamon.gauge(
     name = "jvm.class-loading.loaded",
-    description = "Total number od classes loaded"
+    description = "Total number of classes loaded"
   )
 
   val ClassesUnloaded = Kamon.gauge(
     name = "jvm.class-loading.unloaded",
-    description = "Total number od classes unloaded"
+    description = "Total number of classes unloaded"
   )
 
   val ClassesCurrentlyLoaded = Kamon.gauge(
     name = "jvm.class-loading.currently-loaded",
-    description = "Total number od classes currently loaded"
+    description = "Total number of classes currently loaded"
   )
 
   val BufferPoolCount = Kamon.gauge(
