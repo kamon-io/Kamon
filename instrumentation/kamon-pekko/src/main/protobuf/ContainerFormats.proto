@@ -1,0 +1,99 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * license agreements; and to You under the Apache License, version 2.0:
+ *
+ *   https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * This file is part of the Apache Pekko project, derived from Akka.
+ */
+
+/*
+ * Copyright (C) 2009-2022 Lightbend Inc. <https://www.lightbend.com>
+ */
+
+syntax = "proto2";
+
+option java_package = "org.apache.pekko.remote";
+option optimize_for = SPEED;
+
+/******************************************
+  ActorSelection related formats
+*******************************************/
+
+message SelectionEnvelope {
+  required bytes enclosedMessage = 1;
+  required int32 serializerId = 2;
+  repeated Selection pattern = 3;
+  optional bytes messageManifest = 4;
+  optional bool wildcardFanOut = 5; // optional for pre 2.3.4 compatibility
+}
+
+enum PatternType {
+  PARENT = 0;
+  CHILD_NAME = 1;
+  CHILD_PATTERN = 2;
+}
+
+message Selection {
+  required PatternType type = 1;
+  optional string matcher = 2;
+}
+
+message Identify {
+  required Payload messageId = 1;
+}
+
+message ActorIdentity {
+  required Payload correlationId = 1;
+  optional ActorRef ref = 2;
+}
+
+message ActorRef {
+  required string path = 1;
+}
+
+message Option {
+  optional Payload value = 1;
+}
+
+message Payload {
+  required bytes enclosedMessage = 1;
+  required int32 serializerId = 2;
+  optional bytes messageManifest = 4;
+}
+
+message WatcherHeartbeatResponse {
+  required uint64 uid = 1;
+}
+
+message Throwable {
+  required string className = 1;
+  optional string message = 2;
+  optional Payload cause = 3;
+  repeated StackTraceElement stackTrace = 4;
+}
+
+message ThrowableNotSerializable {
+  required string message = 1;
+  required string originalMessage = 2;
+  required string originalClassName = 3;
+}
+
+message ActorInitializationException {
+  optional ActorRef actor = 1;
+  required string message = 2;
+  required Payload cause = 3;
+}
+
+message StackTraceElement {
+  required string className = 1;
+  required string methodName = 2;
+  required string fileName = 3;
+  required int32 lineNumber = 4;
+}
+
+
+// ReplyWith pattern message(s)
+message StatusReplyErrorMessage {
+  required string errorMessage = 1;
+}

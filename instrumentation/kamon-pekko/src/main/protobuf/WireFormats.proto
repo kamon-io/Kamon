@@ -1,0 +1,222 @@
+// Extracted from https://github.com/apache/incubator-pekko/blob/main/remote/src/main/protobuf/WireFormats.proto
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * license agreements; and to You under the Apache License, version 2.0:
+ *
+ *   https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * This file is part of the Apache Pekko project, derived from Akka.
+ */
+
+/*
+ * Copyright (C) 2009-2022 Lightbend Inc. <https://www.lightbend.com>
+ */
+
+syntax = "proto2";
+
+option java_package = "org.apache.pekko.remote";
+option optimize_for = SPEED;
+
+import "ContainerFormats.proto";
+
+/******************************************
+ * Remoting message formats
+ ******************************************/
+
+
+message AckAndEnvelopeContainer {
+    optional AcknowledgementInfo ack = 1;
+    optional RemoteEnvelope envelope = 2;
+}
+
+/**
+ * Defines a remote message.
+ */
+message RemoteEnvelope {
+    required ActorRefData recipient = 1;
+    required SerializedMessage message = 2;
+    optional ActorRefData sender = 4;
+    optional fixed64 seq = 5;
+}
+
+message AcknowledgementInfo {
+    required fixed64 cumulativeAck = 1;
+    repeated fixed64 nacks = 2;
+}
+
+/**
+ * Defines a remote ActorRef that "remembers" and uses its original Actor instance
+ * on the original node.
+ */
+message ActorRefData {
+    required string path = 1;
+}
+
+/**
+ * Defines a message.
+ */
+message SerializedMessage {
+    required bytes message = 1;
+    required int32 serializerId = 2;
+    optional bytes messageManifest = 3;
+}
+
+/**
+ * Defines org.apache.pekko.remote.DaemonMsgCreate
+ */
+message DaemonMsgCreateData {
+    required PropsData props = 1;
+    required DeployData deploy = 2;
+    required string path = 3;
+    required ActorRefData supervisor = 4;
+}
+
+/**
+ * Serialization of org.apache.pekko.actor.Props
+ */
+message PropsData {
+    required DeployData deploy = 2;
+    required string clazz = 3;
+    repeated bytes args = 4;
+    // serialized props parameters
+    // older wire protocol: contains class name for each arg
+    // newer wire protocol: contains string manifest for each arg
+    repeated string manifests = 5;
+    // newer wire protocol: serializer id for each arg
+    repeated int32 serializerIds = 6;
+    // additionally a flag per position to indicate if it was
+    // serialized with manifest or not
+    repeated bool hasManifest = 7;
+}
+
+/**
+ * Serialization of org.apache.pekko.actor.Deploy
+ */
+message DeployData {
+    required string path = 1;
+    optional bytes config = 2;
+    optional bytes routerConfig = 3;
+    optional bytes scope = 4;
+    optional string dispatcher = 5;
+    // older wire protocol: hardcoded class used to look up serializer
+    // newer wire protocol: serializer id and manifest available for each
+    optional int32 scopeSerializerId = 6;
+    optional string scopeManifest = 7;
+    optional int32 configSerializerId = 8;
+    optional string configManifest = 9;
+    optional int32 routerConfigSerializerId = 10;
+    optional string routerConfigManifest = 11;
+    repeated string tags = 12;
+}
+
+
+/******************************************
+ * Pekko Protocol message formats
+ ******************************************/
+
+/**
+ * Message format of Pekko Protocol.
+ * Message contains either a payload or an instruction.
+ */
+message PekkoProtocolMessage {
+    optional bytes payload = 1;
+    optional PekkoControlMessage instruction = 2;
+}
+
+/**
+ * Defines some control messages for the remoting
+ */
+message PekkoControlMessage {
+    required CommandType commandType = 1;
+    optional PekkoHandshakeInfo handshakeInfo = 2;
+}
+
+message PekkoHandshakeInfo {
+    required AddressData origin = 1;
+    required fixed64 uid = 2;
+    optional string cookie = 3;
+
+}
+
+/**
+ * Defines the type of the PekkoControlMessage command type
+ */
+enum CommandType {
+    ASSOCIATE = 1;
+    DISASSOCIATE = 2;
+    HEARTBEAT = 3;
+    DISASSOCIATE_SHUTTING_DOWN = 4; // Remote system is going down and will not accepts new connections
+    DISASSOCIATE_QUARANTINED = 5;   // Remote system refused the association since the current system is quarantined
+}
+
+/**
+ * java.util.concurrent.TimeUnit enum
+ */
+enum TimeUnit {
+    NANOSECONDS = 1;
+    MICROSECONDS = 2;
+    MILLISECONDS = 3;
+    SECONDS = 4;
+    MINUTES = 5;
+    HOURS = 6;
+    DAYS = 7;
+}
+
+message FiniteDuration {
+    required int64 value = 1;
+    required TimeUnit unit = 2;
+}
+
+message RemoteScope {
+    required AddressData node = 1;
+}
+
+// router configs
+
+message DefaultResizer {
+    required uint32 lowerBound = 1;
+    required uint32 upperBound = 2;
+    required uint32 pressureThreshold = 3;
+    required double rampupRate = 4;
+    required double backoffThreshold = 5;
+    required double backoffRate = 6;
+    required uint32 messagesPerResize = 7;
+}
+
+message FromConfig {
+    optional Payload resizer = 1;
+    optional string routerDispatcher = 2;
+}
+
+message GenericRoutingPool {
+    required uint32 nrOfInstances = 1;
+    optional string routerDispatcher = 2;
+    required bool usePoolDispatcher = 3;
+    optional Payload resizer = 4;
+}
+
+message ScatterGatherPool {
+    required GenericRoutingPool generic = 1;
+    required FiniteDuration within = 2;
+}
+
+message TailChoppingPool {
+    required GenericRoutingPool generic = 1;
+    required FiniteDuration within = 2;
+    required FiniteDuration interval = 3;
+}
+
+/**
+ * Defines a remote address.
+ */
+message AddressData {
+    required string system = 1;
+    required string hostname = 2;
+    required uint32 port = 3;
+    optional string protocol = 4;
+}
+
+message RemoteRouterConfig {
+    required Payload local = 1;
+    repeated AddressData nodes = 2;
+}

@@ -487,6 +487,15 @@ lazy val `kamon-akka-http` = (project in file("instrumentation/kamon-akka-http")
     ),
   )).dependsOn(`kamon-akka`, `kamon-testkit` % "test")
 
+
+lazy val `kamon-pekko` = (project in file("instrumentation/kamon-pekko"))
+  .enablePlugins(JavaAgent)
+  .disablePlugins(AssemblyPlugin)
+  .settings(instrumentationSettings: _*)
+  .dependsOn(
+    `kamon-scala-future` % "compile",
+    `kamon-testkit` % "test"
+  )
 lazy val `kamon-akka-grpc` = (project in file("instrumentation/kamon-akka-grpc"))
   .enablePlugins(JavaAgent, AkkaGrpcPlugin)
   .disablePlugins(AssemblyPlugin)
