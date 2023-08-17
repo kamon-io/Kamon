@@ -137,6 +137,8 @@ val instrumentationProjects = Seq[ProjectReference](
   `kamon-akka`,
   `kamon-akka-http`,
   `kamon-akka-grpc`,
+  `kamon-pekko`,
+  `kamon-pekko-http`,
   `kamon-play`,
   `kamon-okhttp`,
   `kamon-tapir`,
@@ -493,6 +495,9 @@ lazy val `kamon-pekko` = (project in file("instrumentation/kamon-pekko"))
   .enablePlugins(JavaAgent)
   .disablePlugins(AssemblyPlugin)
   .settings(instrumentationSettings: _*)
+  .settings(Seq(
+    crossScalaVersions := Seq(`scala_2.12_version`, `scala_2.13_version`),
+  ))
   .dependsOn(
     `kamon-scala-future` % "compile",
     `kamon-testkit` % "test"
@@ -506,6 +511,7 @@ lazy val `kamon-pekko-http` = (project in file("instrumentation/kamon-pekko-http
   .settings(instrumentationSettings)
   .settings(Seq(
     javaAgents += "org.mortbay.jetty.alpn" % "jetty-alpn-agent" % "2.0.10" % "test",
+    crossScalaVersions := Seq(`scala_2.12_version`, `scala_2.13_version`),
     libraryDependencies ++= Seq(
       kanelaAgent % "provided",
       "org.apache.pekko" %% "pekko-http"          % pekkoHttpVersion % "provided",
@@ -990,6 +996,8 @@ lazy val `kamon-bundle-dependencies-2-12-and-up` = (project in file("bundle/kamo
     `kamon-akka-grpc`,
     `kamon-cats-io-3`,
     `kamon-finagle`,
+    `kamon-pekko`,
+    `kamon-pekko-http`,
     `kamon-tapir`,
     `kamon-alpakka-kafka`
   )
