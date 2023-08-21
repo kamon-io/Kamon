@@ -243,6 +243,45 @@ class KafkaClientsTracingInstrumentationSpec extends AnyWordSpec with Matchers
         span.parentId shouldBe sendingSpan.get.id
       }
     }
+
+    "create a Producer/Consumer Span when publish/consume a message with custom format" in new SpanReportingTestScope(reporter) {
+      applyConfig("kamon.instrumentation.kafka.client.tracing.propagator = kamon.instrumentation.kafka.testutil.CustomPropagationImplementation")
+
+      val testTopicName = "custom-context-propagation"
+      publishStringMessageToKafka(testTopicName, "Hello world!!!")
+
+      val consumedRecord = consumeFirstRawRecord(testTopicName)
+
+      consumedRecord.headers().lastHeader("x-trace-id").value() should not be empty
+      consumedRecord.headers().lastHeader("traceparent") shouldBe null
+      consumedRecord.headers().lastHeader("kctx") shouldBe null
+      consumedRecord.value() shouldBe "Hello world!!!"
+
+      awaitNumReportedSpans(2)
+
+      var sendingSpan: Option[Span.Finished] = None
+      assertReportedSpan(_.operationName == "producer.send") { span =>
+        span.metricTags.get(plain("component")) shouldBe "kafka.producer"
+        span.metricTags.get(plain("span.kind")) shouldBe "producer"
+        span.tags.get(plain("kafka.topic")) shouldBe testTopicName
+        span.tags.get(plain("kafka.key")) shouldBe KafkaInstrumentation.Keys.Null
+        span.tags.get(plainLong("kafka.partition")) shouldBe 0L
+        sendingSpan = Some(span)
+      }
+
+      assertReportedSpan(_.operationName == "consumer.process") { span =>
+        span.metricTags.get(plain("component")) shouldBe "kafka.consumer"
+        span.metricTags.get(plain("span.kind")) shouldBe "consumer"
+        span.tags.get(plain("kafka.topic")) shouldBe testTopicName
+        span.tags.get(plain("kafka.client-id")) should not be empty
+        span.tags.get(plain("kafka.group-id")) should not be empty
+        span.tags.get(plainLong("kafka.partition")) shouldBe 0L
+        span.tags.get(plainLong("kafka.timestamp")) shouldBe consumedRecord.timestamp()
+        span.tags.get(plain("kafka.timestamp-type")) shouldBe consumedRecord.timestampType().name
+        span.trace.id shouldBe sendingSpan.get.trace.id
+        span.parentId shouldBe sendingSpan.get.id
+      }
+    }
   }
 
   private def publishStringMessageToKafka(topicName: String, message: String): Unit = {
