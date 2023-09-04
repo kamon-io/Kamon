@@ -455,6 +455,7 @@ lazy val `kamon-akka` = (project in file("instrumentation/kamon-akka"))
   .enablePlugins(JavaAgent)
   .disablePlugins(AssemblyPlugin)
   .settings(instrumentationSettings: _*)
+  .settings(crossScalaVersions += `scala_3_version`)
   .dependsOn(
     `kamon-scala-future` % "compile,common,akka-2.5,akka-2.6",
     `kamon-testkit` % "test,test-common,test-akka-2.5,test-akka-2.6"
