@@ -509,7 +509,7 @@ lazy val pekkoHttpVersion = "1.0.0"
 lazy val `kamon-pekko-http` = (project in file("instrumentation/kamon-pekko-http"))
   .enablePlugins(JavaAgent)
   .disablePlugins(AssemblyPlugin)
-  .settings(instrumentationSettings)
+  .settings(instrumentationSettings :+ (crossScalaVersions += `scala_3_version`))
   .settings(Seq(
     javaAgents += "org.mortbay.jetty.alpn" % "jetty-alpn-agent" % "2.0.10" % "test",
     crossScalaVersions := Seq(`scala_2.12_version`, `scala_2.13_version`),
