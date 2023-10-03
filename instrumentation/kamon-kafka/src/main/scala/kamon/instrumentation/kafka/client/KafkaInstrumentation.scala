@@ -17,7 +17,7 @@
 package kamon.instrumentation.kafka.client
 
 import com.typesafe.config.Config
-import kamon.Kamon
+import kamon.{ClassLoading, Kamon}
 import kamon.context.Context
 import kamon.instrumentation.context.HasContext
 import kamon.trace.Span
@@ -50,7 +50,10 @@ object KafkaInstrumentation {
             log.warn("W3C TraceContext propagation should be used only with identifier-scheme = double")
           }
           SpanPropagation.W3CTraceContext()
-        case other => sys.error(s"Unrecognized option [$other] for the kamon.instrumentation.kafka.client.tracing.propagator config.")
+        case fqcn => try ClassLoading.createInstance[KafkaPropagator](fqcn) catch {
+          case t: Throwable =>
+            sys.error(s"Failed to create kafka propagator instance from FQCN [$fqcn]. Reason: ${t.getMessage}")
+        }
       }
     )
   }
