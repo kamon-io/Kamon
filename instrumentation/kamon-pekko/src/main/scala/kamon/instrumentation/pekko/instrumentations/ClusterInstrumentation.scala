@@ -24,7 +24,7 @@ object AfterClusterInitializationAdvice {
   def onClusterExtensionCreated(@Advice.Argument(0) system: ExtendedActorSystem, @Advice.Return clusterExtension: Cluster): Unit = {
     val settings = PekkoInstrumentation.settings()
     if(settings.exposeClusterMetrics) {
-      val stateExporter = system.systemActorOf(Props[ClusterInstrumentation.ClusterStateExporter], "kamon-cluster-state-exporter")
+      val stateExporter = system.systemActorOf(Props[ClusterInstrumentation.ClusterStateExporter](), "kamon-cluster-state-exporter")
       clusterExtension.subscribe(stateExporter, classOf[ClusterEvent.ClusterDomainEvent])
     }
   }

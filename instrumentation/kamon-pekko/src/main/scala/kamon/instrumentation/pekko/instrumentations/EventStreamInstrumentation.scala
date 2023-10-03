@@ -21,6 +21,8 @@ import kamon.instrumentation.pekko.PekkoMetrics
 import kanela.agent.api.instrumentation.InstrumentationBuilder
 import kanela.agent.libs.net.bytebuddy.asm.Advice.{Argument, OnMethodExit, This}
 
+import scala.annotation.static
+
 class EventStreamInstrumentation extends InstrumentationBuilder {
 
   /**
@@ -32,19 +34,20 @@ class EventStreamInstrumentation extends InstrumentationBuilder {
     .advise(method("publish").and(takesArguments(1)), PublishMethodAdvice)
 }
 
-
+class ConstructorAdvice
 object ConstructorAdvice {
 
   @OnMethodExit(suppress = classOf[Throwable])
-  def exit(@This eventStream: HasSystem, @Argument(0) system:ActorSystem): Unit = {
+  @static def exit(@This eventStream: HasSystem, @Argument(0) system:ActorSystem): Unit = {
     eventStream.setSystem(system)
   }
 }
 
+class PublishMethodAdvice
 object PublishMethodAdvice {
 
   @OnMethodExit(suppress = classOf[Throwable])
-  def exit(@This stream:HasSystem, @Argument(0) event: AnyRef):Unit = event match {
+  @static def exit(@This stream:HasSystem, @Argument(0) event: AnyRef):Unit = event match {
     case _: DeadLetter => PekkoMetrics.forSystem(stream.system.name).deadLetters.increment()
     case _: UnhandledMessage => PekkoMetrics.forSystem(stream.system.name).unhandledMessages.increment()
     case _ => ()

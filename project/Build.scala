@@ -59,7 +59,7 @@ object BaseProject extends AutoPlugin {
     val `scala_2.11_version` = "2.11.12"
     val `scala_2.12_version` = "2.12.15"
     val `scala_2.13_version` = "2.13.8"
-    val scala_3_version = "3.2.0"
+    val scala_3_version = "3.3.1"
 
     // This installs the GPG signing key from the
     setupGpg()

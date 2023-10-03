@@ -498,6 +498,9 @@ lazy val `kamon-pekko` = (project in file("instrumentation/kamon-pekko"))
   .settings(instrumentationSettings: _*)
   .settings(Seq(
     crossScalaVersions := Seq(`scala_2.12_version`, `scala_2.13_version`),
+    libraryDependencies ++= Seq(
+      "org.apache.pekko" %% "pekko-actor" % pekkoHttpVersion % "provided"
+    )
   ))
   .dependsOn(
     `kamon-scala-future` % "compile",
@@ -509,9 +512,8 @@ lazy val pekkoHttpVersion = "1.0.0"
 lazy val `kamon-pekko-http` = (project in file("instrumentation/kamon-pekko-http"))
   .enablePlugins(JavaAgent)
   .disablePlugins(AssemblyPlugin)
-  .settings(instrumentationSettings :+ (crossScalaVersions += `scala_3_version`))
+  .settings(instrumentationSettings)
   .settings(Seq(
-    javaAgents += "org.mortbay.jetty.alpn" % "jetty-alpn-agent" % "2.0.10" % "test",
     crossScalaVersions := Seq(`scala_2.12_version`, `scala_2.13_version`),
     libraryDependencies ++= Seq(
       kanelaAgent % "provided",
