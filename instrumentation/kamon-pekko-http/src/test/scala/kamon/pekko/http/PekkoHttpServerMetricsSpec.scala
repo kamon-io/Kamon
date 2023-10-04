@@ -22,14 +22,14 @@ import org.apache.pekko.actor.ActorSystem
 import org.apache.pekko.http.scaladsl.Http
 import org.apache.pekko.http.scaladsl.model.{HttpRequest, HttpResponse}
 import org.apache.pekko.http.scaladsl.settings.ClientConnectionSettings
-import org.apache.pekko.stream.ActorMaterializer
+import org.apache.pekko.stream.{ActorMaterializer, Materializer}
 import org.apache.pekko.stream.scaladsl.{Sink, Source}
 import org.scalatest.OptionValues
 import org.scalatest.concurrent.Eventually
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContextExecutor, Future}
 import scala.concurrent.duration._
 
 class PekkoHttpServerMetricsSpec extends AnyWordSpecLike with Matchers with InitAndStopKamonAfterAll with InstrumentInspection.Syntax
@@ -37,14 +37,14 @@ class PekkoHttpServerMetricsSpec extends AnyWordSpecLike with Matchers with Init
 
   import TestWebServer.Endpoints._
 
-  implicit private val system = ActorSystem("http-server-metrics-instrumentation-spec")
-  implicit private val executor = system.dispatcher
-  implicit private val materializer = ActorMaterializer()
+  implicit private val system: ActorSystem = ActorSystem("http-server-metrics-instrumentation-spec")
+  implicit private val executor: ExecutionContextExecutor = system.dispatcher
+  implicit private val materializer: Materializer = Materializer(system)
 
   val port = 8083
   val interface = "127.0.0.1"
   val timeoutTest: FiniteDuration = 5 second
-  val webServer = startServer(interface, port)
+  val webServer: WebServer = startServer(interface, port)
 
   "the Pekko HTTP server instrumentation" should {
     "track the number of open connections and active requests on the Server side" in {

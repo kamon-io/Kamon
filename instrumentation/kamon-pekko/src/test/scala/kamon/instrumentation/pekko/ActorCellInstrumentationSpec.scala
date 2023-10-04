@@ -29,12 +29,13 @@ import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
 
 import scala.collection.mutable.ListBuffer
+import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
 
 class ActorCellInstrumentationSpec extends TestKit(ActorSystem("ActorCellInstrumentationSpec")) with AnyWordSpecLike
     with BeforeAndAfterAll with ImplicitSender with Eventually with MetricInspection.Syntax with Matchers with InitAndStopKamonAfterAll {
-  implicit lazy val executionContext = system.dispatcher
+  implicit lazy val executionContext: ExecutionContext = system.dispatcher
   import ContextTesting._
 
   "the message passing instrumentation" should {
@@ -59,7 +60,7 @@ class ActorCellInstrumentationSpec extends TestKit(ActorSystem("ActorCellInstrum
     }
 
     "propagate the current context when using the ask pattern" in new EchoActorFixture {
-      implicit val timeout = Timeout(1 seconds)
+      implicit val timeout: Timeout = Timeout(1 seconds)
       Kamon.runWithContext(testContext("propagate-with-ask")) {
         // The pipe pattern use Futures internally, so FutureTracing test should cover the underpinnings of it.
         (contextEchoActor ? "test") pipeTo (testActor)

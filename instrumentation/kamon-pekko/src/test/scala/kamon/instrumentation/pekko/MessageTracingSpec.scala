@@ -39,10 +39,10 @@ class MessageTracingSpec extends TestKit(ActorSystem("MessageTracing")) with Any
       expectMsg("pong")
 
       eventually(timeout(2 seconds)) {
-        val span = testSpanReporter.nextSpan().value
+        val span = testSpanReporter().nextSpan().value
         val spanTags = stringTag(span) _
         spanTags("component") shouldBe "pekko.actor"
-        span.operationName shouldBe("tell(String)")
+        span.operationName shouldBe "tell(String)"
         spanTags("pekko.actor.path") shouldNot include ("filteredout")
         spanTags("pekko.actor.path") should be ("MessageTracing/user/traced-probe-1")
       }
@@ -54,9 +54,9 @@ class MessageTracingSpec extends TestKit(ActorSystem("MessageTracing")) with Any
       expectMsg("pong")
 
       eventually(timeout(2 seconds)) {
-        val span = testSpanReporter.nextSpan().value
+        val span = testSpanReporter().nextSpan().value
         val spanTags = stringTag(span) _
-        span.operationName shouldBe("tell(String)")
+        span.operationName shouldBe "tell(String)"
         spanTags("component") shouldBe "pekko.actor"
         spanTags("pekko.system") shouldBe "MessageTracing"
         spanTags("pekko.actor.path") shouldBe "MessageTracing/user/traced"
@@ -68,9 +68,9 @@ class MessageTracingSpec extends TestKit(ActorSystem("MessageTracing")) with Any
       Await.ready(pong, 10 seconds)
 
       eventually(timeout(2 seconds)) {
-        val span = testSpanReporter.nextSpan().value
+        val span = testSpanReporter().nextSpan().value
         val spanTags = stringTag(span) _
-        span.operationName shouldBe("ask(String)")
+        span.operationName shouldBe "ask(String)"
         spanTags("component") shouldBe "pekko.actor"
         spanTags("pekko.system") shouldBe "MessageTracing"
         spanTags("pekko.actor.path") shouldBe "MessageTracing/user/traced"
@@ -88,7 +88,7 @@ class MessageTracingSpec extends TestKit(ActorSystem("MessageTracing")) with Any
 
       // Span for the first actor message
       val firstSpanID = eventually(timeout(2 seconds)) {
-        val span = testSpanReporter.nextSpan().value
+        val span = testSpanReporter().nextSpan().value
         val spanTags = stringTag(span) _
 
         spanTags("component") shouldBe "pekko.actor"
@@ -101,7 +101,7 @@ class MessageTracingSpec extends TestKit(ActorSystem("MessageTracing")) with Any
 
       // Span for the second actor message
       eventually(timeout(2 seconds)) {
-        val span = testSpanReporter.nextSpan().value
+        val span = testSpanReporter().nextSpan().value
         val spanTags = stringTag(span) _
         span.parentId shouldBe firstSpanID
         span.operationName should include("tell(String)")
@@ -123,9 +123,9 @@ class MessageTracingSpec extends TestKit(ActorSystem("MessageTracing")) with Any
 
       // Span for the first actor message
       val firstSpanID = eventually(timeout(2 seconds)) {
-        val span = testSpanReporter.nextSpan().value
+        val span = testSpanReporter().nextSpan().value
         val spanTags = stringTag(span) _
-        span.operationName shouldBe("tell(Tuple2)")
+        span.operationName shouldBe "tell(Tuple2)"
         spanTags("component") shouldBe "pekko.actor"
         spanTags("pekko.system") shouldBe "MessageTracing"
         spanTags("pekko.actor.path") shouldBe "MessageTracing/user/traced-chain-first"
@@ -137,10 +137,10 @@ class MessageTracingSpec extends TestKit(ActorSystem("MessageTracing")) with Any
 
       // Span for the second actor message
       eventually(timeout(2 seconds)) {
-        val span = testSpanReporter.nextSpan().value
+        val span = testSpanReporter().nextSpan().value
         val spanTags = stringTag(span) _
         span.parentId shouldBe firstSpanID
-        span.operationName shouldBe("tell(String)")
+        span.operationName shouldBe "tell(String)"
         spanTags("component") shouldBe "pekko.actor"
         spanTags("pekko.system") shouldBe "MessageTracing"
         spanTags("pekko.actor.path") shouldBe "MessageTracing/user/traced-chain-last"
@@ -157,7 +157,7 @@ class MessageTracingSpec extends TestKit(ActorSystem("MessageTracing")) with Any
       expectMsg("pong")
 
       eventually(timeout(2 seconds)) {
-        val spanTags = stringTag(testSpanReporter.nextSpan().value) _
+        val spanTags = stringTag(testSpanReporter().nextSpan().value) _
         spanTags("component") shouldBe "pekko.actor"
         spanTags("pekko.actor.path") shouldNot include ("nontraced-pool-router")
         spanTags("pekko.actor.path") should be ("MessageTracing/user/traced-routee-one")
@@ -171,17 +171,17 @@ class MessageTracingSpec extends TestKit(ActorSystem("MessageTracing")) with Any
       expectMsg("pong")
 
       eventually(timeout(2 seconds)) {
-        val spanTags = stringTag(testSpanReporter.nextSpan().value) _
+        val spanTags = stringTag(testSpanReporter().nextSpan().value) _
         spanTags("component") shouldBe "pekko.actor"
         spanTags("pekko.actor.path") should be ("MessageTracing/user/traced-pool-router")
       }
     }
 
     "not track Pekko Streams actors" in {
-      implicit val timeout = Timeout(10 seconds)
+      implicit val timeout: Timeout = Timeout(10 seconds)
       val actorWithMaterializer = system.actorOf(Props[ActorWithMaterializer])
 
-      val finishedStream = Kamon.runWithSpan(Kamon.serverSpanBuilder("wrapper", "test").start()) {
+      val _ = Kamon.runWithSpan(Kamon.serverSpanBuilder("wrapper", "test").start()) {
         actorWithMaterializer.ask("stream").mapTo[String]
       }
       
@@ -222,7 +222,7 @@ class TracingTestActor extends Actor {
 }
 
 class ActorWithMaterializer extends Actor {
-  implicit val mat = ActorMaterializer()
+  implicit val mat: Materializer = Materializer(context)
 
   override def receive: Receive = {
     case "stream" =>

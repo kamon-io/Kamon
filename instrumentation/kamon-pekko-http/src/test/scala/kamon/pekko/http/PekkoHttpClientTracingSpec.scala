@@ -23,7 +23,7 @@ import org.apache.pekko.actor.ActorSystem
 import org.apache.pekko.http.scaladsl.Http
 import org.apache.pekko.http.scaladsl.model.HttpRequest
 import org.apache.pekko.http.scaladsl.model.headers.RawHeader
-import org.apache.pekko.stream.ActorMaterializer
+import org.apache.pekko.stream.{ActorMaterializer, Materializer}
 import org.json4s._
 import org.json4s.native.JsonMethods._
 import org.scalatest.OptionValues
@@ -31,6 +31,7 @@ import org.scalatest.concurrent.Eventually
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
 
+import scala.concurrent.ExecutionContextExecutor
 import scala.concurrent.duration._
 
 class PekkoHttpClientTracingSpec extends AnyWordSpecLike with Matchers with InitAndStopKamonAfterAll with MetricInspection.Syntax
@@ -38,14 +39,14 @@ class PekkoHttpClientTracingSpec extends AnyWordSpecLike with Matchers with Init
 
   import TestWebServer.Endpoints._
 
-  implicit private val system = ActorSystem("http-client-instrumentation-spec")
-  implicit private val executor = system.dispatcher
-  implicit private val materializer = ActorMaterializer()
+  implicit private val system: ActorSystem = ActorSystem("http-client-instrumentation-spec")
+  implicit private val executor: ExecutionContextExecutor = system.dispatcher
+  implicit private val materializer: Materializer = Materializer(system)
 
   val timeoutTest: FiniteDuration = 5 second
   val interface = "127.0.0.1"
   val port = 8080
-  val webServer = startServer(interface, port)
+  val webServer: WebServer = startServer(interface, port)
 
   "the Pekko HTTP client instrumentation" should {
     "create a client Span when using the request level API - Http().singleRequest(...)" in {

@@ -33,14 +33,15 @@ import org.apache.pekko.util.ByteString
 import javax.net.ssl.{KeyManagerFactory, SSLContext, SSLSocketFactory, TrustManagerFactory, X509TrustManager}
 import kamon.Kamon
 import kamon.instrumentation.pekko.http.TracingDirectives
-import org.json4s.{DefaultFormats, native}
+import org.json4s.{DefaultFormats, native, Serialization}
 import kamon.tag.Lookups.plain
 import kamon.trace.Trace
+
 import scala.concurrent.{ExecutionContext, Future}
 
 trait TestWebServer extends TracingDirectives {
-  implicit val serialization = native.Serialization
-  implicit val formats = DefaultFormats
+  implicit val serialization: Serialization = native.Serialization
+  implicit val formats: DefaultFormats = DefaultFormats
   import Json4sSupport._
 
   def startServer(interface: String, port: Int, https: Boolean = false)(implicit system: ActorSystem): WebServer = {
@@ -184,7 +185,7 @@ trait TestWebServer extends TracingDirectives {
       new WebServer(interface, port, "http", Http().newServerAt(interface, port).bindFlow(routes))
   }
 
-  def httpContext() = {
+  def httpContext(): HttpsConnectionContext = {
     val password = "kamon".toCharArray
     val ks = KeyStore.getInstance("PKCS12")
     ks.load(getClass.getClassLoader.getResourceAsStream("https/server.p12"), password)

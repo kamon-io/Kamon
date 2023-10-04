@@ -17,28 +17,29 @@
 package kamon.instrumentation.pekko
 
 
-import org.apache.pekko.actor.SupervisorStrategy.{Escalate, Restart, Resume, Stop}
-import org.apache.pekko.actor._
-import org.apache.pekko.testkit.{ImplicitSender, TestKit}
 import kamon.Kamon
 import kamon.instrumentation.pekko.ContextTesting._
 import kamon.tag.Lookups._
+import org.apache.pekko.actor.SupervisorStrategy.{Escalate, Restart, Resume, Stop}
+import org.apache.pekko.actor._
+import org.apache.pekko.testkit.{ImplicitSender, TestKit}
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.matchers.should.Matchers
-import org.scalatest.wordspec.{AnyWordSpec, AnyWordSpecLike}
+import org.scalatest.wordspec.AnyWordSpecLike
 
+import scala.concurrent.ExecutionContextExecutor
 import scala.util.control.NonFatal
 
 class SystemMessageInstrumentationSpec extends TestKit(ActorSystem("ActorSystemMessageInstrumentationSpec")) with AnyWordSpecLike with Matchers
   with BeforeAndAfterAll with ImplicitSender {
-  implicit lazy val executionContext = system.dispatcher
+  implicit lazy val executionContext: ExecutionContextExecutor = system.dispatcher
 
   "the system message passing instrumentation" should {
     "capture and propagate the current context while processing the Create message in top level actors" in {
       Kamon.runWithContext(testContext("creating-top-level-actor")) {
         system.actorOf(Props(new Actor {
           testActor ! propagatedContextKey()
-          def receive: Actor.Receive = { case any => }
+          def receive: Actor.Receive = { case _ => }
         }))
       }
 
@@ -123,19 +124,19 @@ class SystemMessageInstrumentationSpec extends TestKit(ActorSystem("ActorSystemM
     sendPostStop: Boolean = false, sendPreStart: Boolean = false): ActorRef = {
 
     class GrandParent extends Actor {
-      val child = context.actorOf(Props(new Parent))
+      val child: ActorRef = context.actorOf(Props(new Parent))
 
       override def supervisorStrategy: SupervisorStrategy = OneForOneStrategy() {
         case NonFatal(_) => testActor ! propagatedContextKey(); Stop
       }
 
-      def receive = {
+      def receive: Receive = {
         case any => child forward any
       }
     }
 
     class Parent extends Actor {
-      val child = context.actorOf(Props(new Child))
+      val child: ActorRef = context.actorOf(Props(new Child))
 
       override def supervisorStrategy: SupervisorStrategy = OneForOneStrategy() {
         case NonFatal(_) => testActor ! propagatedContextKey(); directive
@@ -152,7 +153,7 @@ class SystemMessageInstrumentationSpec extends TestKit(ActorSystem("ActorSystemM
     }
 
     class Child extends Actor {
-      def receive = {
+      def receive: Receive = {
         case "fail"    => throw new ArithmeticException("Division by zero.")
         case "context" => sender ! propagatedContextKey()
       }
