@@ -6,16 +6,16 @@ inConfig(Compile)(Defaults.compileSettings ++ Seq(
 
 val pekkoVersion = "1.0.1"
 libraryDependencies ++= { if(scalaBinaryVersion.value == "2.11") Seq.empty else Seq(
-  kanelaAgent,
+  kanelaAgent % "provided",
   scalatest % Test,
   logbackClassic % Test,
-  "org.apache.pekko"   %% "pekko-actor"             % pekkoVersion,
-  "org.apache.pekko"   %% "pekko-testkit"           % pekkoVersion,
-  "org.apache.pekko"   %% "pekko-slf4j"             % pekkoVersion,
-  "org.apache.pekko"   %% "pekko-remote"            % pekkoVersion,
-  "org.apache.pekko"   %% "pekko-cluster"           % pekkoVersion,
-  "org.apache.pekko"   %% "pekko-cluster-sharding"  % pekkoVersion,
-  "org.apache.pekko"   %% "pekko-protobuf"          % pekkoVersion,
+  "org.apache.pekko"   %% "pekko-actor"             % pekkoVersion % "provided,test",
+  "org.apache.pekko"   %% "pekko-testkit"           % pekkoVersion % "provided,test",
+  "org.apache.pekko"   %% "pekko-slf4j"             % pekkoVersion % "provided,test",
+  "org.apache.pekko"   %% "pekko-remote"            % pekkoVersion % "provided,test",
+  "org.apache.pekko"   %% "pekko-cluster"           % pekkoVersion % "provided,test",
+  "org.apache.pekko"   %% "pekko-cluster-sharding"  % pekkoVersion % "provided,test",
+  "org.apache.pekko"   %% "pekko-protobuf"          % pekkoVersion % "provided,test",
   "org.apache.pekko"   %% "pekko-testkit"           % pekkoVersion % Test
 )}
 
