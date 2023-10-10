@@ -90,6 +90,26 @@ trait TestData {
     "error" -> 1
   )
 
+  val spanWithErrorTags = span.copy(tags = TagSet.from(Map(
+    "error" -> true,
+    "error.type" -> "RuntimeException",
+    "error.message" -> "Error message",
+    "error.stacktrace" -> "Error stacktrace"
+  )), hasError = true)
+
+  val jsonWithErrorTags = json ++ Json.obj(
+    "meta" -> Json.obj(
+      "error" -> "true",
+      "env" -> "staging",
+      "error.type" -> "RuntimeException",
+      "error.message" -> "Error message",
+      "error.msg" -> "Error message",
+      "error.stacktrace" -> "Error stacktrace",
+      "error.stack" -> "Error stacktrace"
+    ),
+    "error" -> 1
+  )
+
   val spanWithTags = span.copy(metricTags =
     TagSet.from(
       Map(
@@ -152,6 +172,7 @@ trait TestData {
     "span with marks" -> (Seq(spanWithMarks), Json.arr(Json.arr(jsonWithMarks))),
     "span with meta and marks" -> (Seq(spanWithTagsAndMarks), Json.arr(Json.arr(jsonWithTagsAndMarks))),
     "span with error" -> (Seq(spanWithError), Json.arr(Json.arr(jsonWithError))),
+    "span with error tags" -> (Seq(spanWithErrorTags), Json.arr(Json.arr(jsonWithErrorTags))),
 
     "multiple spans with same trace" -> (Seq(span, spanWithTags), Json.arr(Json.arr(json, jsonWithTags)))
   // "multiple spans with two traces" -> (Seq(span, spanWithTags, otherTraceSpan, span), Json.arr(Json.arr(json, jsonWithTags, json), Json.arr(otherTraceJson)))
