@@ -85,7 +85,7 @@ object AkkaClusterShardingMetrics {
     private val _shardTelemetryMap = TrieMap.empty[String, ShardTelemetry]
 
     private def shardTelemetry(system: String, typeName: String, shardEntities: Histogram, shardMessages: Histogram): ShardTelemetry = {
-      _shardTelemetryMap.getOrElseUpdate(shardTelemetryKey(system, typeName), {
+      _shardTelemetryMap.atomicGetOrElseUpdate(shardTelemetryKey(system, typeName), {
         val entitiesPerShard = TrieMap.empty[String, AtomicLong]
         val messagesPerShard = TrieMap.empty[String, AtomicLong]
         val samplingInterval = AkkaRemoteInstrumentation.settings().shardMetricsSampleInterval
