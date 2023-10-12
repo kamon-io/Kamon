@@ -50,10 +50,10 @@ object AkkaClusterShardingMetrics {
     private val _shardTelemetry = ShardingInstruments.shardTelemetry(system, typeName, shardHostedEntities, shardProcessedMessages)
 
     def hostedEntitiesPerShardCounter(shardID: String): AtomicLong =
-      _shardTelemetry.entitiesPerShard.atomicGetOrElseUpdate(shardID, new AtomicLong())
+      _shardTelemetry.entitiesPerShard.getOrElseUpdate(shardID, new AtomicLong())
 
     def processedMessagesPerShardCounter(shardID: String): AtomicLong =
-      _shardTelemetry.messagesPerShard.atomicGetOrElseUpdate(shardID, new AtomicLong())
+      _shardTelemetry.messagesPerShard.getOrElseUpdate(shardID, new AtomicLong())
 
     // We should only remove when the ShardRegion actor is terminated.
     override def remove(): Unit = {

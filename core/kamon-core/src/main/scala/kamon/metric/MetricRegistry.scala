@@ -50,7 +50,7 @@ class MetricRegistry(config: Config, clock: Clock) {
       Metric.Counter = {
 
     val metric = validateInstrumentType[Metric.Counter] {
-      _metrics.atomicGetOrElseUpdate(name, _factory.counter(name, description, unit, autoUpdateInterval))
+      _metrics.getOrElseUpdate(name, _factory.counter(name, description, unit, autoUpdateInterval))
     } (name, Instrument.Type.Counter)
 
     checkDescription(metric.name, metric.description, description)
@@ -66,7 +66,7 @@ class MetricRegistry(config: Config, clock: Clock) {
   Metric.Gauge = {
 
     val metric = validateInstrumentType[Metric.Gauge] {
-      _metrics.atomicGetOrElseUpdate(name, _factory.gauge(name, description, unit, autoUpdateInterval))
+      _metrics.getOrElseUpdate(name, _factory.gauge(name, description, unit, autoUpdateInterval))
     } (name, Instrument.Type.Gauge)
 
     checkDescription(metric.name, metric.description, description)
@@ -82,7 +82,7 @@ class MetricRegistry(config: Config, clock: Clock) {
     autoUpdateInterval: Option[Duration]): Metric.Histogram = {
 
     val metric = validateInstrumentType[Metric.Histogram] {
-      _metrics.atomicGetOrElseUpdate(name, _factory.histogram(name, description, unit, dynamicRange, autoUpdateInterval))
+      _metrics.getOrElseUpdate(name, _factory.histogram(name, description, unit, dynamicRange, autoUpdateInterval))
     } (name, Instrument.Type.Histogram)
 
     checkDescription(metric.name, metric.description, description)
@@ -98,7 +98,7 @@ class MetricRegistry(config: Config, clock: Clock) {
   def timer(name: String, description: Option[String], dynamicRange: Option[DynamicRange], autoUpdateInterval: Option[Duration]): Metric.Timer = {
 
     val metric = validateInstrumentType[Metric.Timer] {
-      _metrics.atomicGetOrElseUpdate(name, _factory.timer(name, description, Some(MeasurementUnit.time.nanoseconds),
+      _metrics.getOrElseUpdate(name, _factory.timer(name, description, Some(MeasurementUnit.time.nanoseconds),
         dynamicRange, autoUpdateInterval))
     } (name, Instrument.Type.Timer)
 
@@ -115,7 +115,7 @@ class MetricRegistry(config: Config, clock: Clock) {
     autoUpdateInterval: Option[Duration]): Metric.RangeSampler = {
 
     val metric = validateInstrumentType[Metric.RangeSampler] {
-      _metrics.atomicGetOrElseUpdate(name, _factory.rangeSampler(name, description, unit, dynamicRange, autoUpdateInterval))
+      _metrics.getOrElseUpdate(name, _factory.rangeSampler(name, description, unit, dynamicRange, autoUpdateInterval))
     } (name, Instrument.Type.RangeSampler)
 
     checkDescription(metric.name, metric.description, description)
