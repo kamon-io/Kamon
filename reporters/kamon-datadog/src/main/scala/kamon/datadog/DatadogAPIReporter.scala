@@ -16,7 +16,6 @@
 
 package kamon.datadog
 
-import java.lang.StringBuilder
 import java.nio.charset.StandardCharsets
 import java.text.{ DecimalFormat, DecimalFormatSymbols }
 import java.time.Duration
@@ -27,7 +26,7 @@ import kamon.metric.MeasurementUnit.Dimension.{ Information, Time }
 import kamon.metric.{ MeasurementUnit, MetricSnapshot, PeriodSnapshot }
 import kamon.tag.{ Tag, TagSet }
 import kamon.util.{ EnvironmentTags, Filter }
-import kamon.{ module, Kamon }
+import kamon.Kamon
 import kamon.datadog.DatadogAPIReporter.Configuration
 import kamon.module.{ MetricReporter, ModuleFactory }
 import org.slf4j.LoggerFactory
@@ -97,10 +96,10 @@ class DatadogAPIReporter(@volatile private var configuration: Configuration, @vo
       val customTags = (configuration.extraTags ++ tags.iterator(_.toString).map(p => p.key -> p.value).filter(t => configuration.tagFilter.accept(t._1))).map { case (k, v) ⇒ quote"$k:$v" }
       val allTagsString = customTags.mkString("[", ",", "]")
 
-      if (seriesBuilder.length() > 0) seriesBuilder.append(",")
+      if (seriesBuilder.nonEmpty) seriesBuilder.append(",")
 
       seriesBuilder
-        .append(s"""{"metric":"$metricName","interval":$interval,"points":[[$timestamp,$value]],"type":"$metricType","host":"$host","tags":$allTagsString}""")
+        .append(s"""{"metric":"$metricName","interval":$interval,"points":[[$timestamp,$value]],"type":"$metricType","tags":$allTagsString}""")
     }
 
     snapshot.counters.foreach { snap =>
@@ -161,8 +160,7 @@ private object DatadogAPIReporter {
       datadogConfig.getConfig("api"),
       timeUnit = readTimeUnit(datadogConfig.getString("time-unit")),
       informationUnit = readInformationUnit(datadogConfig.getString("information-unit")),
-      // Remove the "host" tag since it gets added to the datadog payload separately
-      EnvironmentTags.from(Kamon.environment, datadogConfig.getConfig("environment-tags")).without("host").all().map(p => p.key -> Tag.unwrapValue(p).toString),
+      EnvironmentTags.from(Kamon.environment, datadogConfig.getConfig("environment-tags")).all().map(p => p.key -> Tag.unwrapValue(p).toString),
       Kamon.filter("kamon.datadog.environment-tags.filter")
     )
   }
