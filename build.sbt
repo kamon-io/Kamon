@@ -147,7 +147,8 @@ val instrumentationProjects = Seq[ProjectReference](
   `kamon-lagom`,
   `kamon-finagle`,
   `kamon-aws-sdk`,
-  `kamon-alpakka-kafka`
+  `kamon-alpakka-kafka`,
+  `kamon-armeria`
 )
 
 lazy val instrumentation = (project in file("instrumentation"))
@@ -699,6 +700,41 @@ lazy val `kamon-alpakka-kafka` = (project in file("instrumentation/kamon-alpakka
     )
   ).dependsOn(`kamon-core`, `kamon-akka`, `kamon-testkit` % "test")
 
+lazy val `kamon-armeria` = (project in file("instrumentation/kamon-armeria"))
+  .disablePlugins(AssemblyPlugin)
+  .enablePlugins(JavaAgent)
+  .settings(instrumentationSettings)
+  .settings(
+    libraryDependencies ++= {
+      val grpcDependencies = {
+        CrossVersion.partialVersion(scalaVersion.value) match {
+          case Some((2, n)) if n >= 12 =>
+            Seq(
+              "com.linecorp.armeria" % "armeria-grpc" % "1.20.0" % "test",
+              "com.thesamet.scalapb" %% "scalapb-runtime-grpc" % scalapb.compiler.Version.scalapbVersion % "test"
+            )
+          case _ => Nil // ignore this dependencies on scala 2.11 test because test will be ignored and this dependency scalapb-runtime-grpc is no available anymore
+        }
+      }
+      Seq(
+        kanelaAgent % "provided",
+        "com.linecorp.armeria" % "armeria" % "1.20.0" % "provided",
+
+        scalatest % "test",
+        logbackClassic % "test"
+      ) ++ grpcDependencies
+    },
+    Test / skip := {
+      CrossVersion.partialVersion(scalaVersion.value) match {
+        case Some((2, n)) if n >= 12 => false
+        case _                       => true // skip scala 2.11 tests because of compatibility issues with protobuf
+    }
+    },
+    Test / PB.protoSources := Seq(file("instrumentation/kamon-armeria/src/test/protobuf")),
+    Test / PB.targets := Seq(scalapb.gen() -> (Test / sourceManaged).value)
+  )
+  .dependsOn(`kamon-instrumentation-common`, `kamon-testkit` % "test")
+
 /**
  * Reporters
  */
@@ -974,7 +1010,8 @@ lazy val `kamon-bundle-dependencies-all` = (project in file("bundle/kamon-bundle
     `kamon-okhttp`,
     `kamon-caffeine`,
     `kamon-lagom`,
-    `kamon-aws-sdk`
+    `kamon-aws-sdk`,
+    `kamon-armeria`
   )
 
 /**
@@ -999,7 +1036,8 @@ lazy val `kamon-bundle-dependencies-2-12-and-up` = (project in file("bundle/kamo
     `kamon-pekko`,
     `kamon-pekko-http`,
     `kamon-tapir`,
-    `kamon-alpakka-kafka`
+    `kamon-alpakka-kafka`,
+    `kamon-armeria`
   )
 
 lazy val `kamon-bundle` = (project in file("bundle/kamon-bundle"))
