@@ -51,7 +51,7 @@ class DatadogAPIReporterSpec extends AbstractHttpReporter with Matchers with Rec
 
       Json.parse(decompressedBody) shouldEqual Json
         .parse(
-          """{"series":[{"metric":"test.counter","interval":1,"points":[[1523394,0]],"type":"count","host":"test","tags":["env:staging","service:kamon-application","tag1:value1"]}]}"""
+          """{"series":[{"metric":"test.counter","interval":1,"points":[[1523394,0]],"type":"count","tags":["env:staging","service:kamon-application","tag1:value1"]}]}"""
         )
     }
 
@@ -83,7 +83,7 @@ class DatadogAPIReporterSpec extends AbstractHttpReporter with Matchers with Rec
       request.getMethod shouldEqual "POST"
       Json.parse(request.getBody.readUtf8()) shouldEqual Json
         .parse(
-          """{"series":[{"metric":"test.counter","interval":1,"points":[[1523394,0]],"type":"count","host":"test","tags":["env:staging","service:kamon-application","tag1:value1"]}]}"""
+          """{"series":[{"metric":"test.counter","interval":1,"points":[[1523394,0]],"type":"count","tags":["env:staging","service:kamon-application","tag1:value1"]}]}"""
         )
 
     }
@@ -134,12 +134,12 @@ class DatadogAPIReporterSpec extends AbstractHttpReporter with Matchers with Rec
       Json.parse(request.getBody.readUtf8()) shouldEqual Json
         .parse(
           """{"series":[
-            |{"metric":"test.timer.avg","interval":1,"points":[[1523394,20]],"type":"gauge","host":"test","tags":["env:staging","service:kamon-application"]},
-            |{"metric":"test.timer.count","interval":1,"points":[[1523394,5]],"type":"count","host":"test","tags":["env:staging","service:kamon-application"]},
-            |{"metric":"test.timer.median","interval":1,"points":[[1523394,0]],"type":"gauge","host":"test","tags":["env:staging","service:kamon-application"]},
-            |{"metric":"test.timer.95percentile","interval":1,"points":[[1523394,0]],"type":"gauge","host":"test","tags":["env:staging","service:kamon-application"]},
-            |{"metric":"test.timer.max","interval":1,"points":[[1523394,10]],"type":"gauge","host":"test","tags":["env:staging","service:kamon-application"]},
-            |{"metric":"test.timer.min","interval":1,"points":[[1523394,0]],"type":"gauge","host":"test","tags":["env:staging","service:kamon-application"]}]}""".stripMargin
+            |{"metric":"test.timer.avg","interval":1,"points":[[1523394,20]],"type":"gauge","tags":["env:staging","service:kamon-application"]},
+            |{"metric":"test.timer.count","interval":1,"points":[[1523394,5]],"type":"count","tags":["env:staging","service:kamon-application"]},
+            |{"metric":"test.timer.median","interval":1,"points":[[1523394,0]],"type":"gauge","tags":["env:staging","service:kamon-application"]},
+            |{"metric":"test.timer.95percentile","interval":1,"points":[[1523394,0]],"type":"gauge","tags":["env:staging","service:kamon-application"]},
+            |{"metric":"test.timer.max","interval":1,"points":[[1523394,10]],"type":"gauge","tags":["env:staging","service:kamon-application"]},
+            |{"metric":"test.timer.min","interval":1,"points":[[1523394,0]],"type":"gauge","tags":["env:staging","service:kamon-application"]}]}""".stripMargin
         )
     }
 
