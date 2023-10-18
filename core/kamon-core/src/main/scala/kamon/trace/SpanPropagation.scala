@@ -450,7 +450,7 @@ object W3CTraceContext {
       * https://docs.datadoghq.com/tracing/guide/send_traces_to_agent_by_api/
       */
     def decodeUnsignedLongToHex(id: String): String =
-      urlDecode(id).toLong.toHexString
+      Long.parseUnsignedLong(urlDecode(id), 10).toHexString
   }
 
   class DataDog extends Propagation.EntryReader[HeaderReader] with Propagation.EntryWriter[HeaderWriter] {
