@@ -119,8 +119,8 @@ class DataDogSpanPropagationSpec extends AnyWordSpec with Matchers with OptionVa
   }
 
 
-  "Testing SpanPropagation.DataDog.decodeUnsignedLongToHex" should {
-    "works as expected " in {
+  "SpanPropagation.DataDog.decodeUnsignedLongToHex" should {
+    "decode unsigned long to expected hex value " in {
         String expectedHex1 = "0";
         String actualHex1 = dataDogPropagation.decodeUnsignedLongToHex("0");
         assertEquals(expectedHex1, actualHex1);
