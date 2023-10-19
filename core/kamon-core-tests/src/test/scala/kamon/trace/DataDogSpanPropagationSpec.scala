@@ -132,6 +132,11 @@ class DataDogSpanPropagationSpec extends AnyWordSpec with Matchers with OptionVa
         String expectedHex3 = "c5863f7d672b65bf";
         String actualHex3 = dataDogPropagation.decodeUnsignedLongToHex("14233133480185390527");
         assertEquals(expectedHex1, actualHex1);
+
+        String expectedHex4 = "ffffffffffffffff";
+        String actualHex4 = dataDogPropagation.decodeUnsignedLongToHex("18446744073709551615");
+        assertEquals(expectedHex4, actualHex4);
+
     }
   }
 
