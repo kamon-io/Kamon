@@ -121,21 +121,21 @@ class DataDogSpanPropagationSpec extends AnyWordSpec with Matchers with OptionVa
 
   "SpanPropagation.DataDog.decodeUnsignedLongToHex" should {
     "decode unsigned long to expected hex value " in {
-        String expectedHex1 = "0";
-        String actualHex1 = dataDogPropagation.decodeUnsignedLongToHex("0");
-        assertEquals(expectedHex1, actualHex1);
+        val expectedHex1 = "0";
+        val actualHex1 = SpanPropagation.DataDog.decodeUnsignedLongToHex("0");
+        expectedHex1 shouldBe actualHex1;
 
-        String expectedHex2 = "ff";
-        String actualHex2 = dataDogPropagation.decodeUnsignedLongToHex("255");
-        assertEquals(expectedHex2, actualHex2);
+        val expectedHex2 = "ff";
+        val actualHex2 = SpanPropagation.DataDog.decodeUnsignedLongToHex("255");
+        expectedHex2 shouldBe actualHex2;
 
-        String expectedHex3 = "c5863f7d672b65bf";
-        String actualHex3 = dataDogPropagation.decodeUnsignedLongToHex("14233133480185390527");
-        assertEquals(expectedHex1, actualHex1);
+        val expectedHex3 = "c5863f7d672b65bf";
+        val actualHex3 = SpanPropagation.DataDog.decodeUnsignedLongToHex("14233133480185390527");
+        expectedHex3 shouldBe actualHex3;
 
-        String expectedHex4 = "ffffffffffffffff";
-        String actualHex4 = dataDogPropagation.decodeUnsignedLongToHex("18446744073709551615");
-        assertEquals(expectedHex4, actualHex4);
+        val expectedHex4 = "ffffffffffffffff";
+        val actualHex4 = SpanPropagation.DataDog.decodeUnsignedLongToHex("18446744073709551615");
+        expectedHex4 shouldBe actualHex4;
 
     }
   }
