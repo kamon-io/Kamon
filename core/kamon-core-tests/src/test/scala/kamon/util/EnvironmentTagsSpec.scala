@@ -43,7 +43,9 @@ class EnvironmentTagsSpec extends AnyWordSpec with Matchers {
       |      }
       |    }
       |
-      |    "tag-with-quotes" = value
+      |    "defined-using-quotes" = value
+      |
+      |    "\"tag-with-quotes\"" = value
       |
       |    "@tag-with-special-chars" = value
       |  }
@@ -86,16 +88,17 @@ class EnvironmentTagsSpec extends AnyWordSpec with Matchers {
       tags("region") shouldBe "asia-1"
 
       tags.toMap shouldBe Map(
-        "@tag-with-special-chars"->"value",
-        "env"->"staging",
-        "host"->"my-hostname",
-        "instance"->"my-instance-name",
-        "k8s.namespace.name"->"production",
+        "@tag-with-special-chars" -> "value",
+        "env" -> "staging",
+        "host" -> "my-hostname",
+        "instance" -> "my-instance-name",
+        "k8s.namespace.name" -> "production",
         "region" -> "asia-1",
-        "service"->"environment-spec",
+        "service" -> "environment-spec",
         "some.tag.@inside" -> "value",
-        "some.tag.inside"->"example",
-        "tag-with-quotes"->"value"
+        "some.tag.inside" -> "example",
+        "defined-using-quotes" -> "value",
+        "\"tag-with-quotes\"" -> "value"
       )
     }
 
@@ -126,9 +129,11 @@ class EnvironmentTagsSpec extends AnyWordSpec with Matchers {
           | "region",
           | "env",
           | "k8s.namespace.name",
-          | "some.tag.inside", "some.tag.@inside",
-          | "tag-with-quotes",
-          | "@tag-with-special-chars"
+          | "some.tag.inside",
+          | "some.tag.@inside",
+          | "defined-using-quotes",
+          | "@tag-with-special-chars",
+          | "\"tag-with-quotes\""
           |]
         """.stripMargin)
 
