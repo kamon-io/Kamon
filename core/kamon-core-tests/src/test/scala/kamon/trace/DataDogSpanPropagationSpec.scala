@@ -118,6 +118,28 @@ class DataDogSpanPropagationSpec extends AnyWordSpec with Matchers with OptionVa
     }
   }
 
+
+  "SpanPropagation.DataDog.decodeUnsignedLongToHex" should {
+    "decode unsigned long to expected hex value " in {
+        val expectedHex1 = "0";
+        val actualHex1 = SpanPropagation.DataDog.decodeUnsignedLongToHex("0");
+        expectedHex1 shouldBe actualHex1;
+
+        val expectedHex2 = "ff";
+        val actualHex2 = SpanPropagation.DataDog.decodeUnsignedLongToHex("255");
+        expectedHex2 shouldBe actualHex2;
+
+        val expectedHex3 = "c5863f7d672b65bf";
+        val actualHex3 = SpanPropagation.DataDog.decodeUnsignedLongToHex("14233133480185390527");
+        expectedHex3 shouldBe actualHex3;
+
+        val expectedHex4 = "ffffffffffffffff";
+        val actualHex4 = SpanPropagation.DataDog.decodeUnsignedLongToHex("18446744073709551615");
+        expectedHex4 shouldBe actualHex4;
+
+    }
+  }
+
   def unsignedLongString(id: String): String = BigInt(id, 16).toString
 
   def headerReaderFromMap(map: Map[String, String]): HttpPropagation.HeaderReader = new HttpPropagation.HeaderReader {
