@@ -4,6 +4,7 @@ import java.time.Duration
 import com.typesafe.config.ConfigFactory
 import kamon.Kamon
 import kamon.context.Context
+import kamon.instrumentation.trace.SpanTagger.TagMode
 import kamon.tag.Lookups._
 import kamon.metric.{Counter, Histogram, RangeSampler, Timer}
 import kamon.testkit.{InitAndStopKamonAfterAll, InstrumentInspection, SpanInspection}
@@ -17,7 +18,7 @@ import org.scalatest.wordspec.AnyWordSpec
 import scala.collection.mutable
 
 class HttpServerInstrumentationSpec extends AnyWordSpec with Matchers with InstrumentInspection.Syntax with OptionValues
-    with SpanInspection.Syntax with Eventually with InitAndStopKamonAfterAll {
+  with SpanInspection.Syntax with Eventually with InitAndStopKamonAfterAll {
 
   "the HTTP server instrumentation" when {
     "configured for context propagation" should {
@@ -173,6 +174,21 @@ class HttpServerInstrumentationSpec extends AnyWordSpec with Matchers with Instr
         completedRequests(8081, 300).value() shouldBe 1L
         completedRequests(8081, 400).value() shouldBe 1L
         completedRequests(8081, 500).value() shouldBe 1L
+      }
+
+      "populate context tags" in {
+        activeRequests(8081).distribution()
+
+        val handlerOne = httpServer().createHandler(fakeRequest("http://localhost:8080/", "/", "GET", Map("namespace" -> "env1")))
+        val handlerTwo = httpServer().createHandler(fakeRequest("http://localhost:8080/", "/", "GET", Map("namespace" -> "env1")))
+
+        handlerOne.contextTagSet.get(option("namespace")) shouldBe Some("env1")
+        handlerTwo.contextTagSet.get(option("namespace")) shouldBe Some("env1")
+        handlerOne.buildResponse(fakeResponse(200, mutable.Map.empty), Context.Empty)
+        handlerTwo.buildResponse(fakeResponse(200, mutable.Map.empty), Context.Empty)
+        handlerOne.responseSent(0L)
+        handlerTwo.responseSent(0L)
+
       }
     }
 

@@ -27,6 +27,7 @@ import kamon.instrumentation.trace.SpanTagger.TagMode
 import kamon.instrumentation.tag.TagKeys
 import kamon.instrumentation.trace.SpanTagger
 import kamon.tag.Lookups.option
+import kamon.tag.TagSet
 import kamon.trace.Span
 import kamon.trace.Trace.SamplingDecision
 import kamon.util.Filter
@@ -153,6 +154,10 @@ object HttpServerInstrumentation {
     def span: Span
 
     /**
+     * Tag set to propagate to metrics from context
+     * */
+    def contextTagSet: TagSet
+    /**
       * Signals that the entire request (headers and body) has been received.
       */
     def requestReceived(): RequestHandler =
@@ -231,8 +236,11 @@ object HttpServerInstrumentation {
         incomingContext.withEntry(Span.Key, requestSpan)
       else incomingContext
 
+      val _contextTagSet: TagSet =
+        TagSet.from(settings.contextTagsForMetrics.collect{ case (k, TagMode.Metric) => handlerContext.getTag(option(k)).map(k -> _) }.flatten.toMap)
+
       _metrics.foreach { httpServerMetrics =>
-        httpServerMetrics.activeRequests.increment()
+        httpServerMetrics.activeRequests.withTags(_contextTagSet).increment()
       }
 
       new HttpServerInstrumentation.RequestHandler {
@@ -242,10 +250,12 @@ object HttpServerInstrumentation {
         override def span: Span =
           requestSpan
 
+        override def contextTagSet: TagSet = _contextTagSet
+
         override def requestReceived(receivedBytes: Long): RequestHandler = {
           if(receivedBytes >= 0) {
             _metrics.foreach { httpServerMetrics =>
-              httpServerMetrics.requestSize.record(receivedBytes)
+              httpServerMetrics.requestSize.withTags(contextTagSet).record(receivedBytes)
             }
           }
 
@@ -254,14 +264,14 @@ object HttpServerInstrumentation {
 
         override def buildResponse[HttpResponse](response: HttpMessage.ResponseBuilder[HttpResponse], context: Context): HttpResponse = {
           _metrics.foreach { httpServerMetrics =>
-            httpServerMetrics.countCompletedRequest(response.statusCode)
+            httpServerMetrics.countCompletedRequest(response.statusCode, contextTagSet)
           }
 
           if(!span.isEmpty) {
             settings.traceIDResponseHeader.foreach(traceIDHeader => response.write(traceIDHeader, span.trace.id.string))
             settings.spanIDResponseHeader.foreach(spanIDHeader => response.write(spanIDHeader, span.id.string))
             settings.httpServerResponseHeaderGenerator.headers(handlerContext).foreach(header => response.write(header._1, header._2))
-            
+
             SpanTagger.tag(span, TagKeys.HttpStatusCode, response.statusCode, settings.statusCodeTagMode)
 
             val statusCode = response.statusCode
@@ -275,10 +285,10 @@ object HttpServerInstrumentation {
 
         override def responseSent(sentBytes: Long): Unit = {
           _metrics.foreach { httpServerMetrics =>
-            httpServerMetrics.activeRequests.decrement()
+            httpServerMetrics.activeRequests.withTags(contextTagSet).decrement()
 
             if(sentBytes >= 0)
-              httpServerMetrics.responseSize.record(sentBytes)
+              httpServerMetrics.responseSize.withTags(contextTagSet).record(sentBytes)
           }
 
           span.finish()
@@ -336,7 +346,7 @@ object HttpServerInstrumentation {
             .foreach(tagValue => SpanTagger.tag(span, tagName, tagValue, mode))
       }
 
-      
+
       span.start()
     }
   }
@@ -359,9 +369,11 @@ object HttpServerInstrumentation {
     unhandledOperationName: String,
     operationMappings: Map[Filter.Glob, String],
     operationNameGenerator: HttpOperationNameGenerator,
-    httpServerResponseHeaderGenerator:HttpServerResponseHeaderGenerator
+    httpServerResponseHeaderGenerator:HttpServerResponseHeaderGenerator,
+    tagMetricsFromContext: Boolean
   ) {
     val operationNameSettings = OperationNameSettings(defaultOperationName, operationMappings, operationNameGenerator)
+    def contextTagsForMetrics: Map[String, TagMode] = if (tagMetricsFromContext) contextTags else Map.empty
   }
 
   object Settings {
@@ -375,6 +387,7 @@ object HttpServerInstrumentation {
 
       // HTTP Server metrics settings
       val enableServerMetrics = config.getBoolean("metrics.enabled")
+      val tagMetricsFromContext = config.getBoolean("metrics.use-context-tags")
 
       // Tracing settings
       val enableTracing = config.getBoolean("tracing.enabled")
@@ -435,7 +448,8 @@ object HttpServerInstrumentation {
         unhandledOperationName,
         operationMappings,
         operationNameGenerator.get,
-        httpServerResponseHeaderGenerator.get
+        httpServerResponseHeaderGenerator.get,
+        tagMetricsFromContext
       )
     }
   }

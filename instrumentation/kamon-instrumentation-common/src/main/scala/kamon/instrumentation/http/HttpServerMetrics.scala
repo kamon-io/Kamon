@@ -84,17 +84,17 @@ object HttpServerMetrics {
     /**
       * Increments the appropriate response counter depending on the the status code.
       */
-    def countCompletedRequest(statusCode: Int): Unit = {
+    def countCompletedRequest(statusCode: Int, contextTagSet: TagSet): Unit = {
       if(statusCode >= 200 && statusCode <= 299)
-        requestsSuccessful.increment()
+        requestsSuccessful.withTags(contextTagSet).increment()
       else if(statusCode >= 500 && statusCode <= 599)
-        requestsServerError.increment()
+        requestsServerError.withTags(contextTagSet).increment()
       else if(statusCode >= 400 && statusCode <= 499)
-        requestsClientError.increment()
+        requestsClientError.withTags(contextTagSet).increment()
       else if(statusCode >= 300 && statusCode <= 399)
-        requestsRedirection.increment()
+        requestsRedirection.withTags(contextTagSet).increment()
       else if(statusCode >= 100 && statusCode <= 199)
-        requestsInformational.increment()
+        requestsInformational.withTags(contextTagSet).increment()
       else {
         _logger.warn("Unknown HTTP status code {} found when recording HTTP server metrics", statusCode.toString)
       }
