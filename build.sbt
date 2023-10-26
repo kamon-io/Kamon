@@ -139,6 +139,7 @@ val instrumentationProjects = Seq[ProjectReference](
   `kamon-akka-grpc`,
   `kamon-pekko`,
   `kamon-pekko-http`,
+  `kamon-pekko-grpc`,
   `kamon-play`,
   `kamon-okhttp`,
   `kamon-tapir`,
@@ -525,6 +526,31 @@ lazy val `kamon-pekko-http` = (project in file("instrumentation/kamon-pekko-http
       "org.json4s"        %% "json4s-native"        % "4.0.6" % "test",
     ),
   )).dependsOn(`kamon-pekko`, `kamon-testkit` % "test")
+
+lazy val `kamon-pekko-grpc` = (project in file("instrumentation/kamon-pekko-grpc"))
+  .enablePlugins(JavaAgent, PekkoGrpcPlugin)
+  .disablePlugins(AssemblyPlugin)
+  .settings(instrumentationSettings)
+  .settings(Seq(
+    PB.additionalDependencies := Seq.empty,
+    crossScalaVersions := Seq(`scala_2.12_version`, `scala_2.13_version`),
+    libraryDependencies ++= Seq(
+      kanelaAgent % "provided",
+
+      "org.apache.pekko" %% "pekko-http" % pekkoHttpVersion % "provided",
+      "org.apache.pekko" %% "pekko-stream" % "1.0.1" % "provided",
+      "org.apache.pekko" %% "pekko-discovery"% "1.0.0" % "provided",
+
+      "com.thesamet.scalapb"    %% "scalapb-runtime"   % "0.11.8" % "provided",
+      "org.apache.pekko"        %% "pekko-grpc-runtime" % "1.0.0" % "provided",
+      "io.grpc"                 %  "grpc-stub"         % "1.43.2" % "provided",
+
+
+      scalatest % "test",
+      slf4jApi % "test",
+      logbackClassic % "test",
+    )
+  )).dependsOn(`kamon-pekko-http`, `kamon-testkit` % "test")
 
 lazy val `kamon-akka-grpc` = (project in file("instrumentation/kamon-akka-grpc"))
   .enablePlugins(JavaAgent, AkkaGrpcPlugin)
@@ -998,6 +1024,7 @@ lazy val `kamon-bundle-dependencies-2-12-and-up` = (project in file("bundle/kamo
     `kamon-finagle`,
     `kamon-pekko`,
     `kamon-pekko-http`,
+    `kamon-pekko-grpc`,
     `kamon-tapir`,
     `kamon-alpakka-kafka`
   )
