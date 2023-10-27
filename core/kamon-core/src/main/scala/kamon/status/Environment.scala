@@ -19,7 +19,7 @@ package status
 
 import java.net.InetAddress
 import java.util.concurrent.ThreadLocalRandom
-import com.typesafe.config.Config
+import com.typesafe.config.{Config, ConfigUtil}
 import kamon.tag.TagSet
 import kamon.util.HexCodec
 import org.slf4j.LoggerFactory
@@ -83,7 +83,7 @@ object Environment {
       tagsConfig.entrySet()
         .iterator()
         .asScala
-        .map { e => e.getKey -> e.getValue.unwrapped().toString }
+        .map { e => ConfigUtil.splitPath(e.getKey).asScala.mkString(".") -> e.getValue.unwrapped().toString }
         .toMap
     )
   }

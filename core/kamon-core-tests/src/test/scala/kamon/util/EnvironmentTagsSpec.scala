@@ -39,8 +39,15 @@ class EnvironmentTagsSpec extends AnyWordSpec with Matchers {
       |    some {
       |      tag {
       |        inside = example
+      |        "@inside" = value
       |      }
       |    }
+      |
+      |    "defined-using-quotes" = value
+      |
+      |    "\"tag-with-quotes\"" = value
+      |
+      |    "@tag-with-special-chars" = value
       |  }
       |}
     """.stripMargin
@@ -80,6 +87,19 @@ class EnvironmentTagsSpec extends AnyWordSpec with Matchers {
       tags("env") shouldBe "staging"
       tags("region") shouldBe "asia-1"
 
+      tags.toMap shouldBe Map(
+        "@tag-with-special-chars" -> "value",
+        "env" -> "staging",
+        "host" -> "my-hostname",
+        "instance" -> "my-instance-name",
+        "k8s.namespace.name" -> "production",
+        "region" -> "asia-1",
+        "service" -> "environment-spec",
+        "some.tag.@inside" -> "value",
+        "some.tag.inside" -> "example",
+        "defined-using-quotes" -> "value",
+        "\"tag-with-quotes\"" -> "value"
+      )
     }
 
     "remove excluded tags" in {
@@ -105,7 +125,16 @@ class EnvironmentTagsSpec extends AnyWordSpec with Matchers {
           |include-service = no
           |include-host = no
           |include-instance = no
-          |exclude = [ "region", "env", "k8s.namespace.name", "some.tag.inside" ]
+          |exclude = [
+          | "region",
+          | "env",
+          | "k8s.namespace.name",
+          | "some.tag.inside",
+          | "some.tag.@inside",
+          | "defined-using-quotes",
+          | "@tag-with-special-chars",
+          | "\"tag-with-quotes\""
+          |]
         """.stripMargin)
 
       val tags = EnvironmentTags.from(testEnv, config)
