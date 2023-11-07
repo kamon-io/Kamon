@@ -31,6 +31,7 @@ class EventStreamInstrumentation extends InstrumentationBuilder {
   onType("org.apache.pekko.event.EventStream")
     .mixin(classOf[HasSystem.Mixin])
     .advise(isConstructor.and(takesArguments(2)), classOf[ConstructorAdvice])
+  onType("org.apache.pekko.event.SubchannelClassification")
     .advise(method("publish").and(takesArguments(1)), classOf[PublishMethodAdvice])
 }
 
@@ -47,11 +48,17 @@ class PublishMethodAdvice
 object PublishMethodAdvice {
 
   @OnMethodExit(suppress = classOf[Throwable])
-  @static def exit(@This stream:HasSystem, @Argument(0) event: AnyRef):Unit = event match {
-    case _: DeadLetter => PekkoMetrics.forSystem(stream.system.name).deadLetters.increment()
-    case _: UnhandledMessage => PekkoMetrics.forSystem(stream.system.name).unhandledMessages.increment()
-    case _ => ()
-  }
+  @static def exit(@This any: Any, @Argument(0) event: AnyRef):Unit =
+    try {
+      val stream = any.asInstanceOf[HasSystem]
+      event match {
+        case _: DeadLetter => PekkoMetrics.forSystem(stream.system.name).deadLetters.increment()
+        case _: UnhandledMessage => PekkoMetrics.forSystem(stream.system.name).unhandledMessages.increment()
+        case _ => ()
+      }
+    } catch {
+      case _: ClassCastException => ()
+    }
 }
 
 trait HasSystem {
