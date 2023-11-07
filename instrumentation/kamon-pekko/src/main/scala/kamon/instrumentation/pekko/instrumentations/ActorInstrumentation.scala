@@ -32,6 +32,11 @@ class ActorInstrumentation extends InstrumentationBuilder {
 
   onType("org.apache.pekko.actor.dungeon.Dispatch")
     .advise(method("sendMessage").and(takesArguments(1)), classOf[SendMessageAdvice])
+    .advise(method("swapMailbox"), classOf[ActorCellSwapMailboxAdvice])
+
+  onType("org.apache.pekko.actor.dungeon.FaultHandling")
+    .advise(method("handleInvokeFailure"), classOf[HandleInvokeFailureMethodAdvice])
+    .advise(method("terminate"), classOf[TerminateMethodAdvice])
 
   /**
    * This is where most of the Actor processing magic happens. Handling of messages, errors and system messages.
@@ -40,10 +45,6 @@ class ActorInstrumentation extends InstrumentationBuilder {
     .mixin(classOf[HasActorMonitor.Mixin])
     .advise(isConstructor, classOf[ActorCellConstructorAdvice])
     .advise(method("invoke"), classOf[ActorCellInvokeAdvice])
-    .advise(method("handleInvokeFailure"), classOf[HandleInvokeFailureMethodAdvice])
-    .advise(method("sendMessage").and(takesArguments(1)), classOf[SendMessageAdvice])
-    .advise(method("terminate"), classOf[TerminateMethodAdvice])
-    .advise(method("swapMailbox"), classOf[ActorCellSwapMailboxAdvice])
     .advise(method("invokeAll$1"), classOf[InvokeAllMethodInterceptor])
 
   /**
