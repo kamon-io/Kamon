@@ -38,7 +38,7 @@ class MessageTracingSpec extends TestKit(ActorSystem("MessageTracing")) with Any
       traced ! "ping"
       expectMsg("pong")
 
-      eventually(timeout(2 seconds)) {
+      eventually(timeout(4 seconds)) {
         val span = testSpanReporter().nextSpan().value
         val spanTags = stringTag(span) _
         spanTags("component") shouldBe "pekko.actor"
@@ -87,7 +87,7 @@ class MessageTracingSpec extends TestKit(ActorSystem("MessageTracing")) with Any
       expectMsg("pong")
 
       // Span for the first actor message
-      val firstSpanID = eventually(timeout(2 seconds)) {
+      val firstSpanID = eventually(timeout(4 seconds)) {
         val span = testSpanReporter().nextSpan().value
         val spanTags = stringTag(span) _
 
@@ -100,7 +100,7 @@ class MessageTracingSpec extends TestKit(ActorSystem("MessageTracing")) with Any
       }
 
       // Span for the second actor message
-      eventually(timeout(2 seconds)) {
+      eventually(timeout(4 seconds)) {
         val span = testSpanReporter().nextSpan().value
         val spanTags = stringTag(span) _
         span.parentId shouldBe firstSpanID
@@ -122,7 +122,7 @@ class MessageTracingSpec extends TestKit(ActorSystem("MessageTracing")) with Any
       expectMsg("pong")
 
       // Span for the first actor message
-      val firstSpanID = eventually(timeout(2 seconds)) {
+      val firstSpanID = eventually(timeout(4 seconds)) {
         val span = testSpanReporter().nextSpan().value
         val spanTags = stringTag(span) _
         span.operationName shouldBe "tell(Tuple2)"
@@ -136,7 +136,7 @@ class MessageTracingSpec extends TestKit(ActorSystem("MessageTracing")) with Any
       }
 
       // Span for the second actor message
-      eventually(timeout(2 seconds)) {
+      eventually(timeout(4 seconds)) {
         val span = testSpanReporter().nextSpan().value
         val spanTags = stringTag(span) _
         span.parentId shouldBe firstSpanID

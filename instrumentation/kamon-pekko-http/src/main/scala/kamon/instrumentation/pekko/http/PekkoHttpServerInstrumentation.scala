@@ -16,7 +16,7 @@ import org.apache.pekko.http.scaladsl.server.RouteResult.Rejected
 import org.apache.pekko.http.scaladsl.server._
 import org.apache.pekko.http.scaladsl.server.directives.RouteDirectives.reject
 import org.apache.pekko.http.scaladsl.server.directives.{BasicDirectives, CompleteOrRecoverWithMagnet, OnSuccessMagnet}
-import org.apache.pekko.http.scaladsl.server.util.Tupler
+import org.apache.pekko.http.scaladsl.server.util.{Tuple, Tupler}
 import org.apache.pekko.stream.scaladsl.Flow
 
 import java.util.concurrent.Callable
@@ -267,7 +267,7 @@ object PathDirectivesRawPathPrefixInterceptor {
   import BasicDirectives._
 
   def rawPathPrefix[T](@Argument(0) matcher: PathMatcher[T]): Directive[T] = {
-    implicit val LIsTuple = matcher.ev
+    implicit val LIsTuple: Tuple[T] = matcher.ev
 
     extract { ctx =>
       val fullPath = ctx.unmatchedPath.toString()

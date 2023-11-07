@@ -30,8 +30,8 @@ class EventStreamInstrumentation extends InstrumentationBuilder {
     */
   onType("org.apache.pekko.event.EventStream")
     .mixin(classOf[HasSystem.Mixin])
-    .advise(isConstructor.and(takesArguments(2)), ConstructorAdvice)
-    .advise(method("publish").and(takesArguments(1)), PublishMethodAdvice)
+    .advise(isConstructor.and(takesArguments(2)), classOf[ConstructorAdvice])
+    .advise(method("publish").and(takesArguments(1)), classOf[PublishMethodAdvice])
 }
 
 class ConstructorAdvice

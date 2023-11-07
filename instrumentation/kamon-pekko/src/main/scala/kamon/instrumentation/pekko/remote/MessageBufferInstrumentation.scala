@@ -13,7 +13,7 @@ class MessageBufferInstrumentation extends InstrumentationBuilder {
     */
   onType("org.apache.pekko.util.MessageBuffer$Node")
     .mixin(classOf[HasContext.Mixin])
-    .advise(isConstructor, CaptureCurrentContextOnExit)
-    .advise(method("apply"), InvokeWithCapturedContext)
+    .advise(isConstructor, classOf[CaptureCurrentContextOnExit])
+    .advise(method("apply"), classOf[InvokeWithCapturedContext])
 
 }

@@ -23,6 +23,8 @@ import kamon.instrumentation.context.HasContext
 import kanela.agent.api.instrumentation.InstrumentationBuilder
 import kanela.agent.libs.net.bytebuddy.asm.Advice.{Argument, Enter, OnMethodEnter, OnMethodExit}
 
+import scala.annotation.static
+
 class ActorLoggingInstrumentation extends InstrumentationBuilder {
 
   /**
@@ -33,16 +35,17 @@ class ActorLoggingInstrumentation extends InstrumentationBuilder {
     .mixin(classOf[HasContext.MixinWithInitializer])
 
   onType("org.apache.pekko.event.slf4j.Slf4jLogger")
-    .advise(method("withMdc"), WithMdcMethodAdvice)
+    .advise(method("withMdc"), classOf[WithMdcMethodAdvice])
 }
 
+class WithMdcMethodAdvice
 object WithMdcMethodAdvice {
 
   @OnMethodEnter
-  def enter(@Argument(1) logEvent: LogEvent): Scope =
+  @static def enter(@Argument(1) logEvent: LogEvent): Scope =
     Kamon.storeContext(logEvent.asInstanceOf[HasContext].context)
 
   @OnMethodExit
-  def exit(@Enter scope: Scope): Unit =
+  @static def exit(@Enter scope: Scope): Unit =
     scope.close()
 }

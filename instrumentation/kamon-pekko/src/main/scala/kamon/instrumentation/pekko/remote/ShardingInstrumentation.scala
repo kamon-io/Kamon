@@ -8,6 +8,8 @@ import kamon.util.Filter
 import kanela.agent.api.instrumentation.InstrumentationBuilder
 import kanela.agent.libs.net.bytebuddy.asm.Advice
 
+import scala.annotation.static
+
 class ShardingInstrumentation extends InstrumentationBuilder {
 
     /**
@@ -16,9 +18,9 @@ class ShardingInstrumentation extends InstrumentationBuilder {
       */
     onType("org.apache.pekko.cluster.sharding.ShardRegion")
       .mixin(classOf[HasShardingInstruments.Mixin])
-      .advise(isConstructor, InitializeShardRegionAdvice)
-      .advise(method("deliverMessage"), DeliverMessageOnShardRegion)
-      .advise(method("postStop"), RegionPostStopAdvice)
+      .advise(isConstructor, classOf[InitializeShardRegionAdvice])
+      .advise(method("deliverMessage"), classOf[DeliverMessageOnShardRegion])
+      .advise(method("postStop"), classOf[RegionPostStopAdvice])
 
 
     /**
@@ -32,16 +34,16 @@ class ShardingInstrumentation extends InstrumentationBuilder {
     onType("org.apache.pekko.cluster.sharding.Shard")
       .mixin(classOf[HasShardingInstruments.Mixin])
       .mixin(classOf[HasShardCounters.Mixin])
-      .advise(isConstructor, InitializeShardAdvice)
-      .advise(method("onLeaseAcquired"), ShardInitializedAdvice)
-      .advise(method("postStop"), ShardPostStopStoppedAdvice)
-      .advise(method("getOrCreateEntity"), ShardGetOrCreateEntityAdvice)
-      .advise(method("entityTerminated"), ShardEntityTerminatedAdvice)
-      .advise(method("org$apache$pekko$cluster$sharding$Shard$$deliverMessage"), ShardDeliverMessageAdvice)
-      .advise(method("deliverMessage"), ShardDeliverMessageAdvice)
+      .advise(isConstructor, classOf[InitializeShardAdvice])
+      .advise(method("onLeaseAcquired"), classOf[ShardInitializedAdvice])
+      .advise(method("postStop"), classOf[ShardPostStopStoppedAdvice])
+      .advise(method("getOrCreateEntity"), classOf[ShardGetOrCreateEntityAdvice])
+      .advise(method("entityTerminated"), classOf[ShardEntityTerminatedAdvice])
+      .advise(method("org$apache$pekko$cluster$sharding$Shard$$deliverMessage"), classOf[ShardDeliverMessageAdvice])
+      .advise(method("deliverMessage"), classOf[ShardDeliverMessageAdvice])
 
     onType("org.apache.pekko.cluster.sharding.Shard")
-      .advise(method("shardInitialized"), ShardInitializedAdvice)
+      .advise(method("shardInitialized"), classOf[ShardInitializedAdvice])
 }
 
 
@@ -74,10 +76,11 @@ object HasShardCounters {
   }
 }
 
+class InitializeShardRegionAdvice
 object InitializeShardRegionAdvice {
 
   @Advice.OnMethodExit
-  def exit(@Advice.This region: Actor with HasShardingInstruments, @Advice.Argument(0) typeName: String): Unit = {
+  @static def exit(@Advice.This region: Actor with HasShardingInstruments, @Advice.Argument(0) typeName: String): Unit = {
     region.setShardingInstruments(new ShardingInstruments(region.context.system.name, typeName))
 
     val system = region.context.system
@@ -88,10 +91,11 @@ object InitializeShardRegionAdvice {
   }
 }
 
+class InitializeShardAdvice
 object InitializeShardAdvice {
 
   @Advice.OnMethodExit
-  def exit(@Advice.This shard: Actor with HasShardingInstruments with HasShardCounters, @Advice.Argument(0) typeName: String,
+  @static def exit(@Advice.This shard: Actor with HasShardingInstruments with HasShardCounters, @Advice.Argument(0) typeName: String,
       @Advice.Argument(1) shardID: String): Unit = {
 
     val shardingInstruments = new ShardingInstruments(shard.context.system.name, typeName)
@@ -103,10 +107,11 @@ object InitializeShardAdvice {
   }
 }
 
+class DeliverMessageOnShardRegion
 object DeliverMessageOnShardRegion {
 
   @Advice.OnMethodEnter
-  def enter(@Advice.This region: HasShardingInstruments, @Advice.Argument(0) message: Any): Unit = {
+  @static def enter(@Advice.This region: Object with HasShardingInstruments, @Advice.Argument(0) message: Any): Unit = {
     // NOTE: The "deliverMessage" method also handles the "RestartShard" message, which is not an user-facing message
     //       but it should not happen so often so we wont do any additional matching on it to filter it out of the
     //       metric.
@@ -115,32 +120,36 @@ object DeliverMessageOnShardRegion {
 
 }
 
+class RegionPostStopAdvice
 object RegionPostStopAdvice {
 
   @Advice.OnMethodExit
-  def enter(@Advice.This shard: HasShardingInstruments): Unit =
+  @static def enter(@Advice.This shard: Object with HasShardingInstruments): Unit =
     shard.shardingInstruments.remove()
 }
 
 
+class ShardInitializedAdvice
 object ShardInitializedAdvice {
 
   @Advice.OnMethodExit
-  def enter(@Advice.This shard: HasShardingInstruments): Unit =
+  @static def enter(@Advice.This shard: Object with HasShardingInstruments): Unit =
     shard.shardingInstruments.hostedShards.increment()
 }
 
+class ShardPostStopStoppedAdvice
 object ShardPostStopStoppedAdvice {
 
   @Advice.OnMethodExit
-  def enter(@Advice.This shard: HasShardingInstruments): Unit =
+  @static def enter(@Advice.This shard: Object with HasShardingInstruments): Unit =
     shard.shardingInstruments.hostedShards.decrement()
 }
 
+class ShardGetOrCreateEntityAdvice
 object ShardGetOrCreateEntityAdvice {
 
   @Advice.OnMethodEnter
-  def enter(@Advice.This shard: Actor with HasShardingInstruments with HasShardCounters, @Advice.Argument(0) entityID: String): Unit = {
+  @static def enter(@Advice.This shard: Actor with HasShardingInstruments with HasShardCounters, @Advice.Argument(0) entityID: String): Unit = {
     if(shard.context.child(entityID).isEmpty) {
       // The entity is not created just yet, but we know that it will be created right after this.
       shard.shardingInstruments.hostedEntities.increment()
@@ -149,18 +158,20 @@ object ShardGetOrCreateEntityAdvice {
   }
 }
 
+class ShardEntityTerminatedAdvice
 object ShardEntityTerminatedAdvice {
 
   @Advice.OnMethodEnter
-  def enter(@Advice.This shard: Actor with HasShardingInstruments with HasShardCounters): Unit = {
+  @static def enter(@Advice.This shard: Actor with HasShardingInstruments with HasShardCounters): Unit = {
     shard.shardingInstruments.hostedEntities.decrement()
     shard.hostedEntitiesCounter.decrementAndGet()
   }
 }
 
+class ShardDeliverMessageAdvice
 object ShardDeliverMessageAdvice {
   @Advice.OnMethodEnter
-  def enter(@Advice.This shard: Actor with HasShardingInstruments with HasShardCounters): Unit = {
+  @static def enter(@Advice.This shard: Actor with HasShardingInstruments with HasShardCounters): Unit = {
     shard.processedMessagesCounter.incrementAndGet()
   }
 

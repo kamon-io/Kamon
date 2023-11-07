@@ -16,44 +16,50 @@
 
 package kamon.instrumentation.pekko.instrumentations
 
-import org.apache.pekko.actor.{ActorRef, ActorSystem}
 import kamon.Kamon
 import kamon.context.Storage.Scope
-import kamon.instrumentation.pekko.instrumentations.HasActorMonitor.actorMonitor
 import kamon.instrumentation.context.{HasContext, HasTimestamp}
+import kamon.instrumentation.pekko.instrumentations.HasActorMonitor.actorMonitor
 import kanela.agent.api.instrumentation.InstrumentationBuilder
 import kanela.agent.libs.net.bytebuddy.asm.Advice
 import kanela.agent.libs.net.bytebuddy.asm.Advice.{Argument, OnMethodEnter, OnMethodExit, This}
 import org.apache.pekko.actor.instrumentation.ReplaceWithAdvice
+import org.apache.pekko.actor.{ActorRef, ActorSystem}
+
+import scala.annotation.static
 
 class ActorInstrumentation extends InstrumentationBuilder {
 
-  /**
-    * This is where most of the Actor processing magic happens. Handling of messages, errors and system messages.
-    */
-  onType("org.apache.pekko.actor.ActorCell")
-    .mixin(classOf[HasActorMonitor.Mixin])
-    .advise(isConstructor, ActorCellConstructorAdvice)
-    .advise(method("invoke"), classOf[ActorCellInvokeAdvice])
-    .advise(method("handleInvokeFailure"), HandleInvokeFailureMethodAdvice)
-    .advise(method("sendMessage").and(takesArguments(1)), SendMessageAdvice)
-    .advise(method("terminate"), TerminateMethodAdvice)
-    .advise(method("swapMailbox"), ActorCellSwapMailboxAdvice)
-    .advise(method("invokeAll$1"), InvokeAllMethodInterceptor)
+  onType("org.apache.pekko.actor.dungeon.Dispatch")
+    .advise(method("sendMessage").and(takesArguments(1)), classOf[SendMessageAdvice])
 
   /**
-    * Ensures that the Context is properly propagated when messages are temporarily stored on an UnstartedCell.
-    */
+   * This is where most of the Actor processing magic happens. Handling of messages, errors and system messages.
+   */
+  onType("org.apache.pekko.actor.ActorCell")
+    .mixin(classOf[HasActorMonitor.Mixin])
+    .advise(isConstructor, classOf[ActorCellConstructorAdvice])
+    .advise(method("invoke"), classOf[ActorCellInvokeAdvice])
+    .advise(method("handleInvokeFailure"), classOf[HandleInvokeFailureMethodAdvice])
+    .advise(method("sendMessage").and(takesArguments(1)), classOf[SendMessageAdvice])
+    .advise(method("terminate"), classOf[TerminateMethodAdvice])
+    .advise(method("swapMailbox"), classOf[ActorCellSwapMailboxAdvice])
+    .advise(method("invokeAll$1"), classOf[InvokeAllMethodInterceptor])
+
+  /**
+   * Ensures that the Context is properly propagated when messages are temporarily stored on an UnstartedCell.
+   */
   onType("org.apache.pekko.actor.UnstartedCell")
     .mixin(classOf[HasActorMonitor.Mixin])
-    .advise(isConstructor, RepointableActorCellConstructorAdvice)
-    .advise(method("sendMessage").and(takesArguments(1)), SendMessageAdvice)
+    .advise(isConstructor, classOf[RepointableActorCellConstructorAdvice])
+    .advise(method("sendMessage").and(takesArguments(1)), classOf[SendMessageAdvice])
     .advise(method("replaceWith"), classOf[ReplaceWithAdvice])
 
 }
 
 trait HasActorMonitor {
   def actorMonitor: ActorMonitor
+
   def setActorMonitor(actorMonitor: ActorMonitor): Unit
 }
 
@@ -68,43 +74,49 @@ object HasActorMonitor {
     cell.asInstanceOf[HasActorMonitor].actorMonitor
 }
 
+class ActorCellSwapMailboxAdvice
+
 object ActorCellSwapMailboxAdvice {
 
   @Advice.OnMethodEnter
-  def enter(@Advice.This cell: Any, @Advice.Argument(0) newMailbox: Any): Boolean = {
+  @static def enter(@Advice.This cell: Any, @Advice.Argument(0) newMailbox: Any): Boolean = {
     val isShuttingDown = PekkoPrivateAccess.isDeadLettersMailbox(cell, newMailbox)
-    if(isShuttingDown)
+    if (isShuttingDown)
       actorMonitor(cell).onTerminationStart()
 
     isShuttingDown
   }
 
   @Advice.OnMethodExit
-  def exit(@Advice.This cell: Any, @Advice.Return oldMailbox: Any, @Advice.Enter isShuttingDown: Boolean): Unit = {
-    if(oldMailbox != null && isShuttingDown) {
+  @static def exit(@Advice.This cell: Any, @Advice.Return oldMailbox: Any, @Advice.Enter isShuttingDown: Boolean): Unit = {
+    if (oldMailbox != null && isShuttingDown) {
       actorMonitor(cell).onDroppedMessages(PekkoPrivateAccess.mailboxMessageCount(oldMailbox))
     }
   }
 }
 
+class InvokeAllMethodInterceptor
+
 object InvokeAllMethodInterceptor {
 
   @Advice.OnMethodEnter
-  def enter(@Advice.Argument(0) message: Any): Option[Scope] =
+  @static def enter(@Advice.Argument(0) message: Any): Option[Scope] =
     message match {
       case m: HasContext => Some(Kamon.storeContext(m.context))
       case _ => None
     }
 
   @Advice.OnMethodExit
-  def exit(@Advice.Enter scope: Option[Scope]): Unit =
+  @static def exit(@Advice.Enter scope: Option[Scope]): Unit =
     scope.foreach(_.close())
 }
+
+class SendMessageAdvice
 
 object SendMessageAdvice {
 
   @OnMethodEnter(suppress = classOf[Throwable])
-  def onEnter(@This cell: Any, @Argument(0) envelope: Object): Unit = {
+  @static def onEnter(@This cell: Any, @Argument(0) envelope: Object): Unit = {
 
     val instrumentation = actorMonitor(cell)
     envelope.asInstanceOf[HasContext].setContext(instrumentation.captureEnvelopeContext())
@@ -112,32 +124,40 @@ object SendMessageAdvice {
   }
 }
 
+class RepointableActorCellConstructorAdvice
+
 object RepointableActorCellConstructorAdvice {
 
   @Advice.OnMethodExit(suppress = classOf[Throwable])
-  def onExit(@This cell: Any, @Argument(0) system: ActorSystem, @Argument(1) ref: ActorRef, @Argument(3) parent: ActorRef): Unit =
+  @static def onExit(@This cell: Any, @Argument(0) system: ActorSystem, @Argument(1) ref: ActorRef, @Argument(3) parent: ActorRef): Unit =
     cell.asInstanceOf[HasActorMonitor].setActorMonitor(ActorMonitor.from(cell, ref, parent, system))
 }
+
+class ActorCellConstructorAdvice
 
 object ActorCellConstructorAdvice {
 
   @OnMethodExit(suppress = classOf[Throwable])
-  def onExit(@This cell: Any, @Argument(0) system: ActorSystem, @Argument(1) ref: ActorRef, @Argument(4) parent: ActorRef): Unit =
+  @static def onExit(@This cell: Any, @Argument(0) system: ActorSystem, @Argument(1) ref: ActorRef, @Argument(4) parent: ActorRef): Unit =
     cell.asInstanceOf[HasActorMonitor].setActorMonitor(ActorMonitor.from(cell, ref, parent, system))
 }
+
+class HandleInvokeFailureMethodAdvice
 
 object HandleInvokeFailureMethodAdvice {
 
   @OnMethodEnter(suppress = classOf[Throwable])
-  def onEnter(@This cell: Any, @Argument(1) failure: Throwable): Unit =
+  @static def onEnter(@This cell: Any, @Argument(1) failure: Throwable): Unit =
     actorMonitor(cell).onFailure(failure)
 
 }
 
+class TerminateMethodAdvice
+
 object TerminateMethodAdvice {
 
   @OnMethodEnter(suppress = classOf[Throwable])
-  def onEnter(@This cell: Any): Unit = {
+  @static def onEnter(@This cell: Any): Unit = {
     actorMonitor(cell).cleanup()
 
     if (PekkoPrivateAccess.isRoutedActorCell(cell)) {
