@@ -181,7 +181,7 @@ object AkkaMetrics {
   )
 
   def forSystem(name: String): ActorSystemInstruments =
-    _systemInstrumentsCache.atomicGetOrElseUpdate(name, new ActorSystemInstruments(TagSet.of("system", name)))
+    _systemInstrumentsCache.getOrElseUpdate(name, new ActorSystemInstruments(TagSet.of("system", name)))
 
   class ActorSystemInstruments(tags: TagSet) extends InstrumentGroup(tags) {
     val deadLetters = register(SystemDeadLetters)

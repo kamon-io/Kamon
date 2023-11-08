@@ -26,10 +26,10 @@ object BaseProject extends AutoPlugin {
     /** Marker configuration for dependencies that will be shaded into their module's jar.  */
     lazy val Shaded = config("shaded").hide
 
-    val kanelaAgent       = "io.kamon"              %  "kanela-agent"    % "1.0.17"
-    val slf4jApi          = "org.slf4j"             %  "slf4j-api"       % "1.7.25"
-    val slf4jnop          = "org.slf4j"             %  "slf4j-nop"       % "1.7.24"
-    val logbackClassic    = "ch.qos.logback"        %  "logback-classic" % "1.2.3"
+    val kanelaAgent       = "io.kamon"              %  "kanela-agent"    % "1.0.18"
+    val slf4jApi          = "org.slf4j"             %  "slf4j-api"       % "1.7.36"
+    val slf4jnop          = "org.slf4j"             %  "slf4j-nop"       % "1.7.36"
+    val logbackClassic    = "ch.qos.logback"        %  "logback-classic" % "1.2.12"
     val scalatest         = "org.scalatest"         %% "scalatest"       % "3.2.9"
     val hdrHistogram      = "org.hdrhistogram"      %  "HdrHistogram"    % "2.1.10"
     val okHttp            = "com.squareup.okhttp3"  %  "okhttp"          % "4.10.0"

@@ -24,6 +24,7 @@ import kamon.context.HttpPropagation.{HeaderReader, HeaderWriter}
 import kamon.context.generated.binary.span.{Span => ColferSpan}
 import kamon.context.{Context, _}
 import kamon.trace.Trace.SamplingDecision
+import java.lang.{Long => JLong}
 
 import scala.util.Try
 
@@ -450,7 +451,7 @@ object W3CTraceContext {
       * https://docs.datadoghq.com/tracing/guide/send_traces_to_agent_by_api/
       */
     def decodeUnsignedLongToHex(id: String): String =
-      urlDecode(id).toLong.toHexString
+      JLong.parseUnsignedLong(urlDecode(id), 10).toHexString
   }
 
   class DataDog extends Propagation.EntryReader[HeaderReader] with Propagation.EntryWriter[HeaderWriter] {
