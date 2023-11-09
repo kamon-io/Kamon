@@ -4,6 +4,8 @@ import akka.actor.{ActorRef, ActorSystem, Props}
 import kanela.agent.api.instrumentation.InstrumentationBuilder
 import kanela.agent.libs.net.bytebuddy.asm.Advice._
 
+import scala.annotation.static
+
 class RouterInstrumentation extends InstrumentationBuilder {
 
   /**
@@ -60,35 +62,38 @@ object HasRouterMonitor {
   }
 }
 
+class RoutedActorRefConstructorAdvice
 object RoutedActorRefConstructorAdvice {
 
   @OnMethodExit(suppress = classOf[Throwable])
-  def exit(@This ref: ActorRef, @Argument(1) routerProps: Props, @Argument(4) routeeProps: Props): Unit = {
+  @static def exit(@This ref: ActorRef, @Argument(1) routerProps: Props, @Argument(4) routeeProps: Props): Unit = {
     val routedRef = ref.asInstanceOf[HasRouterProps]
     routedRef.setRouteeProps(routeeProps)
     routedRef.setRouterProps(routerProps)
   }
 }
 
+class RoutedActorCellConstructorAdvice
 object RoutedActorCellConstructorAdvice {
 
   @OnMethodExit(suppress = classOf[Throwable])
-  def exit(@This cell: Any, @Argument(0) system: ActorSystem, @Argument(1) ref: ActorRef, @Argument(5) parent: ActorRef): Unit = {
+  @static def exit(@This cell: Any, @Argument(0) system: ActorSystem, @Argument(1) ref: ActorRef, @Argument(5) parent: ActorRef): Unit = {
     cell.asInstanceOf[HasRouterMonitor].setRouterMonitor(RouterMonitor.from(cell, ref, parent, system))
   }
 }
 
+class SendMessageOnRouterAdvice
 object SendMessageOnRouterAdvice {
 
   def routerInstrumentation(cell: Any): RouterMonitor =
     cell.asInstanceOf[HasRouterMonitor].routerMonitor
 
   @OnMethodEnter(suppress = classOf[Throwable])
-  def onEnter(@This cell: Any): Long =
+  @static def onEnter(@This cell: Any): Long =
     routerInstrumentation(cell).processMessageStart()
 
   @OnMethodExit(suppress = classOf[Throwable])
-  def onExit(@This cell: Any, @Enter timestampBeforeProcessing: Long): Unit =
+  @static def onExit(@This cell: Any, @Enter timestampBeforeProcessing: Long): Unit =
     routerInstrumentation(cell).processMessageEnd(timestampBeforeProcessing)
 }
 

@@ -20,6 +20,8 @@ import kamon.instrumentation.context.{HasContext, HasTimestamp}
 import kanela.agent.api.instrumentation.InstrumentationBuilder
 import kanela.agent.libs.net.bytebuddy.asm.Advice
 
+import scala.annotation.static
+
 
 class EnvelopeInstrumentation extends InstrumentationBuilder {
 
@@ -32,10 +34,11 @@ class EnvelopeInstrumentation extends InstrumentationBuilder {
     .advise(method("copy"), EnvelopeCopyAdvice)
 }
 
+class EnvelopeCopyAdvice
 object EnvelopeCopyAdvice {
 
   @Advice.OnMethodExit
-  def exit(@Advice.Return newEnvelope: Any, @Advice.This envelope: Any): Unit = {
+  @static def exit(@Advice.Return newEnvelope: Any, @Advice.This envelope: Any): Unit = {
     newEnvelope.asInstanceOf[HasContext].setContext(envelope.asInstanceOf[HasContext].context)
     newEnvelope.asInstanceOf[HasTimestamp].setTimestamp(envelope.asInstanceOf[HasTimestamp].timestamp)
   }

@@ -8,6 +8,7 @@ import kanela.agent.api.instrumentation.InstrumentationBuilder
 import kanela.agent.libs.net.bytebuddy.implementation.bind.annotation.Argument
 import org.slf4j.LoggerFactory
 
+import scala.annotation.static
 import scala.util.control.NonFatal
 
 class ActorMonitorInstrumentation extends InstrumentationBuilder with VersionFiltering {
@@ -27,7 +28,7 @@ class MessageClassAdvice
 object MessageClassAdvice {
   private val logger = LoggerFactory.getLogger(classOf[MessageClassAdvice])
 
-  def extractMessageClass(@Argument(0) envelope: Envelope): String = {
+  @static def extractMessageClass(@Argument(0) envelope: Envelope): String = {
     try {
       envelope.message match {
         case message: WrappedMessage => ActorCellInfo.simpleClassName(message.message.getClass)

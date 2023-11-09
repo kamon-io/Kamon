@@ -10,6 +10,7 @@ import kamon.tag.TagSet
 import kanela.agent.api.instrumentation.InstrumentationBuilder
 import kanela.agent.libs.net.bytebuddy.asm.Advice
 
+import scala.annotation.static
 import scala.collection.mutable
 
 class ClusterInstrumentation extends InstrumentationBuilder with VersionFiltering {
@@ -20,10 +21,11 @@ class ClusterInstrumentation extends InstrumentationBuilder with VersionFilterin
   }
 }
 
+class AfterClusterInitializationAdvice
 object AfterClusterInitializationAdvice {
 
   @Advice.OnMethodExit
-  def onClusterExtensionCreated(@Advice.Argument(0) system: ExtendedActorSystem, @Advice.Return clusterExtension: Cluster): Unit = {
+  @static def onClusterExtensionCreated(@Advice.Argument(0) system: ExtendedActorSystem, @Advice.Return clusterExtension: Cluster): Unit = {
     val settings = AkkaInstrumentation.settings()
     if(settings.exposeClusterMetrics) {
       val stateExporter = system.systemActorOf(Props[ClusterInstrumentation.ClusterStateExporter], "kamon-cluster-state-exporter")
