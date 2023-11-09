@@ -1,9 +1,8 @@
-package kamon.instrumentation.akka.instrumentations.akka_26
+package kamon.instrumentation.pekko.instrumentations
 
-import akka.actor.WrappedMessage
-import akka.dispatch.Envelope
-import akka.remote.artery.KamonRemoteInstrument
-import kamon.instrumentation.akka.instrumentations.{ActorCellInfo, VersionFiltering}
+import org.apache.pekko.actor.WrappedMessage
+import org.apache.pekko.dispatch.Envelope
+import kamon.instrumentation.pekko.instrumentations.ActorCellInfo
 import kanela.agent.api.instrumentation.InstrumentationBuilder
 import kanela.agent.libs.net.bytebuddy.implementation.bind.annotation.Argument
 import org.slf4j.LoggerFactory
@@ -11,17 +10,14 @@ import org.slf4j.LoggerFactory
 import scala.annotation.static
 import scala.util.control.NonFatal
 
-class ActorMonitorInstrumentation extends InstrumentationBuilder with VersionFiltering {
-
-  onAkka("2.6", "2.7") {
-    /*
+class ActorMonitorInstrumentation extends InstrumentationBuilder {
+   /*
      * Changes implementation of extractMessageClass for our ActorMonitor.
-     * In akka 2.6, all typed messages are converted to AdaptMessage,
+     * In Pekko, all typed messages are converted to AdaptMessage,
      * so we're forced to extract the original message type.
      */
-    onSubTypesOf("kamon.instrumentation.akka.instrumentations.ActorMonitor")
+    onSubTypesOf("kamon.instrumentation.pekko.instrumentations.ActorMonitor")
       .intercept(method("extractMessageClass"), classOf[MessageClassAdvice])
-  }
 }
 
 class MessageClassAdvice
@@ -38,7 +34,7 @@ object MessageClassAdvice {
     } catch {
       // NoClassDefFound is thrown in early versions of akka 2.6
       // so we can safely fallback to the original method
-      case _: NoClassDefFoundError =>
+      case _: NoClassDefFoundError | _: ClassCastException | _: NullPointerException =>
         ActorCellInfo.simpleClassName(e.message.getClass)
       case NonFatal(ex) =>
         logger.info(s"Expected NoClassDefFoundError, got: ${ex}")
