@@ -24,17 +24,6 @@ import kanela.agent.libs.net.bytebuddy.asm.Advice.{Argument, OnMethodExit, This}
 
 import scala.annotation.static
 
-class EventStreamInstrumentation extends InstrumentationBuilder {
-
-  /**
-    * Counts dead letters and unhandled messages as they are published on the EventStream.
-    */
-  onType("akka.event.EventStream")
-    .mixin(classOf[HasSystem.Mixin])
-    .advise(isConstructor.and(takesArguments(2)), ConstructorAdvice)
-    .advise(method("publish").and(takesArguments(1)), PublishMethodAdvice)
-}
-
 class ConstructorAdvice
 object ConstructorAdvice {
 
