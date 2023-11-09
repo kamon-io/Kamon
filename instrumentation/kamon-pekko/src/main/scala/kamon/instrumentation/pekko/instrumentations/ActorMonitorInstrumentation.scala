@@ -34,7 +34,7 @@ object MessageClassAdvice {
     } catch {
       // NoClassDefFound is thrown in early versions of akka 2.6
       // so we can safely fallback to the original method
-      case _: NoClassDefFoundError | _: ClassCastException | _: NullPointerException =>
+      case _: NoClassDefFoundError =>
         ActorCellInfo.simpleClassName(e.message.getClass)
       case NonFatal(ex) =>
         logger.info(s"Expected NoClassDefFoundError, got: ${ex}")
