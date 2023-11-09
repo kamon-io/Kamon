@@ -28,9 +28,6 @@ import kanela.agent.libs.net.bytebuddy.asm.Advice.{Argument, OnMethodEnter, OnMe
 
 class ActorInstrumentation extends InstrumentationBuilder {
 
-  onType("akka.actor.dungeon.Dispatch")
-    .advise(method("sendMessage").and(takesArguments(1)), SendMessageAdvice)
-
   /**
     * This is where most of the Actor processing magic happens. Handling of messages, errors and system messages.
     */
@@ -40,6 +37,7 @@ class ActorInstrumentation extends InstrumentationBuilder {
     .advise(method("invoke"), classOf[ActorCellInvokeAdvice])
     .advise(method("handleInvokeFailure"), HandleInvokeFailureMethodAdvice)
     .advise(method("terminate"), TerminateMethodAdvice)
+    .advise(method("sendMessage").and(takesArguments(1)), SendMessageAdvice)
     .advise(method("swapMailbox"), ActorCellSwapMailboxAdvice)
     .advise(method("invokeAll$1"), InvokeAllMethodInterceptor)
 

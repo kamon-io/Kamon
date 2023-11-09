@@ -498,7 +498,7 @@ lazy val `kamon-pekko` = (project in file("instrumentation/kamon-pekko"))
   .disablePlugins(AssemblyPlugin)
   .settings(instrumentationSettings: _*)
   .settings(Seq(
-    crossScalaVersions := Seq(`scala_2.12_version`, `scala_2.13_version`),
+    crossScalaVersions := Seq(`scala_2.12_version`, `scala_2.13_version`, scala_3_version),
     libraryDependencies ++= Seq(
       "org.apache.pekko" %% "pekko-actor" % pekkoHttpVersion % "provided"
     )
@@ -515,7 +515,7 @@ lazy val `kamon-pekko-http` = (project in file("instrumentation/kamon-pekko-http
   .disablePlugins(AssemblyPlugin)
   .settings(instrumentationSettings)
   .settings(Seq(
-    crossScalaVersions := Seq(`scala_2.12_version`, `scala_2.13_version`),
+    crossScalaVersions := Seq(`scala_2.12_version`, `scala_2.13_version`, scala_3_version),
     libraryDependencies ++= Seq(
       kanelaAgent % "provided",
       "org.apache.pekko" %% "pekko-http"          % pekkoHttpVersion % "provided",

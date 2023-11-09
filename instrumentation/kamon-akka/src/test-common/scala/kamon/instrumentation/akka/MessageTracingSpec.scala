@@ -222,7 +222,7 @@ class TracingTestActor extends Actor {
 }
 
 class ActorWithMaterializer extends Actor {
-  implicit val mat: Materializer = Materializer(context)
+  implicit val mat: Materializer = ActorMaterializer()
 
   override def receive: Receive = {
     case "stream" =>
