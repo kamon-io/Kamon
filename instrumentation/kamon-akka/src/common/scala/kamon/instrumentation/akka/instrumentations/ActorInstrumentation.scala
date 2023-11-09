@@ -28,32 +28,6 @@ import kanela.agent.libs.net.bytebuddy.asm.Advice.{Argument, OnMethodEnter, OnMe
 
 import scala.annotation.static
 
-class ActorInstrumentation extends InstrumentationBuilder {
-
-  /**
-    * This is where most of the Actor processing magic happens. Handling of messages, errors and system messages.
-    */
-  onType("akka.actor.ActorCell")
-    .mixin(classOf[HasActorMonitor.Mixin])
-    .advise(isConstructor, ActorCellConstructorAdvice)
-    .advise(method("invoke"), classOf[ActorCellInvokeAdvice])
-    .advise(method("handleInvokeFailure"), HandleInvokeFailureMethodAdvice)
-    .advise(method("terminate"), TerminateMethodAdvice)
-    .advise(method("sendMessage").and(takesArguments(1)), SendMessageAdvice)
-    .advise(method("swapMailbox"), ActorCellSwapMailboxAdvice)
-    .advise(method("invokeAll$1"), InvokeAllMethodInterceptor)
-
-  /**
-    * Ensures that the Context is properly propagated when messages are temporarily stored on an UnstartedCell.
-    */
-  onType("akka.actor.UnstartedCell")
-    .mixin(classOf[HasActorMonitor.Mixin])
-    .advise(isConstructor, RepointableActorCellConstructorAdvice)
-    .advise(method("sendMessage").and(takesArguments(1)), SendMessageAdvice)
-    .advise(method("replaceWith"), classOf[ReplaceWithAdvice])
-
-}
-
 trait HasActorMonitor {
   def actorMonitor: ActorMonitor
   def setActorMonitor(actorMonitor: ActorMonitor): Unit
