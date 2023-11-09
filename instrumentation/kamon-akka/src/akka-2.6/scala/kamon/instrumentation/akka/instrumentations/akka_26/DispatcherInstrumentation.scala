@@ -42,7 +42,7 @@ class DispatcherInstrumentation extends InstrumentationBuilder with VersionFilte
     onSubTypesOf("akka.dispatch.ExecutorServiceFactory")
       .mixin(classOf[HasDispatcherPrerequisites.Mixin])
       .mixin(classOf[HasDispatcherName.Mixin])
-      .intercept(method("createExecutorService"), InstrumentNewExecutorServiceOnAkka26)
+      .intercept(method("createExecutorService"), classOf[InstrumentNewExecutorServiceOnAkka26])
 
     /**
       * First step on getting the Actor System name is to read it from the prerequisites instance passed to the

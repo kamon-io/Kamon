@@ -20,7 +20,7 @@ class ActorMonitorInstrumentation extends InstrumentationBuilder with VersionFil
      * so we're forced to extract the original message type.
      */
     onSubTypesOf("kamon.instrumentation.akka.instrumentations.ActorMonitor")
-      .intercept(method("extractMessageClass"), MessageClassAdvice)
+      .intercept(method("extractMessageClass"), classOf[MessageClassAdvice])
   }
 }
 
