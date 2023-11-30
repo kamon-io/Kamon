@@ -36,18 +36,19 @@ import kamon.instrumentation.akka.http.TracingDirectives
 import org.json4s.{DefaultFormats, native}
 import kamon.tag.Lookups.plain
 import kamon.trace.Trace
+import org.json4s.native.Serialization
 import scala.concurrent.{ExecutionContext, Future}
 
 trait TestWebServer extends TracingDirectives {
-  implicit val serialization = native.Serialization
-  implicit val formats = DefaultFormats
+  implicit val serialization: Serialization.type = native.Serialization
+  implicit val formats: DefaultFormats.type = DefaultFormats
   import Json4sSupport._
 
   def startServer(interface: String, port: Int, https: Boolean = false)(implicit system: ActorSystem): WebServer = {
     import Endpoints._
 
     implicit val ec: ExecutionContext = system.dispatcher
-    implicit val materializer = ActorMaterializer()
+    implicit val materializer: ActorMaterializer = ActorMaterializer()
 
     val routes = logRequest("routing-request") {
       get {

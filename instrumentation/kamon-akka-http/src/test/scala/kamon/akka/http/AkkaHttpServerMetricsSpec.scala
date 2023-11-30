@@ -29,7 +29,7 @@ import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
 import org.scalatest.OptionValues
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContextExecutor, Future}
 import scala.concurrent.duration._
 
 class AkkaHttpServerMetricsSpec extends AnyWordSpecLike with Matchers with InitAndStopKamonAfterAll with InstrumentInspection.Syntax
@@ -37,9 +37,9 @@ class AkkaHttpServerMetricsSpec extends AnyWordSpecLike with Matchers with InitA
 
   import TestWebServer.Endpoints._
 
-  implicit private val system = ActorSystem("http-server-metrics-instrumentation-spec")
-  implicit private val executor = system.dispatcher
-  implicit private val materializer = ActorMaterializer()
+  implicit private val system: ActorSystem = ActorSystem("http-server-metrics-instrumentation-spec")
+  implicit private val executor: ExecutionContextExecutor = system.dispatcher
+  implicit private val materializer: ActorMaterializer = ActorMaterializer()
 
   val port = 8083
   val interface = "127.0.0.1"
