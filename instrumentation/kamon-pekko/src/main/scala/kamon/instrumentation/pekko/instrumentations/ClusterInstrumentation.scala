@@ -10,21 +10,23 @@ import kamon.tag.TagSet
 import kanela.agent.api.instrumentation.InstrumentationBuilder
 import kanela.agent.libs.net.bytebuddy.asm.Advice
 
+import scala.annotation.static
 import scala.collection.mutable
 
 class ClusterInstrumentation extends InstrumentationBuilder {
 
     onType("org.apache.pekko.cluster.Cluster$")
-      .advise(method("createExtension").and(takesArguments(1)), AfterClusterInitializationAdvice)
+      .advise(method("createExtension").and(takesArguments(1)), classOf[AfterClusterInitializationAdvice])
 }
 
+class AfterClusterInitializationAdvice
 object AfterClusterInitializationAdvice {
 
   @Advice.OnMethodExit
-  def onClusterExtensionCreated(@Advice.Argument(0) system: ExtendedActorSystem, @Advice.Return clusterExtension: Cluster): Unit = {
+  @static def onClusterExtensionCreated(@Advice.Argument(0) system: ExtendedActorSystem, @Advice.Return clusterExtension: Cluster): Unit = {
     val settings = PekkoInstrumentation.settings()
     if(settings.exposeClusterMetrics) {
-      val stateExporter = system.systemActorOf(Props[ClusterInstrumentation.ClusterStateExporter], "kamon-cluster-state-exporter")
+      val stateExporter = system.systemActorOf(Props[ClusterInstrumentation.ClusterStateExporter](), "kamon-cluster-state-exporter")
       clusterExtension.subscribe(stateExporter, classOf[ClusterEvent.ClusterDomainEvent])
     }
   }

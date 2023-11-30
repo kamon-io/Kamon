@@ -21,20 +21,21 @@ import akka.routing._
 import akka.testkit.{ImplicitSender, TestKit}
 import akka.util.Timeout
 import kamon.Kamon
-import kamon.testkit.{InitAndStopKamonAfterAll, MetricInspection}
 import kamon.tag.Lookups._
+import kamon.testkit.{InitAndStopKamonAfterAll, MetricInspection}
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.concurrent.Eventually
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
 
 import scala.collection.mutable.ListBuffer
+import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
 
 class ActorCellInstrumentationSpec extends TestKit(ActorSystem("ActorCellInstrumentationSpec")) with AnyWordSpecLike
     with BeforeAndAfterAll with ImplicitSender with Eventually with MetricInspection.Syntax with Matchers with InitAndStopKamonAfterAll {
-  implicit lazy val executionContext = system.dispatcher
+  implicit lazy val executionContext: ExecutionContext = system.dispatcher
   import ContextTesting._
 
   "the message passing instrumentation" should {
@@ -59,7 +60,7 @@ class ActorCellInstrumentationSpec extends TestKit(ActorSystem("ActorCellInstrum
     }
 
     "propagate the current context when using the ask pattern" in new EchoActorFixture {
-      implicit val timeout = Timeout(1 seconds)
+      implicit val timeout: Timeout = Timeout(1 seconds)
       Kamon.runWithContext(testContext("propagate-with-ask")) {
         // The pipe pattern use Futures internally, so FutureTracing test should cover the underpinnings of it.
         (contextEchoActor ? "test") pipeTo (testActor)
@@ -122,11 +123,11 @@ class ActorCellInstrumentationSpec extends TestKit(ActorSystem("ActorCellInstrum
   }
 
   trait EchoActorFixture {
-    val contextEchoActor = system.actorOf(Props[ContextStringEcho])
+    val contextEchoActor: ActorRef = system.actorOf(Props[ContextStringEcho])
   }
 
   trait EchoSimpleRouterFixture {
-    val router = {
+    val router: Router = {
       val routees = Vector.fill(5) {
         val r = system.actorOf(Props[ContextStringEcho])
         ActorRefRoutee(r)
@@ -136,22 +137,22 @@ class ActorCellInstrumentationSpec extends TestKit(ActorSystem("ActorCellInstrum
   }
 
   trait EchoPoolRouterFixture {
-    val pool = system.actorOf(RoundRobinPool(nrOfInstances = 5).props(Props[ContextStringEcho]), "pool-router")
+    val pool: ActorRef = system.actorOf(RoundRobinPool(nrOfInstances = 5).props(Props[ContextStringEcho]), "pool-router")
   }
 
   trait EchoGroupRouterFixture {
-    val routees = Vector.fill(5) {
+    val routees: Vector[ActorRef] = Vector.fill(5) {
       system.actorOf(Props[ContextStringEcho])
     }
 
-    val group = system.actorOf(RoundRobinGroup(routees.map(_.path.toStringWithoutAddress)).props(), "group-router")
+    val group: ActorRef = system.actorOf(RoundRobinGroup(routees.map(_.path.toStringWithoutAddress)).props(), "group-router")
   }
 }
 
 class ContextStringEcho extends Actor {
   import ContextTesting._
 
-  def receive = {
+  def receive: Receive = {
     case _: String =>
       sender ! Kamon.currentContext().getTag(plain(TestKey))
   }

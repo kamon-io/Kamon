@@ -42,9 +42,9 @@ object ActorCellInfo {
 
     val (actorOrRouterClass, routeeClass) =
       if(isRouter)
-        (props.routerConfig.getClass, Some(ref.asInstanceOf[HasRouterProps].routeeProps.actorClass))
+        (props.routerConfig.getClass, Some(ref.asInstanceOf[HasRouterProps].routeeProps.actorClass()))
       else if (isRoutee)
-        (parent.asInstanceOf[HasRouterProps].routerProps.routerConfig.getClass, Some(props.actorClass))
+        (parent.asInstanceOf[HasRouterProps].routerProps.routerConfig.getClass, Some(props.actorClass()))
       else
         (props.actorClass(), None)
 

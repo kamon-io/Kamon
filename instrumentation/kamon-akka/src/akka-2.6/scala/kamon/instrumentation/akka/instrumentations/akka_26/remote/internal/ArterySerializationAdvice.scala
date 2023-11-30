@@ -11,6 +11,8 @@ import kamon.instrumentation.akka.AkkaRemoteMetrics
 import kamon.instrumentation.context.HasContext
 import kanela.agent.libs.net.bytebuddy.asm.Advice
 
+import scala.annotation.static
+
 
 /**
   * For Artery messages we will always add two sections to the end of each serialized message: the Context and the size
@@ -25,12 +27,12 @@ class SerializeForArteryAdvice
 object SerializeForArteryAdvice {
 
   @Advice.OnMethodEnter
-  def enter(): Long = {
+  @static def enter(): Long = {
     System.nanoTime()
   }
 
   @Advice.OnMethodExit
-  def exit(@Advice.Argument(0) serialization: Serialization, @Advice.Argument(1) envelope: OutboundEnvelope,
+  @static def exit(@Advice.Argument(0) serialization: Serialization, @Advice.Argument(1) envelope: OutboundEnvelope,
       @Advice.Argument(3) envelopeBuffer: EnvelopeBuffer, @Advice.Enter startTime: Long): Unit = {
 
     val instruments = AkkaRemoteMetrics.serializationInstruments(serialization.system.name)
@@ -75,7 +77,7 @@ object DeserializeForArteryAdvice {
   )
 
   @Advice.OnMethodEnter
-  def exit(@Advice.Argument(5) envelopeBuffer: EnvelopeBuffer): DeserializationInfo = {
+  @static def exit(@Advice.Argument(5) envelopeBuffer: EnvelopeBuffer): DeserializationInfo = {
     val startTime = System.nanoTime()
     val messageBuffer = envelopeBuffer.byteBuffer
     val messageStart = messageBuffer.position()
@@ -102,7 +104,7 @@ object DeserializeForArteryAdvice {
   }
 
   @Advice.OnMethodExit(onThrowable = classOf[Throwable])
-  def exit(@Advice.Argument(0) system: ActorSystem, @Advice.Argument(5) envelopeBuffer: EnvelopeBuffer,
+  @static def exit(@Advice.Argument(0) system: ActorSystem, @Advice.Argument(5) envelopeBuffer: EnvelopeBuffer,
       @Advice.Enter deserializationInfo: DeserializationInfo, @Advice.Thrown error: Throwable): Unit = {
 
     if(error == null) {
@@ -142,7 +144,7 @@ class CaptureContextOnInboundEnvelope
 object CaptureContextOnInboundEnvelope {
 
   @Advice.OnMethodEnter
-  def enter(@Advice.This inboundEnvelope: Any): Unit = {
+  @static def enter(@Advice.This inboundEnvelope: Any): Unit = {
     val lastContext = DeserializeForArteryAdvice.LastDeserializedContext.get()
     if(lastContext != null) {
       inboundEnvelope.asInstanceOf[HasContext].setContext(lastContext)

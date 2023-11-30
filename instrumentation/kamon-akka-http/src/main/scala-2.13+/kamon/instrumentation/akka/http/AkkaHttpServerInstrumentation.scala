@@ -8,7 +8,7 @@ import akka.http.scaladsl.server.PathMatcher.{Matched, Unmatched}
 import akka.http.scaladsl.server.directives.{BasicDirectives, CompleteOrRecoverWithMagnet, OnSuccessMagnet}
 import akka.http.scaladsl.server.directives.RouteDirectives.reject
 import akka.http.scaladsl.server._
-import akka.http.scaladsl.server.util.Tupler
+import akka.http.scaladsl.server.util.{Tuple, Tupler}
 import akka.http.scaladsl.util.FastFuture
 import kamon.Kamon
 import kamon.instrumentation.akka.http.HasMatchingContext.PathMatchingContext
@@ -27,6 +27,7 @@ import akka.stream.scaladsl.Flow
 import kamon.context.Context
 import kanela.agent.libs.net.bytebuddy.matcher.ElementMatchers.isPublic
 
+import scala.annotation.static
 import scala.collection.immutable
 
 
@@ -53,7 +54,7 @@ class AkkaHttpServerInstrumentation extends InstrumentationBuilder {
     .advise(method("bindAndHandleAsync") and isPublic(), classOf[Http2ExtBindAndHandleAdvice])
 
   onType("akka.http.impl.engine.http2.Http2Blueprint$")
-    .intercept(method("handleWithStreamIdHeader"), Http2BlueprintInterceptor)
+    .intercept(method("handleWithStreamIdHeader"), classOf[Http2BlueprintInterceptor])
 
   /**
     * The rest of these sections are just about making sure that we can generate an appropriate operation name (i.e. free
@@ -61,7 +62,7 @@ class AkkaHttpServerInstrumentation extends InstrumentationBuilder {
     */
   onType("akka.http.scaladsl.server.RequestContextImpl")
     .mixin(classOf[HasMatchingContext.Mixin])
-    .intercept(method("copy"), RequestContextCopyInterceptor)
+    .intercept(method("copy"), classOf[RequestContextCopyInterceptor])
 
   onType("akka.http.scaladsl.server.directives.PathDirectives")
     .intercept(method("rawPathPrefix"), classOf[PathDirectivesRawPathPrefixInterceptor])
@@ -263,10 +264,11 @@ object LastAutomaticOperationNameEdit {
     new LastAutomaticOperationNameEdit(operationName, allowAutomaticChanges)
 }
 
+class RequestContextCopyInterceptor
 object RequestContextCopyInterceptor {
 
   @RuntimeType
-  def copy(@This context: RequestContext, @SuperCall copyCall: Callable[RequestContext]): RequestContext = {
+  @static def copy(@This context: RequestContext, @SuperCall copyCall: Callable[RequestContext]): RequestContext = {
     val copiedRequestContext = copyCall.call()
     copiedRequestContext.asInstanceOf[HasMatchingContext].setMatchingContext(context.asInstanceOf[HasMatchingContext].matchingContext)
     copiedRequestContext
@@ -277,8 +279,8 @@ class PathDirectivesRawPathPrefixInterceptor
 object PathDirectivesRawPathPrefixInterceptor {
   import BasicDirectives._
 
-  def rawPathPrefix[T](@Argument(0) matcher: PathMatcher[T]): Directive[T] = {
-    implicit val LIsTuple = matcher.ev
+  @static def rawPathPrefix[T](@Argument(0) matcher: PathMatcher[T]): Directive[T] = {
+    implicit val LIsTuple: Tuple[T] = matcher.ev
 
     extract { ctx =>
       val fullPath = ctx.unmatchedPath.toString()
@@ -294,7 +296,7 @@ object PathDirectivesRawPathPrefixInterceptor {
       (ctx, matching)
     } flatMap {
       case (ctx, Matched(rest, values)) =>
-        tprovide(values) & mapRequestContext(_ withUnmatchedPath rest) & mapRouteResult { routeResult =>
+        tprovide[T](values) & mapRequestContext(_ withUnmatchedPath rest) & mapRouteResult { routeResult =>
 
           if(routeResult.isInstanceOf[Rejected])
             ctx.asInstanceOf[HasMatchingContext].popOneMatchingContext()
@@ -307,6 +309,7 @@ object PathDirectivesRawPathPrefixInterceptor {
   }
 }
 
+class Http2BlueprintInterceptor
 object Http2BlueprintInterceptor {
 
   case class HandlerWithEndpoint(interface: String, port: Int, handler: HttpRequest => Future[HttpResponse])
@@ -316,7 +319,7 @@ object Http2BlueprintInterceptor {
   }
 
   @RuntimeType
-  def handleWithStreamIdHeader(@Argument(1) handler: HttpRequest => Future[HttpResponse],
+  @static def handleWithStreamIdHeader(@Argument(1) handler: HttpRequest => Future[HttpResponse],
     @SuperCall zuper: Callable[Flow[HttpRequest, HttpResponse, NotUsed]]): Flow[HttpRequest, HttpResponse, NotUsed] = {
 
     handler match {

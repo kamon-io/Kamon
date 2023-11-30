@@ -7,6 +7,8 @@ import kamon.instrumentation.context.HasContext
 import kanela.agent.api.instrumentation.InstrumentationBuilder
 import kanela.agent.libs.net.bytebuddy.asm.Advice
 
+import scala.annotation.static
+
 class ActorRefInstrumentation extends InstrumentationBuilder {
 
   /**
@@ -38,14 +40,15 @@ object HasGroupPath {
   }
 }
 
+class RepointableActorRefPointAdvice
 object RepointableActorRefPointAdvice {
 
   @Advice.OnMethodEnter
-  def enter(@Advice.This repointableActorRef: Object): Scope =
+  @static def enter(@Advice.This repointableActorRef: Object): Scope =
     Kamon.storeContext(repointableActorRef.asInstanceOf[HasContext].context)
 
   @Advice.OnMethodExit
-  def exit(@Advice.Enter scope: Scope, @Advice.This repointableActorRef: Object): Unit = {
+  @static def exit(@Advice.Enter scope: Scope, @Advice.This repointableActorRef: Object): Unit = {
     scope.close()
 
     repointableActorRef

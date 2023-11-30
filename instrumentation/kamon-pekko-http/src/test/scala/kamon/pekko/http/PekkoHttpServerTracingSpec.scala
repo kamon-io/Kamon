@@ -17,7 +17,6 @@
 package kamon.pekko.http
 
 import org.apache.pekko.actor.ActorSystem
-import org.apache.pekko.stream.ActorMaterializer
 import kamon.tag.Lookups.{plain, plainBoolean, plainLong}
 import kamon.testkit._
 import kamon.trace.Span.Mark
@@ -31,6 +30,7 @@ import java.util.UUID
 import javax.net.ssl.{HostnameVerifier, SSLSession}
 import scala.concurrent.duration._
 import scala.collection.JavaConverters._
+import scala.concurrent.ExecutionContext
 import scala.util.control.NonFatal
 
 class PekkoHttpServerTracingSpec extends AnyWordSpecLike with Matchers with ScalaFutures with Inside with InitAndStopKamonAfterAll
@@ -38,8 +38,8 @@ class PekkoHttpServerTracingSpec extends AnyWordSpecLike with Matchers with Scal
 
   import TestWebServer.Endpoints._
 
-  implicit private val system = ActorSystem("http-server-instrumentation-spec")
-  implicit private val executor = system.dispatcher
+  implicit private val system: ActorSystem = ActorSystem("http-server-instrumentation-spec")
+  implicit private val executor: ExecutionContext = system.dispatcher
 
   val (sslSocketFactory, trustManager) = clientSSL()
   val okHttp = new OkHttpClient.Builder()

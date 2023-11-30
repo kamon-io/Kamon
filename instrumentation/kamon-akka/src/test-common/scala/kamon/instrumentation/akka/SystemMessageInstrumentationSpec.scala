@@ -25,13 +25,14 @@ import kamon.instrumentation.akka.ContextTesting._
 import kamon.tag.Lookups._
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.matchers.should.Matchers
-import org.scalatest.wordspec.{AnyWordSpec, AnyWordSpecLike}
+import org.scalatest.wordspec.AnyWordSpecLike
 
+import scala.concurrent.ExecutionContext
 import scala.util.control.NonFatal
 
 class SystemMessageInstrumentationSpec extends TestKit(ActorSystem("ActorSystemMessageInstrumentationSpec")) with AnyWordSpecLike with Matchers
   with BeforeAndAfterAll with ImplicitSender {
-  implicit lazy val executionContext = system.dispatcher
+  implicit lazy val executionContext: ExecutionContext = system.dispatcher
 
   "the system message passing instrumentation" should {
     "capture and propagate the current context while processing the Create message in top level actors" in {

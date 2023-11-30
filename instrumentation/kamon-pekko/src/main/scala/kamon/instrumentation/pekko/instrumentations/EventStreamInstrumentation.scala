@@ -21,6 +21,8 @@ import kamon.instrumentation.pekko.PekkoMetrics
 import kanela.agent.api.instrumentation.InstrumentationBuilder
 import kanela.agent.libs.net.bytebuddy.asm.Advice.{Argument, OnMethodExit, This}
 
+import scala.annotation.static
+
 class EventStreamInstrumentation extends InstrumentationBuilder {
 
   /**
@@ -28,27 +30,35 @@ class EventStreamInstrumentation extends InstrumentationBuilder {
     */
   onType("org.apache.pekko.event.EventStream")
     .mixin(classOf[HasSystem.Mixin])
-    .advise(isConstructor.and(takesArguments(2)), ConstructorAdvice)
-    .advise(method("publish").and(takesArguments(1)), PublishMethodAdvice)
+    .advise(isConstructor.and(takesArguments(2)), classOf[ConstructorAdvice])
+  onType("org.apache.pekko.event.SubchannelClassification")
+    .advise(method("publish").and(takesArguments(1)), classOf[PublishMethodAdvice])
 }
 
-
+class ConstructorAdvice
 object ConstructorAdvice {
 
   @OnMethodExit(suppress = classOf[Throwable])
-  def exit(@This eventStream: HasSystem, @Argument(0) system:ActorSystem): Unit = {
+  @static def exit(@This eventStream: HasSystem, @Argument(0) system:ActorSystem): Unit = {
     eventStream.setSystem(system)
   }
 }
 
+class PublishMethodAdvice
 object PublishMethodAdvice {
 
   @OnMethodExit(suppress = classOf[Throwable])
-  def exit(@This stream:HasSystem, @Argument(0) event: AnyRef):Unit = event match {
-    case _: DeadLetter => PekkoMetrics.forSystem(stream.system.name).deadLetters.increment()
-    case _: UnhandledMessage => PekkoMetrics.forSystem(stream.system.name).unhandledMessages.increment()
-    case _ => ()
-  }
+  @static def exit(@This any: Any, @Argument(0) event: AnyRef):Unit =
+    try {
+      val stream = any.asInstanceOf[HasSystem]
+      event match {
+        case _: DeadLetter => PekkoMetrics.forSystem(stream.system.name).deadLetters.increment()
+        case _: UnhandledMessage => PekkoMetrics.forSystem(stream.system.name).unhandledMessages.increment()
+        case _ => ()
+      }
+    } catch {
+      case _: ClassCastException => ()
+    }
 }
 
 trait HasSystem {

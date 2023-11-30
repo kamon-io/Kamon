@@ -31,6 +31,7 @@ import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
 import org.scalatest.OptionValues
 
+import scala.concurrent.ExecutionContextExecutor
 import scala.concurrent.duration._
 
 class AkkaHttpClientTracingSpec extends AnyWordSpecLike with Matchers with InitAndStopKamonAfterAll with MetricInspection.Syntax
@@ -38,9 +39,9 @@ class AkkaHttpClientTracingSpec extends AnyWordSpecLike with Matchers with InitA
 
   import TestWebServer.Endpoints._
 
-  implicit private val system = ActorSystem("http-client-instrumentation-spec")
-  implicit private val executor = system.dispatcher
-  implicit private val materializer = ActorMaterializer()
+  implicit private val system: ActorSystem = ActorSystem("http-client-instrumentation-spec")
+  implicit private val executor: ExecutionContextExecutor = system.dispatcher
+  implicit private val materializer: ActorMaterializer = ActorMaterializer()
 
   val timeoutTest: FiniteDuration = 5 second
   val interface = "127.0.0.1"

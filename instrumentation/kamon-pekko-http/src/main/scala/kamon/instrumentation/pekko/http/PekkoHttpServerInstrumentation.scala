@@ -1,33 +1,29 @@
 package kamon.instrumentation.pekko.http
 
-import java.util.concurrent.Callable
-import org.apache.pekko.http.scaladsl.marshalling.{ToEntityMarshaller, ToResponseMarshallable, ToResponseMarshaller}
-import org.apache.pekko.http.scaladsl.model.StatusCodes.Redirection
-import org.apache.pekko.http.scaladsl.model.{HttpHeader, HttpRequest, HttpResponse, StatusCode, Uri}
-import org.apache.pekko.http.scaladsl.server.PathMatcher.{Matched, Unmatched}
-import org.apache.pekko.http.scaladsl.server.directives.{BasicDirectives, CompleteOrRecoverWithMagnet, OnSuccessMagnet}
-import org.apache.pekko.http.scaladsl.server.directives.RouteDirectives.reject
-import org.apache.pekko.http.scaladsl.server._
-import org.apache.pekko.http.scaladsl.server.util.Tupler
-import org.apache.pekko.http.scaladsl.util.FastFuture
 import kamon.Kamon
+import kamon.context.Context
 import kamon.instrumentation.pekko.http.HasMatchingContext.PathMatchingContext
-import kamon.instrumentation.context.{HasContext, InvokeWithCapturedContext}
 import kanela.agent.api.instrumentation.InstrumentationBuilder
 import kanela.agent.api.instrumentation.mixin.Initializer
 import kanela.agent.libs.net.bytebuddy.implementation.bind.annotation._
-
-import scala.concurrent.{Batchable, ExecutionContext, Future, Promise}
-import scala.util.control.NonFatal
-import scala.util.{Failure, Success, Try}
-import java.util.regex.Pattern
-import org.apache.pekko.NotUsed
-import org.apache.pekko.http.scaladsl.server.RouteResult.Rejected
-import org.apache.pekko.stream.scaladsl.Flow
-import kamon.context.Context
 import kanela.agent.libs.net.bytebuddy.matcher.ElementMatchers.isPublic
+import org.apache.pekko.NotUsed
+import org.apache.pekko.http.scaladsl.marshalling.{ToEntityMarshaller, ToResponseMarshallable, ToResponseMarshaller}
+import org.apache.pekko.http.scaladsl.model.StatusCodes.Redirection
+import org.apache.pekko.http.scaladsl.model._
+import org.apache.pekko.http.scaladsl.server.PathMatcher.{Matched, Unmatched}
+import org.apache.pekko.http.scaladsl.server.RouteResult.Rejected
+import org.apache.pekko.http.scaladsl.server._
+import org.apache.pekko.http.scaladsl.server.directives.RouteDirectives.reject
+import org.apache.pekko.http.scaladsl.server.directives.{BasicDirectives, CompleteOrRecoverWithMagnet, OnSuccessMagnet}
+import org.apache.pekko.http.scaladsl.server.util.{Tuple, Tupler}
+import org.apache.pekko.stream.scaladsl.Flow
 
+import java.util.concurrent.Callable
+import java.util.regex.Pattern
 import scala.collection.immutable
+import scala.concurrent.Future
+import scala.util.{Failure, Success, Try}
 
 
 class PekkoHttpServerInstrumentation extends InstrumentationBuilder {
@@ -271,7 +267,7 @@ object PathDirectivesRawPathPrefixInterceptor {
   import BasicDirectives._
 
   def rawPathPrefix[T](@Argument(0) matcher: PathMatcher[T]): Directive[T] = {
-    implicit val LIsTuple = matcher.ev
+    implicit val LIsTuple: Tuple[T] = matcher.ev
 
     extract { ctx =>
       val fullPath = ctx.unmatchedPath.toString()
@@ -287,7 +283,7 @@ object PathDirectivesRawPathPrefixInterceptor {
       (ctx, matching)
     } flatMap {
       case (ctx, Matched(rest, values)) =>
-        tprovide(values) & mapRequestContext(_ withUnmatchedPath rest) & mapRouteResult { routeResult =>
+        tprovide[T](values) & mapRequestContext(_ withUnmatchedPath rest) & mapRouteResult { routeResult =>
 
           if(routeResult.isInstanceOf[Rejected])
             ctx.asInstanceOf[HasMatchingContext].popOneMatchingContext()

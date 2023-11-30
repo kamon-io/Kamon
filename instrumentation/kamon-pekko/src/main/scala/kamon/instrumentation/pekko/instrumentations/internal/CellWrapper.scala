@@ -38,16 +38,14 @@ import kamon.instrumentation.context.HasContext
   * will be propagated for all queued messages.
   */
 class CellWrapper(val underlying: Cell) extends Cell {
-  override def sendMessage(msg: Envelope): Unit = {
-    if(msg.isInstanceOf[HasContext]) {
-      val context = msg.asInstanceOf[HasContext].context
-      Kamon.runWithContext(context) {
-        underlying.sendMessage(msg)
-      }
-    }
-    else {
+  override def sendMessage(msg: Envelope): Unit = try {
+    val context = msg.asInstanceOf[HasContext].context
+    Kamon.runWithContext(context) {
       underlying.sendMessage(msg)
     }
+  }
+  catch {
+    case _: ClassCastException => underlying.sendMessage(msg)
   }
 
   override def sendSystemMessage(msg: SystemMessage): Unit =

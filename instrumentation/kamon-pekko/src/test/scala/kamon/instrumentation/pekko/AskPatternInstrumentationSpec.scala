@@ -17,24 +17,24 @@
 package kamon.instrumentation.pekko
 
 
+import com.typesafe.config.ConfigFactory
+import kamon.Kamon
+import kamon.instrumentation.pekko.ContextTesting._
+import kamon.testkit.InitAndStopKamonAfterAll
 import org.apache.pekko.actor._
 import org.apache.pekko.pattern.ask
 import org.apache.pekko.testkit.{EventFilter, ImplicitSender, TestKit}
 import org.apache.pekko.util.Timeout
-import com.typesafe.config.ConfigFactory
-import kamon.Kamon
-import kamon.testkit.InitAndStopKamonAfterAll
-import kamon.instrumentation.pekko.ContextTesting._
-import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
 
+import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
 class AskPatternInstrumentationSpec extends TestKit(ActorSystem("AskPatternInstrumentationSpec")) with AnyWordSpecLike
     with InitAndStopKamonAfterAll with ImplicitSender {
 
-  implicit lazy val ec = system.dispatcher
-  implicit val askTimeout = Timeout(10 millis)
+  implicit lazy val ec: ExecutionContext = system.dispatcher
+  implicit val askTimeout: Timeout = Timeout(10 millis)
 
   // TODO: Make this work with ActorSelections
 
@@ -93,7 +93,7 @@ class AskPatternInstrumentationSpec extends TestKit(ActorSystem("AskPatternInstr
 }
 
 class NoReply extends Actor {
-  def receive = {
+  def receive: Receive = {
     case _ =>
   }
 }

@@ -1,7 +1,6 @@
 package org.apache.pekko.remote.kamon.instrumentation.pekko.remote.internal.remote
 
 import java.nio.ByteBuffer
-
 import org.apache.pekko.remote.artery._
 import org.apache.pekko.actor.ActorSystem
 import org.apache.pekko.serialization.Serialization
@@ -10,6 +9,8 @@ import kamon.context.{BinaryPropagation, Context}
 import kamon.instrumentation.pekko.PekkoRemoteMetrics
 import kamon.instrumentation.context.HasContext
 import kanela.agent.libs.net.bytebuddy.asm.Advice
+
+import scala.annotation.static
 
 
 /**
@@ -25,12 +26,12 @@ class SerializeForArteryAdvice
 object SerializeForArteryAdvice {
 
   @Advice.OnMethodEnter
-  def enter(): Long = {
+  @static def enter(): Long = {
     System.nanoTime()
   }
 
   @Advice.OnMethodExit
-  def exit(@Advice.Argument(0) serialization: Serialization, @Advice.Argument(1) envelope: OutboundEnvelope,
+  @static def exit(@Advice.Argument(0) serialization: Serialization, @Advice.Argument(1) envelope: OutboundEnvelope,
       @Advice.Argument(3) envelopeBuffer: EnvelopeBuffer, @Advice.Enter startTime: Long): Unit = {
 
     val instruments = PekkoRemoteMetrics.serializationInstruments(serialization.system.name)
@@ -75,7 +76,7 @@ object DeserializeForArteryAdvice {
   )
 
   @Advice.OnMethodEnter
-  def exit(@Advice.Argument(5) envelopeBuffer: EnvelopeBuffer): DeserializationInfo = {
+  @static def exit(@Advice.Argument(5) envelopeBuffer: EnvelopeBuffer): DeserializationInfo = {
     val startTime = System.nanoTime()
     val messageBuffer = envelopeBuffer.byteBuffer
     val messageStart = messageBuffer.position()
@@ -102,7 +103,7 @@ object DeserializeForArteryAdvice {
   }
 
   @Advice.OnMethodExit(onThrowable = classOf[Throwable])
-  def exit(@Advice.Argument(0) system: ActorSystem, @Advice.Argument(5) envelopeBuffer: EnvelopeBuffer,
+  @static def exit(@Advice.Argument(0) system: ActorSystem, @Advice.Argument(5) envelopeBuffer: EnvelopeBuffer,
       @Advice.Enter deserializationInfo: DeserializationInfo, @Advice.Thrown error: Throwable): Unit = {
 
     if(error == null) {
@@ -142,7 +143,7 @@ class CaptureContextOnInboundEnvelope
 object CaptureContextOnInboundEnvelope {
 
   @Advice.OnMethodEnter
-  def enter(@Advice.This inboundEnvelope: Any): Unit = {
+  @static def enter(@Advice.This inboundEnvelope: Any): Unit = {
     val lastContext = DeserializeForArteryAdvice.LastDeserializedContext.get()
     if(lastContext != null) {
       inboundEnvelope.asInstanceOf[HasContext].setContext(lastContext)

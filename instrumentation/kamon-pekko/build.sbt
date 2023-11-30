@@ -1,7 +1,7 @@
 // The Common configuration should always depend on the latest version of Pekko. All code in the Common configuration
 // should be source compatible with all Pekko versions.
 inConfig(Compile)(Defaults.compileSettings ++ Seq(
-  crossScalaVersions := Seq(`scala_2.12_version`, `scala_2.13_version`)
+  crossScalaVersions := Seq(`scala_2.12_version`, `scala_2.13_version`, scala_3_version)
 ))
 
 val pekkoVersion = "1.0.1"
@@ -33,5 +33,5 @@ lazy val baseTestSettings = Seq(
 )
 
 inConfig(Test)(Defaults.testSettings ++ instrumentationSettings ++ baseTestSettings ++ Seq(
-  crossScalaVersions := Seq(`scala_2.12_version`, `scala_2.13_version`)
+  crossScalaVersions := Seq(`scala_2.12_version`, `scala_2.13_version`, scala_3_version),
 ))

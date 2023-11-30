@@ -27,6 +27,7 @@ import kanela.agent.api.instrumentation.InstrumentationBuilder
 import kanela.agent.libs.net.bytebuddy.asm.Advice.{Argument, OnMethodExit, Origin, Return}
 import org.slf4j.LoggerFactory
 
+import scala.annotation.static
 import scala.compat.Platform.EOL
 import scala.concurrent.Future
 
@@ -52,7 +53,7 @@ object AskPatternInstrumentation {
   )
 
   @OnMethodExit(suppress = classOf[Throwable])
-  def onExit(@Origin origin: String, @Return future: Future[AnyRef], @Argument(0) actor: ActorRef, @Argument(2) timeout: Timeout) = {
+  @static def onExit(@Origin origin: String, @Return future: Future[AnyRef], @Argument(0) actor: ActorRef, @Argument(2) timeout: Timeout) = {
 
     if(PekkoPrivateAccess.isInternalAndActiveActorRef(actor) && Kamon.currentContext().nonEmpty()) {
       PekkoInstrumentation.settings().askPatternWarning match {

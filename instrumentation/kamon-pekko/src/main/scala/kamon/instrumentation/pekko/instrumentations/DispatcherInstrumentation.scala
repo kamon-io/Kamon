@@ -17,7 +17,6 @@
 package kamon.instrumentation.pekko.instrumentations
 
 import java.util.concurrent.{AbstractExecutorService, Callable, ExecutorService, ThreadFactory, TimeUnit}
-
 import org.apache.pekko.dispatch.{DefaultExecutorServiceConfigurator, DispatcherPrerequisites, Dispatchers, ExecutorServiceFactory, ExecutorServiceFactoryProvider, ForkJoinExecutorConfigurator, PinnedDispatcherConfigurator, ThreadPoolExecutorConfigurator}
 import kamon.Kamon
 import kamon.instrumentation.pekko.PekkoInstrumentation
@@ -27,6 +26,8 @@ import kamon.tag.TagSet
 import kanela.agent.api.instrumentation.InstrumentationBuilder
 import kanela.agent.libs.net.bytebuddy.asm.Advice
 import kanela.agent.libs.net.bytebuddy.implementation.bind.annotation.{Argument, SuperCall, This}
+
+import scala.annotation.static
 
 class DispatcherInstrumentation extends InstrumentationBuilder {
 
@@ -38,7 +39,7 @@ class DispatcherInstrumentation extends InstrumentationBuilder {
     onSubTypesOf("org.apache.pekko.dispatch.ExecutorServiceFactory")
       .mixin(classOf[HasDispatcherPrerequisites.Mixin])
       .mixin(classOf[HasDispatcherName.Mixin])
-      .intercept(method("createExecutorService"), InstrumentNewExecutorServiceOnPekko)
+      .intercept(method("createExecutorService"), classOf[InstrumentNewExecutorServiceOnPekko])
 
     /**
       * First step on getting the Actor System name is to read it from the prerequisites instance passed to the
@@ -50,7 +51,7 @@ class DispatcherInstrumentation extends InstrumentationBuilder {
         "org.apache.pekko.dispatch.PinnedDispatcherConfigurator",
         "org.apache.pekko.dispatch.DefaultExecutorServiceConfigurator")
       .mixin(classOf[HasDispatcherPrerequisites.Mixin])
-      .advise(isConstructor, CaptureDispatcherPrerequisitesOnExecutorConfigurator)
+      .advise(isConstructor, classOf[CaptureDispatcherPrerequisitesOnExecutorConfigurator])
 
     /**
       * Copies the Actor System and Dispatcher names to the ExecutorServiceFactory instances for the two types of
@@ -62,21 +63,22 @@ class DispatcherInstrumentation extends InstrumentationBuilder {
         "org.apache.pekko.dispatch.PinnedDispatcherConfigurator",
         "org.apache.pekko.dispatch.DefaultExecutorServiceConfigurator")
       .mixin(classOf[HasDispatcherName.Mixin])
-      .advise(method("createExecutorServiceFactory"), CopyDispatcherInfoToExecutorServiceFactory)
+      .advise(method("createExecutorServiceFactory"), classOf[CopyDispatcherInfoToExecutorServiceFactory])
 
     /**
       * This ensures that the ActorSystem name is not lost when creating PinnedDispatcher instances.
       */
     onType("org.apache.pekko.dispatch.ThreadPoolConfig")
       .mixin(classOf[HasDispatcherPrerequisites.Mixin])
-      .advise(method("copy"), ThreadPoolConfigCopyAdvice)
+      .advise(method("copy"), classOf[ThreadPoolConfigCopyAdvice])
 
 }
 
+class CaptureDispatcherPrerequisitesOnExecutorConfigurator
 object CaptureDispatcherPrerequisitesOnExecutorConfigurator {
 
   @Advice.OnMethodExit(suppress = classOf[Throwable])
-  def exit(@Advice.This configurator: Any, @Advice.Argument(1) prerequisites: DispatcherPrerequisites): Unit = {
+  @static def exit(@Advice.This configurator: Any, @Advice.Argument(1) prerequisites: DispatcherPrerequisites): Unit = {
     configurator match {
       case fjec: ForkJoinExecutorConfigurator => fjec.asInstanceOf[HasDispatcherPrerequisites].setDispatcherPrerequisites(prerequisites)
       case tpec: ThreadPoolExecutorConfigurator => tpec.threadPoolConfig.asInstanceOf[HasDispatcherPrerequisites].setDispatcherPrerequisites(prerequisites)
@@ -87,19 +89,21 @@ object CaptureDispatcherPrerequisitesOnExecutorConfigurator {
   }
 }
 
+class CopyDispatcherInfoToExecutorServiceFactory
 object CopyDispatcherInfoToExecutorServiceFactory {
 
   @Advice.OnMethodExit
-  def exit(@Advice.This poolConfig: HasDispatcherPrerequisites, @Advice.Argument(0) dispatcherName: String, @Advice.Return factory: Any): Unit = {
+  @static def exit(@Advice.This poolConfig: HasDispatcherPrerequisites, @Advice.Argument(0) dispatcherName: String, @Advice.Return factory: Any): Unit = {
     val factoryWithMixins = factory.asInstanceOf[HasDispatcherName with HasDispatcherPrerequisites]
     factoryWithMixins.setDispatcherPrerequisites(poolConfig.dispatcherPrerequisites)
     factoryWithMixins.setDispatcherName(dispatcherName)
   }
 }
 
+class InstrumentNewExecutorServiceOnPekko
 object InstrumentNewExecutorServiceOnPekko {
 
-  def around(@This factory: HasDispatcherPrerequisites with HasDispatcherName, @SuperCall callable: Callable[ExecutorService]): ExecutorService = {
+  @static def around(@This factory: HasDispatcherPrerequisites with HasDispatcherName, @SuperCall callable: Callable[ExecutorService]): ExecutorService = {
     val executor = callable.call()
     val actorSystemName = factory.dispatcherPrerequisites.settings.name
     val dispatcherName = factory.dispatcherName
@@ -119,10 +123,11 @@ object InstrumentNewExecutorServiceOnPekko {
   }
 }
 
+class ThreadPoolConfigCopyAdvice
 object ThreadPoolConfigCopyAdvice {
 
   @Advice.OnMethodExit
-  def exit(@Advice.This original: Any, @Advice.Return copy: Any): Unit = {
+  @static def exit(@Advice.This original: Any, @Advice.Return copy: Any): Unit = {
     copy.asInstanceOf[HasDispatcherPrerequisites].setDispatcherPrerequisites(original.asInstanceOf[HasDispatcherPrerequisites].dispatcherPrerequisites)
     copy.asInstanceOf[HasDispatcherName].setDispatcherName(original.asInstanceOf[HasDispatcherName].dispatcherName)
   }
