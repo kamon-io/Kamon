@@ -472,6 +472,10 @@ def akkaStreamVersion(scalaVersion: String) = scalaVersion match {
   case "3" => "2.7.0"
   case _   => "2.5.32"
 }
+def akkaGrpcRuntimeVersion(scalaVersion: String) = scalaVersion match {
+  case "3" => "2.3.0"
+  case _   => "2.1.3"
+}
 
 def versionedScalaSourceDirectories(sourceDir: File, scalaVersion: String): List[File] =
   scalaVersion match {
@@ -550,7 +554,7 @@ lazy val `kamon-pekko-grpc` = (project in file("instrumentation/kamon-pekko-grpc
   .settings(instrumentationSettings)
   .settings(Seq(
     PB.additionalDependencies := Seq.empty,
-    crossScalaVersions := Seq(`scala_2.12_version`, `scala_2.13_version`),
+    crossScalaVersions := Seq(`scala_2.12_version`, `scala_2.13_version`, scala_3_version),
     libraryDependencies ++= Seq(
       kanelaAgent % "provided",
 
@@ -575,18 +579,18 @@ lazy val `kamon-akka-grpc` = (project in file("instrumentation/kamon-akka-grpc")
   .settings(instrumentationSettings)
   .settings(Seq(
     PB.additionalDependencies := Seq.empty,
-    crossScalaVersions := Seq(`scala_2.12_version`, `scala_2.13_version`),
+    crossScalaVersions := Seq(`scala_2.12_version`, `scala_2.13_version`, scala_3_version),
     libraryDependencies ++= Seq(
       kanelaAgent % "provided",
 
       "com.typesafe.akka" %% "akka-http"            % akkaHttpVersion(scalaBinaryVersion.value) % "provided",
       "com.typesafe.akka" %% "akka-http2-support"   % akkaHttpVersion(scalaBinaryVersion.value)  % "provided",
-      "com.typesafe.akka" %% "akka-stream"          % "2.5.32" % "provided",
-      "com.typesafe.akka" %% "akka-discovery"       % "2.5.32" % "provided",
+      "com.typesafe.akka" %% "akka-stream"          % akkaStreamVersion(scalaBinaryVersion.value) % "provided",
+      "com.typesafe.akka" %% "akka-discovery"       % akkaStreamVersion(scalaBinaryVersion.value) % "provided",
 
       // gRPC-specific dependencies provided by the sbt-akka-grpc plugin. We
       "com.thesamet.scalapb"    %% "scalapb-runtime"   % "0.11.8" % "provided",
-      "com.lightbend.akka.grpc" %% "akka-grpc-runtime" % "2.1.3"  % "provided",
+      "com.lightbend.akka.grpc" %% "akka-grpc-runtime" % akkaGrpcRuntimeVersion(scalaBinaryVersion.value)  % "provided",
       "io.grpc"                 %  "grpc-stub"         % "1.43.2" % "provided",
 
       scalatest % "test",

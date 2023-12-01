@@ -26,13 +26,14 @@ import org.scalatest.concurrent.Eventually
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 
+import scala.concurrent.ExecutionContextExecutor
 import scala.concurrent.duration._
 
 class PekkoGrpcTracingSpec extends AnyWordSpec with InitAndStopKamonAfterAll with Matchers with Eventually
     with TestSpanReporter with OptionValues {
 
-  implicit val system = ActorSystem("pekko-grpc-instrumentation")
-  implicit val ec = system.dispatcher
+  implicit val system: ActorSystem = ActorSystem("pekko-grpc-instrumentation")
+  implicit val ec: ExecutionContextExecutor = system.dispatcher
 
   val greeterService = GreeterServiceHandler(new GreeterServiceImpl())
   val serverBinding = Http()
@@ -55,10 +56,5 @@ class PekkoGrpcTracingSpec extends AnyWordSpec with InitAndStopKamonAfterAll wit
         span.metricTags.get(plain("rpc.method")) shouldBe "SayHello"
       }
     }
-  }
-
-  override protected def beforeAll(): Unit = {
-    super.beforeAll()
-    enableFastSpanFlushing()
   }
 }
