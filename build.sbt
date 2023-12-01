@@ -550,7 +550,7 @@ lazy val `kamon-pekko-grpc` = (project in file("instrumentation/kamon-pekko-grpc
   .settings(instrumentationSettings)
   .settings(Seq(
     PB.additionalDependencies := Seq.empty,
-    crossScalaVersions := Seq(`scala_2.12_version`, `scala_2.13_version`),
+    crossScalaVersions := Seq(`scala_2.12_version`, `scala_2.13_version`, scala_3_version),
     libraryDependencies ++= Seq(
       kanelaAgent % "provided",
 
