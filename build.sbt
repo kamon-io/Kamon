@@ -941,7 +941,9 @@ lazy val bundle = (project in file("bundle"))
   .aggregate(
     `kamon-bundle`,
     `kamon-bundle_2_11`,
-    `kamon-runtime-attacher`
+    `kamon-bundle-3`,
+    `kamon-runtime-attacher`,
+
   )
 
 import com.lightbend.sbt.javaagent.Modules
@@ -1120,6 +1122,7 @@ lazy val `kamon-bundle-3` = (project in file("bundle/kamon-bundle-3"))
   .settings(commonBundleSettings)
   .settings(ideSkipProject: _*)
   .settings(
+    scalaVersion := scala_3_version,
     crossScalaVersions := Seq(scala_3_version)
   )
   .dependsOn(
