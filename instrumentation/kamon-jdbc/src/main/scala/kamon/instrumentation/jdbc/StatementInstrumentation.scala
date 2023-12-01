@@ -18,7 +18,6 @@ package kamon.instrumentation.jdbc
 
 import java.sql.PreparedStatement
 import java.util.Properties
-
 import kamon.Kamon
 import kamon.context.Storage.Scope
 import kamon.instrumentation.jdbc.advisor._
@@ -30,6 +29,8 @@ import kanela.agent.libs.net.bytebuddy.asm.Advice
 
 import scala.util.Try
 import kanela.agent.libs.net.bytebuddy.matcher.ElementMatchers._
+
+import scala.annotation.static
 
 class StatementInstrumentation extends InstrumentationBuilder {
 
@@ -123,10 +124,11 @@ object HasStatementSQL {
   }
 }
 
+class DriverConnectAdvice
 object DriverConnectAdvice {
 
   @Advice.OnMethodExit
-  def exit(@Advice.Argument(0) url: String, @Advice.Argument(1) properties: Properties, @Advice.Return connection: Any): Unit = {
+  @static def exit(@Advice.Argument(0) url: String, @Advice.Argument(1) properties: Properties, @Advice.Return connection: Any): Unit = {
 
     // The connection could be null if there is more than one registered driver and the DriverManager is looping
     // through them to figure out which one accepts the URL.
@@ -147,38 +149,42 @@ object DriverConnectAdvice {
   }
 }
 
+class CreateStatementAdvice
 object CreateStatementAdvice {
 
   @Advice.OnMethodExit
-  def exit(@Advice.This connection: Any, @Advice.Return statement: Any): Unit = {
+  @static def exit(@Advice.This connection: Any, @Advice.Return statement: Any): Unit = {
     statement.asInstanceOf[HasDatabaseTags].setDatabaseTags(connection.asInstanceOf[HasDatabaseTags].databaseTags())
     statement.asInstanceOf[HasConnectionPoolTelemetry].setConnectionPoolTelemetry(connection.asInstanceOf[HasConnectionPoolTelemetry].connectionPoolTelemetry)
   }
 }
 
+class CreatePreparedStatementAdvice
 object CreatePreparedStatementAdvice {
 
   @Advice.OnMethodExit
-  def exit(@Advice.This connection: Any, @Advice.Argument(0) sql: String, @Advice.Return statement: Any): Unit = {
+  @static def exit(@Advice.This connection: Any, @Advice.Argument(0) sql: String, @Advice.Return statement: Any): Unit = {
     statement.asInstanceOf[HasDatabaseTags].setDatabaseTags(connection.asInstanceOf[HasDatabaseTags].databaseTags())
     statement.asInstanceOf[HasConnectionPoolTelemetry].setConnectionPoolTelemetry(statement.asInstanceOf[HasConnectionPoolTelemetry].connectionPoolTelemetry)
     statement.asInstanceOf[HasStatementSQL].setStatementSQL(sql)
   }
 }
 
+class ConnectionIsValidAdvice
 object ConnectionIsValidAdvice {
   import Hooks.PreStart
 
   @Advice.OnMethodEnter
-  def enter(): Scope =
+  @static def enter(): Scope =
     Kamon.storeContext(Kamon.currentContext().withEntry(PreStart.Key, PreStart.updateOperationName("isValid")))
 
   @Advice.OnMethodExit
-  def exit(@Advice.Enter scope: Scope): Unit =
+  @static def exit(@Advice.Enter scope: Scope): Unit =
     scope.close()
 }
 
 
+class PgConnectionIsAliveAdvice
 object PgConnectionIsAliveAdvice {
 
   trait PgConnectionPrivateAccess {
@@ -188,7 +194,7 @@ object PgConnectionIsAliveAdvice {
   }
 
   @Advice.OnMethodEnter
-  def enter(@Advice.This connection: Any): Unit = {
+  @static def enter(@Advice.This connection: Any): Unit = {
     if(connection != null) {
       val statement = connection.asInstanceOf[PgConnectionPrivateAccess].getCheckConnectionStatement()
 
