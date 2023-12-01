@@ -1075,6 +1075,7 @@ lazy val `kamon-bundle-dependencies-3` = (project in file("bundle/kamon-bundle-d
     crossScalaVersions := Seq(scala_3_version)
   )
   .dependsOn(
+    `kamon-runtime-attacher`,
     `kamon-status-page`,
     `kamon-instrumentation-common`,
     `kamon-executors`,
