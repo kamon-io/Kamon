@@ -281,6 +281,7 @@ lazy val `kamon-logback` = (project in file("instrumentation/kamon-logback"))
   .enablePlugins(JavaAgent)
   .settings(instrumentationSettings)
   .settings(
+    crossScalaVersions += scala_3_version,
     libraryDependencies ++= Seq(
       kanelaAgent % "provided",
       logbackClassic % "provided",
@@ -289,25 +290,30 @@ lazy val `kamon-logback` = (project in file("instrumentation/kamon-logback"))
   ).dependsOn(`kamon-core`, `kamon-instrumentation-common`, `kamon-testkit` % "test")
 
 
+def slickVersion(scalaVersion: String) = scalaVersion match {
+  case "3" => "3.5.0-M5"
+  case x   => "3.3.2"
+}
 lazy val `kamon-jdbc` = (project in file("instrumentation/kamon-jdbc"))
   .disablePlugins(AssemblyPlugin)
   .enablePlugins(JavaAgent)
   .settings(instrumentationSettings)
   .settings(
+    crossScalaVersions += scala_3_version, //
     libraryDependencies ++= Seq(
       jsqlparser,
       kanelaAgent % "provided",
       "com.zaxxer"                % "HikariCP"                  % "4.0.3" % "provided",
       "org.mariadb.jdbc"          % "mariadb-java-client"       % "2.2.6" % "provided",
-      "com.typesafe.slick"       %% "slick"                     % "3.3.2" % "provided",
+      "com.typesafe.slick"       %% "slick"                     % slickVersion(scalaBinaryVersion.value) % "provided",
       "org.postgresql"            % "postgresql"                % "42.2.5" % "provided",
 
       scalatest % "test",
       logbackClassic % "test",
-      "com.typesafe.slick"       %% "slick-hikaricp"            % "3.3.2" % "test",
-      "com.h2database"            % "h2"                        % "1.4.182" % "test",
+      "com.typesafe.slick"       %% "slick-hikaricp"            % slickVersion(scalaBinaryVersion.value) % "test",
+      "com.h2database"            % "h2"                        % "1.4.192" % "test",
       "org.xerial"                % "sqlite-jdbc"               % "3.34.0" % "test",
-      "ch.vorburger.mariaDB4j"    % "mariaDB4j"                 % "2.4.0" % "test"
+      "ch.vorburger.mariaDB4j"    % "mariaDB4j"                 % "2.5.3" % "test"
     )
   ).dependsOn(`kamon-core`, `kamon-executors`, `kamon-testkit` % "test")
 
@@ -368,6 +374,7 @@ lazy val `kamon-cassandra` = (project in file("instrumentation/kamon-cassandra")
   .disablePlugins(AssemblyPlugin)
   .enablePlugins(JavaAgent)
   .settings(instrumentationSettings)
+  .settings(crossScalaVersions += scala_3_version)
   .dependsOn(`kamon-core`, `kamon-instrumentation-common`, `kamon-testkit` % "test", `kamon-executors`)
 
 lazy val `kamon-elasticsearch` = (project in file("instrumentation/kamon-elasticsearch"))
@@ -375,6 +382,7 @@ lazy val `kamon-elasticsearch` = (project in file("instrumentation/kamon-elastic
   .enablePlugins(JavaAgent)
   .settings(instrumentationSettings)
   .settings(
+    crossScalaVersions += scala_3_version,
     Test / run / fork := true,
     libraryDependencies ++= Seq(
       kanelaAgent % "provided",
@@ -382,8 +390,8 @@ lazy val `kamon-elasticsearch` = (project in file("instrumentation/kamon-elastic
       "org.elasticsearch.client" % "elasticsearch-rest-high-level-client" % "7.9.1" % "provided",
       scalatest % "test",
       logbackClassic % "test",
-      "com.dimafeng" %% "testcontainers-scala" % "0.39.3" % "test",
-      "com.dimafeng" %% "testcontainers-scala-elasticsearch" % "0.39.3" % "test"
+      "com.dimafeng" %% "testcontainers-scala" % "0.41.0" % "test",
+      "com.dimafeng" %% "testcontainers-scala-elasticsearch" % "0.41.0" % "test"
     )
   ).dependsOn(`kamon-core`, `kamon-instrumentation-common`, `kamon-testkit` % "test")
 
@@ -392,6 +400,7 @@ lazy val `kamon-spring` = (project in file("instrumentation/kamon-spring"))
   .enablePlugins(JavaAgent)
   .settings(instrumentationSettings)
   .settings(
+    crossScalaVersions += scala_3_version,
     Test / run / fork := true,
     libraryDependencies ++= Seq(
       kanelaAgent % "provided",
@@ -616,6 +625,7 @@ lazy val `kamon-okhttp` = (project in file("instrumentation/kamon-okhttp"))
   .enablePlugins(JavaAgent)
   .settings(instrumentationSettings)
   .settings(
+    crossScalaVersions += scala_3_version,
     libraryDependencies ++= Seq(
       kanelaAgent % "provided",
       "com.squareup.okhttp3"      % "okhttp"                    % "4.10.0" % "provided",
@@ -718,6 +728,7 @@ lazy val `kamon-aws-sdk` = (project in file("instrumentation/kamon-aws-sdk"))
   .enablePlugins(JavaAgent)
   .settings(instrumentationSettings)
   .settings(
+    crossScalaVersions += `scala_3_version`,
     libraryDependencies ++= Seq(
       kanelaAgent % "provided",
       "com.amazonaws" % "aws-java-sdk-lambda" % "1.12.225" % "provided",
@@ -1050,6 +1061,45 @@ lazy val `kamon-bundle-dependencies-2-12-and-up` = (project in file("bundle/kamo
     `kamon-alpakka-kafka`
   )
 
+/**
+  *   Add a reference here to all the project dependencies that can be built
+  *   for 3
+  */
+lazy val `kamon-bundle-dependencies-3` = (project in file("bundle/kamon-bundle-dependencies-3"))
+  .disablePlugins(AssemblyPlugin)
+  .settings(noPublishing: _*)
+  .settings(ideSkipProject: _*)
+  .settings(
+    crossScalaVersions := Seq(scala_3_version)
+  )
+  .dependsOn(
+    `kamon-status-page`,
+    `kamon-instrumentation-common`,
+    `kamon-executors`,
+    `kamon-scala-future`,
+    `kamon-logback`,
+    `kamon-jdbc`,
+    `kamon-kafka`,
+    `kamon-cassandra`,
+    `kamon-elasticsearch`,
+    `kamon-spring`,
+    `kamon-annotation`,
+    `kamon-annotation-api`,
+    `kamon-system-metrics`,
+    `kamon-akka`,
+    `kamon-akka-http`,
+    `kamon-akka-grpc`,
+    `kamon-redis`,
+    `kamon-okhttp`,
+    `kamon-caffeine`,
+    `kamon-aws-sdk`,
+    `kamon-cats-io-3`,
+    `kamon-pekko`,
+    `kamon-pekko-http`,
+    `kamon-pekko-grpc`,
+    `kamon-tapir`
+  )
+
 lazy val `kamon-bundle` = (project in file("bundle/kamon-bundle"))
   .enablePlugins(AssemblyPlugin)
   .settings(commonBundleSettings)
@@ -1063,6 +1113,18 @@ lazy val `kamon-bundle` = (project in file("bundle/kamon-bundle"))
   .dependsOn(
     `kamon-core`,
     `kamon-bundle-dependencies-2-12-and-up` % "shaded"
+  )
+
+lazy val `kamon-bundle-3` = (project in file("bundle/kamon-bundle-3"))
+  .enablePlugins(AssemblyPlugin)
+  .settings(commonBundleSettings)
+  .settings(ideSkipProject: _*)
+  .settings(
+    crossScalaVersions := Seq(scala_3_version)
+  )
+  .dependsOn(
+    `kamon-core`,
+    `kamon-bundle-dependencies-3` % "shaded"
   )
 
 lazy val `kamon-bundle_2_11` = (project in file("bundle/kamon-bundle_2.11"))

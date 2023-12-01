@@ -36,7 +36,6 @@ class OkHttpTracingInstrumentationSpec extends AnyWordSpec
   with Matchers
   with Eventually
   with SpanSugar
-  with InitAndStopKamonAfterAll
   with BeforeAndAfterEach
   with TestSpanReporter
   with JettySupport
@@ -281,6 +280,7 @@ class OkHttpTracingInstrumentationSpec extends AnyWordSpec
   }
 
   override protected def beforeAll(): Unit = {
+    Kamon.init()
     super.beforeAll()
     applyConfig(
       s"""
@@ -293,8 +293,6 @@ class OkHttpTracingInstrumentationSpec extends AnyWordSpec
          |  }
          |}
          |""".stripMargin)
-    enableFastSpanFlushing()
-    sampleAlways()
 
     startServer()
   }
@@ -302,6 +300,7 @@ class OkHttpTracingInstrumentationSpec extends AnyWordSpec
   override protected def afterAll(): Unit = {
     stopServer()
     super.afterAll()
+    Kamon.stop()
   }
 
   override protected def beforeEach(): Unit = {
