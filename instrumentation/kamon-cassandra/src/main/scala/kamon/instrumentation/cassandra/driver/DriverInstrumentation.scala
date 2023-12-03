@@ -33,6 +33,7 @@ import kanela.agent.libs.net.bytebuddy.asm.Advice
 
 import java.util.concurrent.CompletionStage
 import java.util.function.BiConsumer
+import scala.annotation.static
 
 class DriverInstrumentation extends InstrumentationBuilder {
 
@@ -51,12 +52,12 @@ class DriverInstrumentation extends InstrumentationBuilder {
     */
   onType("com.datastax.driver.core.HostConnectionPool")
     .advise(method("borrowConnection"), classOf[BorrowAdvice])
-    .advise(method("trashConnection"), TrashConnectionAdvice)
-    .advise(method("addConnectionIfUnderMaximum"), CreateConnectionAdvice)
-    .advise(method("onConnectionDefunct"), ConnectionDefunctAdvice)
-    .advise(isConstructor, PoolConstructorAdvice)
-    .advise(method("initAsync"), InitPoolAdvice)
-    .advise(method("closeAsync"), PoolCloseAdvice)
+    .advise(method("trashConnection"), classOf[TrashConnectionAdvice])
+    .advise(method("addConnectionIfUnderMaximum"), classOf[CreateConnectionAdvice])
+    .advise(method("onConnectionDefunct"), classOf[ConnectionDefunctAdvice])
+    .advise(isConstructor, classOf[PoolConstructorAdvice])
+    .advise(method("initAsync"), classOf[InitPoolAdvice])
+    .advise(method("closeAsync"), classOf[PoolCloseAdvice])
     .mixin(classOf[HasPoolMetrics.Mixin])
 
   /**
@@ -66,18 +67,18 @@ class DriverInstrumentation extends InstrumentationBuilder {
     * to be used for further fetches
     */
   onType("com.datastax.driver.core.RequestHandler$SpeculativeExecution")
-    .advise(method("query"), QueryExecutionAdvice)
-    .advise(method("write"), QueryWriteAdvice)
-    .advise(method("onException"), OnExceptionAdvice)
-    .advise(method("onTimeout"), OnTimeoutAdvice)
-    .advise(method("onSet"), OnSetAdvice)
+    .advise(method("query"), classOf[QueryExecutionAdvice])
+    .advise(method("write"), classOf[QueryWriteAdvice])
+    .advise(method("onException"), classOf[OnExceptionAdvice])
+    .advise(method("onTimeout"), classOf[OnTimeoutAdvice])
+    .advise(method("onSet"), classOf[OnSetAdvice])
     .mixin(classOf[HasContext.MixinWithInitializer])
 
   onSubTypesOf("com.datastax.driver.core.Message$Response")
     .mixin(classOf[HasContext.MixinWithInitializer])
 
   onType("com.datastax.driver.core.ArrayBackedResultSet")
-    .advise(method("fromMessage"), OnResultSetConstruction)
+    .advise(method("fromMessage"), classOf[OnResultSetConstruction])
 
   /**
     * In order for fetchMore execution to be a sibling of original execution
@@ -86,7 +87,7 @@ class DriverInstrumentation extends InstrumentationBuilder {
   onType("com.datastax.driver.core.ArrayBackedResultSet$MultiPage")
     .mixin(classOf[HasContext.MixinWithInitializer])
   onType("com.datastax.driver.core.ArrayBackedResultSet$MultiPage")
-    .advise(method("queryNextPage"), OnFetchMore)
+    .advise(method("queryNextPage"), classOf[OnFetchMore])
 
   /**
     * Query metrics are tagged with target information (based on config)
@@ -94,7 +95,7 @@ class DriverInstrumentation extends InstrumentationBuilder {
     */
   onType("com.datastax.driver.core.Host")
     .mixin(classOf[HasPoolMetrics.Mixin])
-    .advise(method("setLocationInfo"), HostLocationAdvice)
+    .advise(method("setLocationInfo"), classOf[HostLocationAdvice])
 
 
   /**
@@ -104,8 +105,8 @@ class DriverInstrumentation extends InstrumentationBuilder {
       "com.datastax.oss.driver.internal.core.cql.CqlPrepareHandler",
       "com.datastax.oss.driver.internal.core.cql.CqlRequestHandler")
     .mixin(classOf[HasContext.Mixin])
-    .advise(isConstructor(), OnRequestHandlerConstructorAdvice)
-    .advise(method("onThrottleReady"), OnThrottleReadyAdvice)
+    .advise(isConstructor(), classOf[OnRequestHandlerConstructorAdvice])
+    .advise(method("onThrottleReady"), classOf[OnThrottleReadyAdvice])
 
 }
 
@@ -116,10 +117,11 @@ object DriverInstrumentation {
   }
 }
 
+class OnRequestHandlerConstructorAdvice
 object OnRequestHandlerConstructorAdvice {
 
   @Advice.OnMethodExit()
-  def exit(@Advice.This requestHandler: HasContext, @Advice.Argument(0) req: Any): Unit = {
+  @static def exit(@Advice.This requestHandler: HasContext, @Advice.Argument(0) req: Any): Unit = {
     val (operationName, statement) = req match {
       case pr: PrepareRequest => (QueryOperations.QueryPrepareOperationName, pr.getQuery())
       case ss: cql.SimpleStatement => (QueryOperations.QueryOperationName, ss.getQuery())
@@ -158,10 +160,11 @@ object OnRequestHandlerConstructorAdvice {
   }
 }
 
+class OnThrottleReadyAdvice
 object OnThrottleReadyAdvice {
 
   @Advice.OnMethodEnter()
-  def enter(@Advice.This requestHandler: HasContext): Unit = {
+  @static def enter(@Advice.This requestHandler: HasContext): Unit = {
     val querySpan = requestHandler.context.get(Span.Key)
     querySpan.mark("cassandra.throttle.ready")
   }

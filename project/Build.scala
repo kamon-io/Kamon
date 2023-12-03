@@ -138,7 +138,8 @@ object BaseProject extends AutoPlugin {
     crossScalaVersions := Seq(
       autoImport.`scala_2.11_version`,
       autoImport.`scala_2.12_version`,
-      autoImport.`scala_2.13_version`
+      autoImport.`scala_2.13_version`,
+      autoImport.`scala_3_version`
     ),
     javacOptions := Seq(
       "-source", "1.8",

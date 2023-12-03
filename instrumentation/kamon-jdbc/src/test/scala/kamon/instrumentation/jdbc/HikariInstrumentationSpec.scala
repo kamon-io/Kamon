@@ -17,7 +17,6 @@ package kamon.instrumentation.jdbc
 
 import java.sql.SQLException
 import java.util.concurrent.Executors
-
 import com.typesafe.config.ConfigFactory
 import com.zaxxer.hikari.{HikariConfig, HikariDataSource}
 import kamon.Kamon
@@ -30,7 +29,7 @@ import org.scalatest.time.SpanSugar
 import org.scalatest.wordspec.AnyWordSpec
 import org.scalatest.{BeforeAndAfterEach, OptionValues}
 
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ExecutionContext, ExecutionContextExecutor}
 
 class HikariInstrumentationSpec extends AnyWordSpec
   with Matchers
@@ -44,7 +43,7 @@ class HikariInstrumentationSpec extends AnyWordSpec
   with OptionValues {
 
   import HikariInstrumentationSpec.{createH2Pool, createSQLitePool}
-  implicit val parallelQueriesContext = ExecutionContext.fromExecutor(Executors.newFixedThreadPool(16))
+  implicit val parallelQueriesContext: ExecutionContextExecutor = ExecutionContext.fromExecutor(Executors.newFixedThreadPool(16))
 
   override def beforeEach() = testSpanReporter().clear()
 

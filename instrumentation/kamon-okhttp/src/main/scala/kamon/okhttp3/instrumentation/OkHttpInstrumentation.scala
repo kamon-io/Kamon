@@ -20,6 +20,8 @@ import kanela.agent.api.instrumentation.InstrumentationBuilder
 import kanela.agent.libs.net.bytebuddy.asm.Advice
 import okhttp3.OkHttpClient
 
+import scala.annotation.static
+
 class OkHttpInstrumentation extends InstrumentationBuilder {
 
   /**
@@ -41,7 +43,7 @@ object OkHttpClientBuilderAdvisor {
   import scala.collection.JavaConverters._
 
   @Advice.OnMethodEnter(suppress = classOf[Throwable])
-  def addKamonInterceptor(@Advice.Argument(0) builder: OkHttpClient.Builder): Unit = {
+  @static def addKamonInterceptor(@Advice.Argument(0) builder: OkHttpClient.Builder): Unit = {
     val interceptors = builder.networkInterceptors.asScala
     if (!interceptors.exists(_.isInstanceOf[KamonTracingInterceptor])) {
       builder.addNetworkInterceptor(new KamonTracingInterceptor)

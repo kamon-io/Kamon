@@ -32,7 +32,7 @@ import org.scalatest.{BeforeAndAfterEach, OptionValues}
 import java.sql.{Connection, DriverManager, ResultSet}
 import java.time.Duration
 import java.util.concurrent.Executors
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{ExecutionContext, ExecutionContextExecutor, Future}
 import scala.util.{Failure, Success, Try}
 
 class StatementInstrumentationSpec extends AnyWordSpec
@@ -47,7 +47,7 @@ class StatementInstrumentationSpec extends AnyWordSpec
   with InitAndStopKamonAfterAll
   with TestSpanReporter {
 
-  implicit val parallelQueriesExecutor = ExecutionContext.fromExecutor(Executors.newFixedThreadPool(10))
+  implicit val parallelQueriesExecutor: ExecutionContextExecutor = ExecutionContext.fromExecutor(Executors.newFixedThreadPool(10))
 
 
   override protected def beforeAll(): Unit = {

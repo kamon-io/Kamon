@@ -24,10 +24,13 @@ import kamon.instrumentation.cassandra.CassandraInstrumentation
 import kamon.util.CallingThreadExecutionContext
 import kanela.agent.libs.net.bytebuddy.asm.Advice
 
+import scala.annotation.static
+
+class PoolConstructorAdvice
 object PoolConstructorAdvice {
 
   @Advice.OnMethodExit
-  def onConstructed(
+  @static def onConstructed(
       @Advice.This poolWithMetrics:                      HostConnectionPool with HasPoolMetrics,
       @Advice.FieldValue("host") host:                   Host,
       @Advice.FieldValue("totalInFlight") totalInflight: AtomicInteger
@@ -46,10 +49,11 @@ object PoolConstructorAdvice {
   }
 }
 
+class PoolCloseAdvice
 object PoolCloseAdvice {
 
   @Advice.OnMethodExit
-  def onClose(@Advice.This poolWithMetrics: HostConnectionPool with HasPoolMetrics): Unit = {
+  @static def onClose(@Advice.This poolWithMetrics: HostConnectionPool with HasPoolMetrics): Unit = {
     poolWithMetrics.nodeMonitor.cleanup()
   }
 }
@@ -62,12 +66,12 @@ class BorrowAdvice
 object BorrowAdvice {
 
   @Advice.OnMethodEnter
-  def startBorrow(@Advice.This poolMetrics: HasPoolMetrics): Long = {
+  @static def startBorrow(@Advice.This poolMetrics: HasPoolMetrics): Long = {
     Kamon.clock().nanos()
   }
 
   @Advice.OnMethodExit(suppress = classOf[Throwable], inline = false)
-  def onBorrowed(
+  @static def onBorrowed(
       @Advice.Return connection:  ListenableFuture[Connection],
       @Advice.Enter start:        Long,
       @Advice.This poolMetrics:   HasPoolMetrics,
@@ -91,10 +95,11 @@ object BorrowAdvice {
   * Incremented when new connection requested and decremented either on
   * connection being explicitly trashed or defunct
   */
+class InitPoolAdvice
 object InitPoolAdvice {
 
   @Advice.OnMethodExit
-  def onPoolInited(
+  @static def onPoolInited(
       @Advice.This hasPoolMetrics:                HasPoolMetrics,
       @Advice.Return done:                        ListenableFuture[_],
       @Advice.FieldValue("open") openConnections: AtomicInteger
@@ -108,10 +113,11 @@ object InitPoolAdvice {
   }
 }
 
+class CreateConnectionAdvice
 object CreateConnectionAdvice {
 
   @Advice.OnMethodExit
-  def onConnectionCreated(
+  @static def onConnectionCreated(
       @Advice.This hasPoolMetrics: HasPoolMetrics,
       @Advice.Return created:      Boolean
   ): Unit =
@@ -120,10 +126,11 @@ object CreateConnectionAdvice {
     }
 }
 
+class TrashConnectionAdvice
 object TrashConnectionAdvice {
 
   @Advice.OnMethodExit
-  def onConnectionTrashed(
+  @static def onConnectionTrashed(
       @Advice.This hasPoolMetrics:     HasPoolMetrics,
       @Advice.FieldValue("host") host: Host
   ): Unit = {
@@ -131,10 +138,11 @@ object TrashConnectionAdvice {
   }
 }
 
+class ConnectionDefunctAdvice
 object ConnectionDefunctAdvice {
 
   @Advice.OnMethodExit
-  def onConnectionDefunct(@Advice.This hasPoolMetrics: HasPoolMetrics): Unit = {
+  @static def onConnectionDefunct(@Advice.This hasPoolMetrics: HasPoolMetrics): Unit = {
     hasPoolMetrics.nodeMonitor.connectionClosed
   }
 }

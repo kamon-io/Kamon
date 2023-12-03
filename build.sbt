@@ -36,7 +36,6 @@ lazy val `kamon-core` = (project in file("core/kamon-core"))
   .settings(
     buildInfoKeys := Seq[BuildInfoKey](version),
     buildInfoPackage := "kamon.status",
-    crossScalaVersions += `scala_3_version`,
     scalacOptions ++= { if(scalaBinaryVersion.value == "2.11") Seq("-Ydelambdafy:method") else Seq.empty },
     assembly / assemblyShadeRules := Seq(
       ShadeRule.rename("org.jctools.**"                             -> "kamon.lib.@0").inAll,
@@ -71,7 +70,6 @@ lazy val `kamon-core` = (project in file("core/kamon-core"))
 lazy val `kamon-status-page` = (project in file("core/kamon-status-page"))
   .enablePlugins(AssemblyPlugin)
   .settings(
-    crossScalaVersions += `scala_3_version`,
     assembly / assemblyShadeRules := Seq(
       ShadeRule.rename("com.grack.nanojson.**"  -> "kamon.lib.@0").inAll,
       ShadeRule.rename("fi.iki.elonen.**"       -> "kamon.lib.@0").inAll,
@@ -86,7 +84,6 @@ lazy val `kamon-status-page` = (project in file("core/kamon-status-page"))
 lazy val `kamon-testkit` = (project in file("core/kamon-testkit"))
   .disablePlugins(AssemblyPlugin)
   .settings(
-    crossScalaVersions += `scala_3_version`,
     libraryDependencies += scalatest % "provided,test"
   ).dependsOn(`kamon-core`)
 
@@ -95,7 +92,6 @@ lazy val `kamon-core-tests` = (project in file("core/kamon-core-tests"))
   .disablePlugins(AssemblyPlugin)
   .settings(noPublishing: _*)
   .settings(
-    crossScalaVersions += `scala_3_version`,
     libraryDependencies ++= Seq(
       scalatest % "test",
       logbackClassic % "test"
@@ -106,7 +102,6 @@ lazy val `kamon-core-tests` = (project in file("core/kamon-core-tests"))
 lazy val `kamon-core-bench` = (project in file("core/kamon-core-bench"))
   .disablePlugins(AssemblyPlugin)
   .enablePlugins(JmhPlugin)
-  .settings(crossScalaVersions += `scala_3_version`)
   .settings(noPublishing: _*)
   .dependsOn(`kamon-core`)
 
@@ -163,9 +158,6 @@ lazy val `kamon-instrumentation-common` = (project in file("instrumentation/kamo
   .enablePlugins(JavaAgent)
   .settings(instrumentationSettings)
   .settings(
-        crossScalaVersions += `scala_3_version`,
-  )
-  .settings(
     resolvers += Resolver.mavenLocal,
     libraryDependencies ++= Seq(
       slf4jApi % "test",
@@ -178,7 +170,6 @@ lazy val `kamon-instrumentation-common` = (project in file("instrumentation/kamo
 lazy val `kamon-executors` = (project in file("instrumentation/kamon-executors"))
   .disablePlugins(AssemblyPlugin)
   .settings(
-    crossScalaVersions += `scala_3_version`,
     libraryDependencies ++= Seq(
       kanelaAgent % "provided",
       scalatest % "test",
@@ -204,6 +195,7 @@ lazy val `kamon-twitter-future` = (project in file("instrumentation/kamon-twitte
   .enablePlugins(JavaAgent)
   .settings(instrumentationSettings)
   .settings(
+    crossScalaVersions := Seq(`scala_2.11_version`, `scala_2.12_version`, `scala_2.13_version`),
     libraryDependencies ++= Seq(
       kanelaAgent % "provided",
       "com.twitter" %% "util-core" % "20.3.0" % "provided",
@@ -218,6 +210,7 @@ lazy val `kamon-scalaz-future` = (project in file("instrumentation/kamon-scalaz-
   .enablePlugins(JavaAgent)
   .settings(instrumentationSettings)
   .settings(
+    crossScalaVersions := Seq(`scala_2.11_version`, `scala_2.12_version`, `scala_2.13_version`),
     libraryDependencies ++= Seq(
       kanelaAgent % "provided",
       "org.scalaz" %% "scalaz-concurrent" % "7.2.28" % "provided",
@@ -231,7 +224,6 @@ lazy val `kamon-scala-future` = (project in file("instrumentation/kamon-scala-fu
   .disablePlugins(AssemblyPlugin)
   .enablePlugins(JavaAgent)
   .settings(instrumentationSettings)
-  .settings(crossScalaVersions += `scala_3_version`)
   .settings(
     libraryDependencies ++=Seq(
       kanelaAgent % "provided",
@@ -246,6 +238,7 @@ lazy val `kamon-cats-io` = (project in file("instrumentation/kamon-cats-io"))
   .enablePlugins(JavaAgent)
   .settings(instrumentationSettings)
   .settings(
+    crossScalaVersions := Seq(`scala_2.11_version`, `scala_2.12_version`, `scala_2.13_version`),
     libraryDependencies ++= Seq(
       kanelaAgent % "provided",
       {
@@ -289,6 +282,10 @@ lazy val `kamon-logback` = (project in file("instrumentation/kamon-logback"))
   ).dependsOn(`kamon-core`, `kamon-instrumentation-common`, `kamon-testkit` % "test")
 
 
+def slickVersion(scalaVersion: String) = scalaVersion match {
+  case "3" => "3.5.0-M5"
+  case x   => "3.3.2"
+}
 lazy val `kamon-jdbc` = (project in file("instrumentation/kamon-jdbc"))
   .disablePlugins(AssemblyPlugin)
   .enablePlugins(JavaAgent)
@@ -299,15 +296,15 @@ lazy val `kamon-jdbc` = (project in file("instrumentation/kamon-jdbc"))
       kanelaAgent % "provided",
       "com.zaxxer"                % "HikariCP"                  % "4.0.3" % "provided",
       "org.mariadb.jdbc"          % "mariadb-java-client"       % "2.2.6" % "provided",
-      "com.typesafe.slick"       %% "slick"                     % "3.3.2" % "provided",
+      "com.typesafe.slick"       %% "slick"                     % slickVersion(scalaBinaryVersion.value) % "provided",
       "org.postgresql"            % "postgresql"                % "42.2.5" % "provided",
 
       scalatest % "test",
       logbackClassic % "test",
-      "com.typesafe.slick"       %% "slick-hikaricp"            % "3.3.2" % "test",
-      "com.h2database"            % "h2"                        % "1.4.182" % "test",
+      "com.typesafe.slick"       %% "slick-hikaricp"            % slickVersion(scalaBinaryVersion.value) % "test",
+      "com.h2database"            % "h2"                        % "1.4.192" % "test",
       "org.xerial"                % "sqlite-jdbc"               % "3.34.0" % "test",
-      "ch.vorburger.mariaDB4j"    % "mariaDB4j"                 % "2.4.0" % "test"
+      "ch.vorburger.mariaDB4j"    % "mariaDB4j"                 % "2.5.3" % "test"
     )
   ).dependsOn(`kamon-core`, `kamon-executors`, `kamon-testkit` % "test")
 
@@ -316,7 +313,6 @@ lazy val `kamon-kafka` = (project in file("instrumentation/kamon-kafka"))
   .disablePlugins(AssemblyPlugin)
   .enablePlugins(JavaAgent)
   .settings(instrumentationSettings)
-  .settings(crossScalaVersions += `scala_3_version`)
   .settings(
     libraryDependencies ++= Seq(
       kanelaAgent                 % "provided",
@@ -334,6 +330,7 @@ lazy val `kamon-mongo-legacy` = (project in file("instrumentation/kamon-mongo-le
   .enablePlugins(JavaAgent)
   .settings(instrumentationSettings)
   .settings(
+    crossScalaVersions := Seq(`scala_2.11_version`, `scala_2.12_version`, `scala_2.13_version`),
     libraryDependencies ++= Seq(
       kanelaAgent % "provided",
       "org.mongodb"         %   "mongodb-driver-sync"             % "3.11.0" % "provided",
@@ -352,6 +349,7 @@ lazy val `kamon-mongo` = (project in file("instrumentation/kamon-mongo"))
   .enablePlugins(JavaAgent)
   .settings(instrumentationSettings)
   .settings(
+    crossScalaVersions := Seq(`scala_2.11_version`, `scala_2.12_version`, `scala_2.13_version`),
     libraryDependencies ++= Seq(
       kanelaAgent % "provided",
       "org.mongodb"         %   "mongodb-driver-sync"             % "4.2.3" % "provided",
@@ -368,6 +366,7 @@ lazy val `kamon-cassandra` = (project in file("instrumentation/kamon-cassandra")
   .disablePlugins(AssemblyPlugin)
   .enablePlugins(JavaAgent)
   .settings(instrumentationSettings)
+  .settings(crossScalaVersions := Seq(`scala_2.11_version`, `scala_2.12_version`, `scala_2.13_version`))
   .dependsOn(`kamon-core`, `kamon-instrumentation-common`, `kamon-testkit` % "test", `kamon-executors`)
 
 lazy val `kamon-elasticsearch` = (project in file("instrumentation/kamon-elasticsearch"))
@@ -382,8 +381,8 @@ lazy val `kamon-elasticsearch` = (project in file("instrumentation/kamon-elastic
       "org.elasticsearch.client" % "elasticsearch-rest-high-level-client" % "7.9.1" % "provided",
       scalatest % "test",
       logbackClassic % "test",
-      "com.dimafeng" %% "testcontainers-scala" % "0.39.3" % "test",
-      "com.dimafeng" %% "testcontainers-scala-elasticsearch" % "0.39.3" % "test"
+      "com.dimafeng" %% "testcontainers-scala" % "0.41.0" % "test",
+      "com.dimafeng" %% "testcontainers-scala-elasticsearch" % "0.41.0" % "test"
     )
   ).dependsOn(`kamon-core`, `kamon-instrumentation-common`, `kamon-testkit` % "test")
 
@@ -422,7 +421,6 @@ lazy val `kamon-annotation` = (project in file("instrumentation/kamon-annotation
   .enablePlugins(AssemblyPlugin)
   .settings(instrumentationSettings: _*)
   .settings(
-    crossScalaVersions += `scala_3_version`,
     assembly / assemblyShadeRules := Seq(
       ShadeRule.rename("javax.el.**"    -> "kamon.lib.@0").inAll,
       ShadeRule.rename("com.sun.el.**"  -> "kamon.lib.@0").inAll,
@@ -443,7 +441,6 @@ lazy val `kamon-annotation` = (project in file("instrumentation/kamon-annotation
 lazy val `kamon-system-metrics` = (project in file("instrumentation/kamon-system-metrics"))
   .disablePlugins(AssemblyPlugin)
   .settings(
-    crossScalaVersions += `scala_3_version`,
     libraryDependencies ++= Seq(
       oshiCore,
       scalatest % "test",
@@ -456,7 +453,6 @@ lazy val `kamon-akka` = (project in file("instrumentation/kamon-akka"))
   .enablePlugins(JavaAgent)
   .disablePlugins(AssemblyPlugin)
   .settings(instrumentationSettings: _*)
-  .settings(crossScalaVersions += `scala_3_version`)
   .dependsOn(
     `kamon-scala-future` % "compile,common,akka-2.5,akka-2.6",
     `kamon-testkit` % "test,test-common,test-akka-2.5,test-akka-2.6"
@@ -506,7 +502,6 @@ lazy val `kamon-akka-http` = (project in file("instrumentation/kamon-akka-http")
       "de.heikoseeberger" %% "akka-http-json4s"     % "1.27.0" % "test" cross CrossVersion.for3Use2_13 intransitive(),
       "org.json4s"        %% "json4s-native"        % "4.0.6" % "test",
     )))
-  .settings(crossScalaVersions += `scala_3_version`)
   .dependsOn(`kamon-akka`, `kamon-testkit` % "test")
 
 
@@ -603,7 +598,8 @@ lazy val `kamon-akka-grpc` = (project in file("instrumentation/kamon-akka-grpc")
 lazy val `kamon-play` = (project in file("instrumentation/kamon-play"))
   .enablePlugins(JavaAgent)
   .disablePlugins(AssemblyPlugin)
-  .settings(instrumentationSettings)
+  .settings(instrumentationSettings,
+    crossScalaVersions := Seq(`scala_2.11_version`, `scala_2.12_version`, `scala_2.13_version`))
   .dependsOn(
     `kamon-akka` % "compile,test-common,test-play-2.8,test-play-2.7,test-play-2.6",
     `kamon-akka-http` % "compile,test-common,test-play-2.8,test-play-2.7,test-play-2.6",
@@ -657,7 +653,6 @@ lazy val `kamon-redis` = (project in file("instrumentation/kamon-redis"))
   .enablePlugins(JavaAgent)
   .settings(instrumentationSettings)
   .settings(
-    crossScalaVersions += `scala_3_version`,
     libraryDependencies ++= Seq(
       kanelaAgent % "provided",
       "redis.clients" % "jedis"  % "3.6.0" % "provided",
@@ -675,7 +670,6 @@ lazy val `kamon-caffeine` = (project in file("instrumentation/kamon-caffeine"))
   .enablePlugins(JavaAgent)
   .settings(instrumentationSettings)
   .settings(
-    crossScalaVersions += `scala_3_version`,
     libraryDependencies ++= Seq(
       kanelaAgent % "provided",
       "com.github.ben-manes.caffeine" % "caffeine" % "2.8.5" % "provided",
@@ -689,6 +683,7 @@ lazy val `kamon-caffeine` = (project in file("instrumentation/kamon-caffeine"))
 lazy val `kamon-lagom` = (project in file("instrumentation/kamon-lagom"))
   .disablePlugins(AssemblyPlugin)
   .settings(
+    crossScalaVersions := Seq(`scala_2.11_version`, `scala_2.12_version`, `scala_2.13_version`),
     libraryDependencies ++= {
       CrossVersion.partialVersion(scalaVersion.value) match {
         case Some((2, scalaMajor)) if scalaMajor == 11 => providedScope("com.lightbend.lagom" %% "lagom-server" % "1.4.13")
@@ -772,7 +767,6 @@ lazy val reporters = (project in file("reporters"))
 lazy val `kamon-datadog` = (project in file("reporters/kamon-datadog"))
   .enablePlugins(AssemblyPlugin)
   .settings(
-    crossScalaVersions += `scala_3_version`,
     assembly / assemblyMergeStrategy := {
       case PathList("META-INF", xs @ _*)  => MergeStrategy.discard
       case _                              => MergeStrategy.first
@@ -797,7 +791,6 @@ lazy val `kamon-datadog` = (project in file("reporters/kamon-datadog"))
 lazy val `kamon-apm-reporter` = (project in file("reporters/kamon-apm-reporter"))
   .enablePlugins(AssemblyPlugin)
   .settings(
-    crossScalaVersions += `scala_3_version`,
     assembly / test := {},
     assembly / assemblyMergeStrategy := {
       case PathList("META-INF", xs @ _*)  => MergeStrategy.discard
@@ -830,7 +823,6 @@ lazy val `kamon-apm-reporter` = (project in file("reporters/kamon-apm-reporter")
 lazy val `kamon-statsd` = (project in file("reporters/kamon-statsd"))
   .disablePlugins(AssemblyPlugin)
   .settings(
-    crossScalaVersions += `scala_3_version`,
     libraryDependencies += scalatest % Test,
   ).dependsOn(`kamon-core`)
 
@@ -838,7 +830,6 @@ lazy val `kamon-statsd` = (project in file("reporters/kamon-statsd"))
 lazy val `kamon-zipkin` = (project in file("reporters/kamon-zipkin"))
   .disablePlugins(AssemblyPlugin)
   .settings(
-    crossScalaVersions += `scala_3_version`,
     libraryDependencies ++= Seq(
       "io.zipkin.reporter2" % "zipkin-reporter" % "2.7.15",
       "io.zipkin.reporter2" % "zipkin-sender-okhttp3" % "2.7.15",
@@ -850,7 +841,6 @@ lazy val `kamon-zipkin` = (project in file("reporters/kamon-zipkin"))
 lazy val `kamon-jaeger` = (project in file("reporters/kamon-jaeger"))
   .disablePlugins(AssemblyPlugin)
   .settings(
-    crossScalaVersions += `scala_3_version`,
     libraryDependencies ++= Seq(
       "io.jaegertracing" % "jaeger-thrift" % "1.8.1",
       scalatest % "test"
@@ -861,7 +851,6 @@ lazy val `kamon-jaeger` = (project in file("reporters/kamon-jaeger"))
 lazy val `kamon-influxdb` = (project in file("reporters/kamon-influxdb"))
   .disablePlugins(AssemblyPlugin)
   .settings(
-    crossScalaVersions += `scala_3_version`,
     libraryDependencies ++= Seq(
       okHttp,
       okHttpMockServer % "test",
@@ -873,7 +862,6 @@ lazy val `kamon-influxdb` = (project in file("reporters/kamon-influxdb"))
 lazy val `kamon-graphite` = (project in file("reporters/kamon-graphite"))
   .disablePlugins(AssemblyPlugin)
   .settings(
-    crossScalaVersions += `scala_3_version`,
     libraryDependencies ++= Seq(
       scalatest % "test",
       logbackClassic % "test"
@@ -884,7 +872,6 @@ lazy val `kamon-graphite` = (project in file("reporters/kamon-graphite"))
 lazy val `kamon-newrelic` = (project in file("reporters/kamon-newrelic"))
   .disablePlugins(AssemblyPlugin)
   .settings(
-    crossScalaVersions += `scala_3_version`,
     libraryDependencies ++= Seq(
       "com.newrelic.telemetry" % "telemetry-core" % "0.15.0",
       "com.newrelic.telemetry" % "telemetry-http-okhttp" % "0.15.0",
@@ -896,7 +883,6 @@ lazy val `kamon-newrelic` = (project in file("reporters/kamon-newrelic"))
 lazy val `kamon-opentelemetry` = (project in file("reporters/kamon-opentelemetry"))
   .disablePlugins(AssemblyPlugin)
   .settings(
-    crossScalaVersions += `scala_3_version`,
     libraryDependencies ++= Seq(
       "io.opentelemetry" % "opentelemetry-exporter-otlp-http-trace" % "1.13.0",
       "io.opentelemetry" % "opentelemetry-exporter-otlp-trace" % "1.13.0",
@@ -911,7 +897,6 @@ lazy val `kamon-opentelemetry` = (project in file("reporters/kamon-opentelemetry
 lazy val `kamon-prometheus` = (project in file("reporters/kamon-prometheus"))
   .disablePlugins(AssemblyPlugin)
   .settings(
-    crossScalaVersions += `scala_3_version`,
     libraryDependencies ++= Seq(
       okHttp,
       scalatest % "test",
@@ -930,6 +915,7 @@ lazy val bundle = (project in file("bundle"))
   .aggregate(
     `kamon-bundle`,
     `kamon-bundle_2_11`,
+    `kamon-bundle-3`,
     `kamon-runtime-attacher`
   )
 
@@ -1050,6 +1036,41 @@ lazy val `kamon-bundle-dependencies-2-12-and-up` = (project in file("bundle/kamo
     `kamon-alpakka-kafka`
   )
 
+/**
+  *   Add a reference here to all the project dependencies that can be built
+  *   for 3
+  */
+lazy val `kamon-bundle-dependencies-3` = (project in file("bundle/kamon-bundle-dependencies-3"))
+  .disablePlugins(AssemblyPlugin)
+  .settings(noPublishing: _*)
+  .settings(ideSkipProject: _*)
+  .dependsOn(
+    `kamon-runtime-attacher`,
+    `kamon-status-page`,
+    `kamon-instrumentation-common`,
+    `kamon-executors`,
+    `kamon-scala-future`,
+    `kamon-logback`,
+    `kamon-jdbc`,
+    `kamon-kafka`,
+    `kamon-elasticsearch`,
+    `kamon-spring`,
+    `kamon-annotation`,
+    `kamon-annotation-api`,
+    `kamon-system-metrics`,
+    `kamon-akka`,
+    `kamon-akka-http`,
+    `kamon-akka-grpc`,
+    `kamon-redis`,
+    `kamon-okhttp`,
+    `kamon-caffeine`,
+    `kamon-aws-sdk`,
+    `kamon-cats-io-3`,
+    `kamon-pekko`,
+    `kamon-pekko-http`,
+    `kamon-pekko-grpc`
+  )
+
 lazy val `kamon-bundle` = (project in file("bundle/kamon-bundle"))
   .enablePlugins(AssemblyPlugin)
   .settings(commonBundleSettings)
@@ -1063,6 +1084,19 @@ lazy val `kamon-bundle` = (project in file("bundle/kamon-bundle"))
   .dependsOn(
     `kamon-core`,
     `kamon-bundle-dependencies-2-12-and-up` % "shaded"
+  )
+
+lazy val `kamon-bundle-3` = (project in file("bundle/kamon-bundle-3"))
+  .enablePlugins(AssemblyPlugin)
+  .settings(commonBundleSettings)
+  .settings(ideSkipProject: _*)
+  .settings(
+    scalaVersion := scala_3_version,
+    crossScalaVersions := Seq(scala_3_version)
+  )
+  .dependsOn(
+    `kamon-core`,
+    `kamon-bundle-dependencies-3` % "shaded"
   )
 
 lazy val `kamon-bundle_2_11` = (project in file("bundle/kamon-bundle_2.11"))

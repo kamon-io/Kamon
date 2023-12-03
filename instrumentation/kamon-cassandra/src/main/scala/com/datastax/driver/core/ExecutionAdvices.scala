@@ -17,7 +17,6 @@
 package com.datastax.driver.core
 
 import java.util.concurrent.atomic.AtomicReference
-
 import com.datastax.driver.core.Message.Response
 import com.datastax.driver.core.RequestHandler.QueryState
 import kamon.Kamon
@@ -31,6 +30,8 @@ import kamon.instrumentation.context.HasContext
 import kamon.trace.Span
 import kanela.agent.libs.net.bytebuddy.asm.Advice
 
+import scala.annotation.static
+
 object QueryOperations {
   val QueryOperationName = "cassandra.query"
   val BatchOperationName = "cassandra.batch"
@@ -38,13 +39,14 @@ object QueryOperations {
   val ExecutionOperationName:    String = QueryOperationName + ".execution"
 }
 
+class QueryExecutionAdvice
 object QueryExecutionAdvice {
   import QueryOperations._
 
   val ParentSpanKey: Context.Key[Span] = Context.key[Span]("__parent-span", Span.Empty)
 
   @Advice.OnMethodEnter
-  def onQueryExec(
+  @static def onQueryExec(
       @Advice.This execution:                         HasContext,
       @Advice.Argument(0) host:                       Host with HasPoolMetrics,
       @Advice.FieldValue("position") position:        Int,
@@ -84,10 +86,11 @@ object QueryExecutionAdvice {
 /**
   * Transfer context from msg to created result set so it can be used for further page fetches
   */
+class OnResultSetConstruction
 object OnResultSetConstruction {
 
   @Advice.OnMethodExit
-  def onCreateResultSet(
+  @static def onCreateResultSet(
       @Advice.Return rs:       ArrayBackedResultSet,
       @Advice.Argument(0) msg: Responses.Result with HasContext
   ): Unit = if (rs.isInstanceOf[HasContext]) {
@@ -96,24 +99,26 @@ object OnResultSetConstruction {
 
 }
 
+class OnFetchMore
 object OnFetchMore {
 
   @Advice.OnMethodEnter
-  def onFetchMore(@Advice.This hasContext: HasContext): Scope = {
+  @static def onFetchMore(@Advice.This hasContext: HasContext): Scope = {
     val clientSpan = hasContext.context.get(QueryExecutionAdvice.ParentSpanKey)
     Kamon.storeContext(Context.of(Span.Key, clientSpan))
   }
 
   @Advice.OnMethodExit
-  def onFetched(@Advice.Enter scope: Scope): Unit = {
+  @static def onFetched(@Advice.Enter scope: Scope): Unit = {
     scope.close()
   }
 }
 
+class QueryWriteAdvice
 object QueryWriteAdvice {
 
   @Advice.OnMethodEnter
-  def onStartWriting(@Advice.This execution: HasContext): Unit = {
+  @static def onStartWriting(@Advice.This execution: HasContext): Unit = {
     execution.context
       .get(Span.Key)
       .mark("cassandra.connection.write-started")
@@ -121,11 +126,12 @@ object QueryWriteAdvice {
 }
 
 //Server timeouts and exceptions
+class OnSetAdvice
 object OnSetAdvice {
   import QueryOperations._
 
   @Advice.OnMethodEnter
-  def onSetResult(
+  @static def onSetResult(
       @Advice.This execution:                    Connection.ResponseCallback with HasContext,
       @Advice.Argument(0) connection:            Connection,
       @Advice.Argument(1) response:              Message.Response,
@@ -159,10 +165,11 @@ object OnSetAdvice {
 /**
   * Handling of client exceptions
   */
+class OnExceptionAdvice
 object OnExceptionAdvice {
 
   @Advice.OnMethodEnter
-  def onException(
+  @static def onException(
       @Advice.This execution:                    HasContext,
       @Advice.Argument(0) connection:            Connection,
       @Advice.Argument(1) exception:             Exception,
@@ -181,10 +188,11 @@ object OnExceptionAdvice {
 /**
   * Handling of client timeouts
   */
+class OnTimeoutAdvice
 object OnTimeoutAdvice {
 
   @Advice.OnMethodEnter
-  def onTimeout(
+  @static def onTimeout(
       @Advice.This execution:                    HasContext,
       @Advice.Argument(0) connection:            Connection,
       @Advice.FieldValue("current") currentHost: Host with HasPoolMetrics
@@ -199,10 +207,11 @@ object OnTimeoutAdvice {
   }
 }
 
+class HostLocationAdvice
 object HostLocationAdvice {
 
   @Advice.OnMethodExit
-  def onHostLocationUpdate(
+  @static def onHostLocationUpdate(
       @Advice.This host:                            Host with HasPoolMetrics,
       @Advice.FieldValue("manager") clusterManager: Any
   ): Unit = {
