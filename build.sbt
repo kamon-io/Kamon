@@ -916,8 +916,7 @@ lazy val bundle = (project in file("bundle"))
     `kamon-bundle`,
     `kamon-bundle_2_11`,
     `kamon-bundle-3`,
-    `kamon-runtime-attacher`,
-
+    `kamon-runtime-attacher`
   )
 
 import com.lightbend.sbt.javaagent.Modules
