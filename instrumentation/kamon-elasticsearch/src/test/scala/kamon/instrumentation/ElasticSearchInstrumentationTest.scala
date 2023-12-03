@@ -85,7 +85,7 @@ class ElasticSearchInstrumentationTest
   }
 
 
-  override val container = ElasticsearchContainer()
+  override val container: ElasticsearchContainer = ElasticsearchContainer()
   var client: RestClient = _
   var highLevelClient: RestHighLevelClient = _
 
@@ -95,7 +95,7 @@ class ElasticSearchInstrumentationTest
 
     client = RestClient
       .builder(HttpHost.create(container.httpHostAddress))
-      .build
+      .build()
 
     highLevelClient = new RestHighLevelClient(
       RestClient.builder(HttpHost.create(container.httpHostAddress)))
