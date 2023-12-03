@@ -366,6 +366,7 @@ lazy val `kamon-cassandra` = (project in file("instrumentation/kamon-cassandra")
   .disablePlugins(AssemblyPlugin)
   .enablePlugins(JavaAgent)
   .settings(instrumentationSettings)
+  .settings(crossScalaVersions := Seq(`scala_2.11_version`, `scala_2.12_version`, `scala_2.13_version`))
   .dependsOn(`kamon-core`, `kamon-instrumentation-common`, `kamon-testkit` % "test", `kamon-executors`)
 
 lazy val `kamon-elasticsearch` = (project in file("instrumentation/kamon-elasticsearch"))
@@ -1053,7 +1054,6 @@ lazy val `kamon-bundle-dependencies-3` = (project in file("bundle/kamon-bundle-d
     `kamon-logback`,
     `kamon-jdbc`,
     `kamon-kafka`,
-    `kamon-cassandra`,
     `kamon-elasticsearch`,
     `kamon-spring`,
     `kamon-annotation`,
