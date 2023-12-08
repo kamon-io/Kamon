@@ -262,6 +262,7 @@ lazy val `kamon-cats-io-3` = (project in file("instrumentation/kamon-cats-io-3")
     libraryDependencies ++= Seq(
       kanelaAgent % "provided",
       "org.typelevel" %% "cats-effect" % "3.3.14" % "provided",
+      "co.fs2" %% "fs2-core" % "3.3.0" % "test",
       scalatest % "test",
       logbackClassic % "test"
     ),

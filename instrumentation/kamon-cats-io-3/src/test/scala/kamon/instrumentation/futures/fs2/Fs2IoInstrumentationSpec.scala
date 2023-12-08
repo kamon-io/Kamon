@@ -1,4 +1,4 @@
-package kamon.instrumentation.futures.cats3
+package kamon.instrumentation.futures.fs2
 
 import cats.effect.unsafe.{IORuntime, IORuntimeConfig, Scheduler}
 import cats.effect.{IO, Resource, Spawn}
@@ -18,12 +18,12 @@ import cats.implicits._
 import kamon.trace.Identifier.Scheme
 import kamon.trace.{Identifier, Span, Trace}
 
-class CatsIoInstrumentationSpec extends AnyWordSpec with Matchers with ScalaFutures with PatienceConfiguration
+class Fs2IoInstrumentationSpec extends AnyWordSpec with Matchers with ScalaFutures with PatienceConfiguration
     with OptionValues with Eventually with BeforeAndAfterEach {
 
   System.setProperty("kamon.context.debug", "true")
 
-  "an cats.effect IO created when instrumentation is active" should {
+  "an fs2.Stream[IO] created when instrumentation is active" should {
     "capture the active span available when created" which {
 
       "must capture the current context when creating and running fibers" in {
@@ -32,11 +32,11 @@ class CatsIoInstrumentationSpec extends AnyWordSpec with Matchers with ScalaFutu
         val context = Context.of("tool", "kamon")
 
         val effect = for {
-          contextOnAnotherThread <- IO.delay(Kamon.currentContext())
-          _ <- IO.delay(Seq("hello", "world"))
-          _ <- Spawn[IO].evalOn(IO.sleep(10.millis), anotherExecutionContext)
-          _ <- IO.cede
-          _ <- IO.cede
+          contextOnAnotherThread <- fs2.Stream.eval(IO.delay(Kamon.currentContext()))
+          _ <- fs2.Stream.emits(Seq("hello", "world"))
+          _ <- fs2.Stream.eval(Spawn[IO].evalOn(IO.sleep(10.millis), anotherExecutionContext))
+          _ <- fs2.Stream.eval(IO.cede)
+          _ <- fs2.Stream.eval(IO.cede)
         } yield {
           val currentContext = Kamon.currentContext()
           currentContext shouldBe context
@@ -44,14 +44,14 @@ class CatsIoInstrumentationSpec extends AnyWordSpec with Matchers with ScalaFutu
           currentContext
         }
 
-        val contextInsideYield = Kamon.runWithContext(context) {
+        val contextInsideYield: Unit = Kamon.runWithContext(context) {
           // This is what would happen at the edges of the system, when Kamon has already
           // started a Span in an outer layer (usually the HTTP server instrumentation) and
           // when processing gets to user-level code, the users want to run their business
           // logic as an effect. We should always propagate the context that was available
           // at this point to the moment when the effect runs.
 
-          Await.result(effect.unsafeToFuture()(runtime), 100.seconds)
+          Await.result(effect.compile.drain.unsafeToFuture()(runtime), 100.seconds)
         }
 
         context shouldBe contextInsideYield
@@ -64,18 +64,18 @@ class CatsIoInstrumentationSpec extends AnyWordSpec with Matchers with ScalaFutu
 
         val test =
           for {
-            _ <- IO.delay(Kamon.storeContext(context))
-            _ <- Spawn[IO].evalOn(IO.sleep(10.millis), anotherExecutionContext)
-            beforeCleaning <- IO.delay(Kamon.currentContext())
-            _ <- IO.delay(Kamon.storeContext(Context.Empty))
-            _ <- Spawn[IO].evalOn(IO.sleep(10.millis), anotherExecutionContext)
-            afterCleaning <- IO.delay(Kamon.currentContext())
+            _ <- fs2.Stream.eval(IO.delay(Kamon.storeContext(context)))
+            _ <- fs2.Stream.eval(Spawn[IO].evalOn(IO.sleep(10.millis), anotherExecutionContext))
+            beforeCleaning <- fs2.Stream.eval(IO.delay(Kamon.currentContext()))
+            _ <- fs2.Stream.eval(IO.delay(Kamon.storeContext(Context.Empty)))
+            _ <- fs2.Stream.eval(Spawn[IO].evalOn(IO.sleep(10.millis), anotherExecutionContext))
+            afterCleaning <- fs2.Stream.eval(IO.delay(Kamon.currentContext()))
           } yield {
             afterCleaning shouldBe Context.Empty
             beforeCleaning shouldBe context
           }
 
-        test.unsafeRunSync()(runtime)
+        test.compile.drain.unsafeRunSync()(runtime)
       }
 
       "must be available across asynchronous boundaries" in {
@@ -90,18 +90,18 @@ class CatsIoInstrumentationSpec extends AnyWordSpec with Matchers with ScalaFutu
         val context = Context.of("key", "value")
         val test =
           for {
-            scope <- IO.delay(Kamon.storeContext(context))
-            len <- IO("Hello Kamon!").map(_.length)
-            _ <- IO(len.toString)
-            beforeChanging <- getKey()
-            evalOnGlobalRes <- Spawn[IO].evalOn(IO.sleep(Duration.Zero).flatMap(_ => getKey()), global)
-            outerSpanIdBeginning <- IO.delay(Kamon.currentSpan().id.string)
-            innerSpan <- IO.delay(Kamon.clientSpanBuilder("Foo", "attempt").context(context).start())
-            innerSpanId1 <- Spawn[IO].evalOn(IO.delay(Kamon.currentSpan()), anotherExecutionContext)
-            innerSpanId2 <- IO.delay(Kamon.currentSpan())
-            _ <- IO.delay(innerSpan.finish())
-            outerSpanIdEnd <- IO.delay(Kamon.currentSpan().id.string)
-            evalOnAnotherEx <- Spawn[IO].evalOn(IO.sleep(Duration.Zero).flatMap(_ => getKey()), anotherExecutionContext)
+            scope <- fs2.Stream.eval(IO.delay(Kamon.storeContext(context)))
+            len <- fs2.Stream.emit("Hello Kamon!").map(_.length)
+            _ <- fs2.Stream.emit(len.toString)
+            beforeChanging <- fs2.Stream.eval(getKey())
+            evalOnGlobalRes <- fs2.Stream.eval(Spawn[IO].evalOn(IO.sleep(Duration.Zero).flatMap(_ => getKey()), global))
+            outerSpanIdBeginning <- fs2.Stream.eval(IO.delay(Kamon.currentSpan().id.string))
+            innerSpan <- fs2.Stream.eval(IO.delay(Kamon.clientSpanBuilder("Foo", "attempt").context(context).start()))
+            innerSpanId1 <- fs2.Stream.eval(Spawn[IO].evalOn(IO.delay(Kamon.currentSpan()), anotherExecutionContext))
+            innerSpanId2 <- fs2.Stream.eval(IO.delay(Kamon.currentSpan()))
+            _ <- fs2.Stream.eval(IO.delay(innerSpan.finish()))
+            outerSpanIdEnd <- fs2.Stream.eval(IO.delay(Kamon.currentSpan().id.string))
+            evalOnAnotherEx <- fs2.Stream.eval(Spawn[IO].evalOn(IO.sleep(Duration.Zero).flatMap(_ => getKey()), anotherExecutionContext))
           } yield {
             scope.close()
             withClue("before changing")(beforeChanging shouldBe "value")
@@ -113,7 +113,7 @@ class CatsIoInstrumentationSpec extends AnyWordSpec with Matchers with ScalaFutu
             withClue("inner and outer should be different")(outerSpanIdBeginning should not equal innerSpan)
           }
 
-        test.unsafeRunSync()(runtime)
+        test.compile.drain.unsafeRunSync()(runtime)
       }
 
      "must allow complex Span topologies to be created" in {
@@ -132,12 +132,12 @@ class CatsIoInstrumentationSpec extends AnyWordSpec with Matchers with ScalaFutu
           *   - fiftyInParallel
           */
         val test = for {
-          span <- IO.delay(Kamon.currentSpan())
-          nestedLevel0 <- meteredWithSpanCapture("level1-A")(IO.sleep(100.millis))
-          nestedUpToLevel2 <- meteredWithSpanCapture("level1-B")(meteredWithSpanCapture("level2-B")(IO.sleep(100.millis)))
-          fiftyInParallel <- (0 to 49).toList.parTraverse(i => meteredWithSpanCapture(s"operation$i")(IO.sleep(100.millis)))
-          afterCede <- meteredWithSpanCapture("cede")(IO.cede *> IO.delay(Kamon.currentSpan()))
-          afterEverything <- IO.delay(Kamon.currentSpan())
+          span <- fs2.Stream.eval(IO.delay(Kamon.currentSpan()))
+          nestedLevel0 <- fs2.Stream.eval(meteredWithSpanCapture("level1-A")(IO.sleep(100.millis)))
+          nestedUpToLevel2 <- fs2.Stream.eval(meteredWithSpanCapture("level1-B")(meteredWithSpanCapture("level2-B")(IO.sleep(100.millis))))
+          fiftyInParallel <- fs2.Stream.eval((0 to 49).toList.parTraverse(i => meteredWithSpanCapture(s"operation$i")(IO.sleep(100.millis))))
+          afterCede <- fs2.Stream.eval(meteredWithSpanCapture("cede")(IO.cede *> IO.delay(Kamon.currentSpan())))
+          afterEverything <- fs2.Stream.eval(IO.delay(Kamon.currentSpan()))
         } yield {
           span.id.string should not be empty
           span.id.string shouldBe nestedLevel0._1.parentId.string
@@ -151,10 +151,9 @@ class CatsIoInstrumentationSpec extends AnyWordSpec with Matchers with ScalaFutu
         val runtime = IORuntime.global
 
         val result = (1 to 100).toList
-          .parTraverse(_ => IO.delay(Kamon.init()) *> IO.delay(Kamon.storeContext(context)) *> test)
-          .unsafeToFuture()(runtime)
+          .parTraverse(_ => (IO.delay(Kamon.init()) *> IO.delay(Kamon.storeContext(context)) *> test.compile.drain))
 
-        Await.result(result, 100.seconds)
+       Await.result(result.unsafeToFuture()(runtime), 100.seconds)
       }
     }
   }
@@ -180,7 +179,7 @@ class CatsIoInstrumentationSpec extends AnyWordSpec with Matchers with ScalaFutu
         case (initialCtx, span) =>
           for {
             _ <- IO.delay(span.finish())
-            _ <- IO.delay(Kamon.storeContext(initialCtx))
+              _ <- IO.delay(Kamon.storeContext(initialCtx))
           } yield ()
       }
       .use(_ => (IO.delay(Kamon.currentSpan()), io).parBisequence)
