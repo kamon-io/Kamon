@@ -97,10 +97,10 @@ object PeriodSnapshot {
     private var _accumulatingFrom: Option[Instant] = None
 
     def add(periodSnapshot: PeriodSnapshot): Option[PeriodSnapshot] = {
-
       // Initialize the next tick based on incoming snapshots.
-      if(_nextTick == Instant.EPOCH)
-        _nextTick = Clock.nextAlignedInstant(periodSnapshot.to, period)
+      if (_nextTick == Instant.EPOCH) {
+        _nextTick = nextInstant(periodSnapshot.to)
+      }
 
       // short-circuit if there is no need to accumulate (e.g. when metrics tick-interval is the same as duration or the
       // snapshots have a longer period than the duration).
@@ -116,10 +116,9 @@ object PeriodSnapshot {
 
         for(from <- _accumulatingFrom if isAroundNextTick(periodSnapshot.to)) yield {
           val accumulatedPeriodSnapshot = buildPeriodSnapshot(from, periodSnapshot.to, resetState = true)
-          _nextTick = Clock.nextAlignedInstant(_nextTick, period)
+          _nextTick = nextInstant(_nextTick)
           _accumulatingFrom = None
           clearAccumulatedData()
-
           accumulatedPeriodSnapshot
         }
       }
@@ -131,6 +130,18 @@ object PeriodSnapshot {
 
     private def isAroundNextTick(instant: Instant): Boolean = {
       Duration.between(instant, _nextTick.minus(margin)).toMillis() <= 0
+    }
+
+    private def nextInstant(from: Instant): Instant = {
+      if (isOptimisticAlignmentEnabled()) {
+        Clock.nextAlignedInstant(from, period)
+      } else {
+        Instant.ofEpochMilli(from.toEpochMilli + period.toMillis)
+      }
+    }
+
+    private def isOptimisticAlignmentEnabled(): Boolean = {
+      Kamon.config().getBoolean("kamon.metric.optimistic-tick-alignment")
     }
 
     private def isSameDurationAsTickInterval(): Boolean = {

@@ -95,7 +95,34 @@ class PeriodSnapshotAccumulatorSpec extends AnyWordSpec with Matchers with Recon
       accumulator.add(fiveSecondsSeven) shouldBe empty    // second 0:35
     }
 
+    "not align snapshot when optimistic tick alignment is false" in {
+      // When the kamon.metric.optimistic-tick-alignment is false
+      // If accumulating over 11 seconds, the snapshots should be generated at 00:00:11, 00:00:22, 00:00:33 and so on.
+      // Thus the snapshot next tick is never aligned
+      applyConfig("kamon.metric.optimistic-tick-alignment = no")
+
+      val accumulator = newAccumulator(11, 0)
+      // as the first add snapshot.to determines the first ticker use zero second
+      // to send snapshot at the seconds that are multiples of the duration
+      accumulator.add(zeroSecond) shouldBe empty          // second 0:0
+      accumulator.add(fiveSecondsOne) shouldBe empty      // second 0:5
+      accumulator.add(fiveSecondsTwo) shouldBe empty      // second 0:10
+
+      val s15 = accumulator.add(fiveSecondsThree).value   // second 0:15
+      s15.from shouldBe(zeroSecond.from)
+      s15.to shouldBe(fiveSecondsThree.to)
+
+      accumulator.add(fiveSecondsFour) shouldBe empty     // second 0:20
+      val s25 = accumulator.add(fiveSecondsFive).value     // second 0:25
+      s25.from shouldBe(fiveSecondsFour.from)
+      s25.to shouldBe(fiveSecondsFive.to)
+
+      accumulator.add(fiveSecondsSix) shouldBe empty    // second 0:30
+    }
+
     "do best effort to align when snapshots themselves are not aligned" in {
+      applyConfig("kamon.metric.optimistic-tick-alignment = yes")
+
       val accumulator = newAccumulator(30, 0)
       accumulator.add(tenSecondsOne) shouldBe empty       // second 0:13
       accumulator.add(tenSecondsTwo) shouldBe empty       // second 0:23
@@ -141,6 +168,8 @@ class PeriodSnapshotAccumulatorSpec extends AnyWordSpec with Matchers with Recon
     }
 
     "produce a snapshot when enough data has been accumulated" in {
+      applyConfig("kamon.metric.optimistic-tick-alignment = yes")
+
       val accumulator = newAccumulator(15, 1)
       accumulator.add(fiveSecondsOne) shouldBe empty
       accumulator.add(fiveSecondsTwo) shouldBe empty
@@ -168,6 +197,8 @@ class PeriodSnapshotAccumulatorSpec extends AnyWordSpec with Matchers with Recon
 
   val alignedZeroTime = Clock.nextAlignedInstant(Kamon.clock().instant(), Duration.ofSeconds(60)).minusSeconds(60)
   val unAlignedZeroTime = alignedZeroTime.plusSeconds(3)
+
+  val zeroSecond = createPeriodSnapshot(alignedZeroTime, alignedZeroTime, 13)
 
   // Aligned snapshots, every 5 seconds from second 00.
   val fiveSecondsOne = createPeriodSnapshot(alignedZeroTime, alignedZeroTime.plusSeconds(5), 22)
@@ -223,6 +254,7 @@ class PeriodSnapshotAccumulatorSpec extends AnyWordSpec with Matchers with Recon
     )
 
   override protected def beforeAll(): Unit = {
+    applyConfig("kamon.metric.optimistic-tick-alignment = yes")
     applyConfig("kamon.metric.tick-interval = 10 seconds")
   }
 }
