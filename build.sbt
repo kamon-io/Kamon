@@ -243,9 +243,9 @@ lazy val `kamon-cats-io` = (project in file("instrumentation/kamon-cats-io"))
       kanelaAgent % "provided",
       {
         if(scalaBinaryVersion.value == "2.11")
-          "org.typelevel" %% "cats-effect" % "2.0.0" % "provided"
+          "org.typelevel" %% "cats-effect" % "3.3.5" % "provided"
         else
-          "org.typelevel" %% "cats-effect" % "2.1.2" % "provided"
+          "org.typelevel" %% "cats-effect" % "3.3.5" % "provided"
       },
       scalatest % "test",
       logbackClassic % "test"
