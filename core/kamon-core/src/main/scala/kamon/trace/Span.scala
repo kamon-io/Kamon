@@ -687,10 +687,17 @@ object Span {
       }
     }
 
-
+    private def convertSamplingDecisionToTag: String = {
+      if (isSampled) {
+        "sampled"
+      } else {
+        "not-sampled"
+      }
+    }
     private def createMetricTags(): TagSet = {
       _metricTags.add(TagKeys.OperationName, _operationName)
       _metricTags.add(TagKeys.Error, _hasError)
+      _metricTags.add(TagKeys.SampleDecision, convertSamplingDecisionToTag)
 
       if(kind != Span.Kind.Unknown)
         _metricTags.add(TagKeys.SpanKind, kind.toString)
@@ -830,6 +837,7 @@ object Span {
     val ParentOperationName = "parentOperation"
     val SpanKind = "span.kind"
     val UpstreamName = "upstream.name"
+    val SampleDecision = "span.sample-decision"
   }
 
   object MarkKeys {

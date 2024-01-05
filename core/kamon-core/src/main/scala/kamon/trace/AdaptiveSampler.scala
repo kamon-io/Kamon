@@ -18,12 +18,11 @@ package kamon
 package trace
 
 import java.util.concurrent.ThreadLocalRandom
-
 import com.typesafe.config.Config
 import kamon.jsr166.LongAdder
 import kamon.trace.AdaptiveSampler.{Allocation, OperationSampler, Settings}
 import kamon.trace.Trace.SamplingDecision
-import kamon.util.EWMA
+import kamon.util.{EWMA, Filter}
 
 import scala.collection.JavaConverters.collectionAsScalaIterableConverter
 import scala.collection.concurrent.TrieMap
@@ -67,7 +66,7 @@ class AdaptiveSampler extends Sampler {
 
   private def buildOperationSampler(operationName: String): AdaptiveSampler.OperationSampler = synchronized {
     _settings.groups
-      .find(g => g.operations.contains(operationName))
+      .find(g => g.operations.exists(_.accept(operationName)))
       .map(group => {
         group.rules.sample
           .map(fixedSamplingDecision => new OperationSampler.Constant(operationName, fixedSamplingDecision))
@@ -244,7 +243,7 @@ object AdaptiveSampler {
       */
     case class Group (
       name: String,
-      operations: Seq[String],
+      operations: Seq[Filter],
       rules: Rules
     )
 
@@ -275,7 +274,7 @@ object AdaptiveSampler {
 
         Settings.Group(
           name = groupName,
-          operations = groupConfig.getStringList("operations").asScala.toSeq,
+          operations = groupConfig.getStringList("operations").asScala.toSeq.map(Filter.fromGlob),
           rules = readRules(groupConfig.getConfig("rules"))
         )
       }.toSeq
@@ -290,8 +289,9 @@ object AdaptiveSampler {
         maximumThroughput = ifExists(config, "maximum-throughput", _.getDouble)
       )
 
-    private def toSamplingDecision(text: String): SamplingDecision =
+    private def toSamplingDecision(text: String): SamplingDecision = {
       if (text.equalsIgnoreCase("always")) SamplingDecision.Sample else SamplingDecision.DoNotSample
+    }
 
     private def ifExists[T](config: Config, path: String, extract: Config => String => T): Option[T] =
       if (config.hasPath(path)) Option(extract(config)(path)) else None
