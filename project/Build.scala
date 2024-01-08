@@ -32,7 +32,7 @@ object BaseProject extends AutoPlugin {
     val logbackClassic    = "ch.qos.logback"        %  "logback-classic" % "1.2.12"
     val scalatest         = "org.scalatest"         %% "scalatest"       % "3.2.9"
     val hdrHistogram      = "org.hdrhistogram"      %  "HdrHistogram"    % "2.1.10"
-    val okHttp            = "com.squareup.okhttp3"  %  "okhttp"          % "4.10.0"
+    val okHttp            = "com.squareup.okhttp3"  %  "okhttp"          % "4.12.0"
     val okHttpMockServer  = "com.squareup.okhttp3"  %  "mockwebserver"   % "4.10.0"
     val jsqlparser        = "com.github.jsqlparser" % "jsqlparser"       % "4.1"
     val oshiCore          = "com.github.oshi"       %  "oshi-core"       % "5.7.5"
