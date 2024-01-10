@@ -1044,6 +1044,7 @@ lazy val `kamon-bundle-dependencies-2-12-and-up` = (project in file("bundle/kamo
     `kamon-bundle-dependencies-all`,
     `kamon-akka-grpc`,
     `kamon-cats-io-3`,
+    `kamon-zio-2`,
     `kamon-finagle`,
     `kamon-pekko`,
     `kamon-pekko-http`,

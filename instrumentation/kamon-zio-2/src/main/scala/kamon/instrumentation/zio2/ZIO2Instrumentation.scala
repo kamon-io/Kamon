@@ -19,21 +19,9 @@ class ZIO2Instrumentation extends InstrumentationBuilder {
 
   onType("zio.internal.FiberRuntime")
     .mixin(classOf[HasContext.Mixin])
-    .advise(isConstructor, AfterFiberRuntimeInit)
 
   onType("zio.Runtime$")
     .advise(method("defaultSupervisor"), classOf[SupervisorAdvice.OverrideDefaultSupervisor])
-}
-
-class AfterFiberRuntimeInit
-
-object AfterFiberRuntimeInit  {
-
-  @Advice.OnMethodExit
-  @static def exit(@Advice.This fiber: Any): Unit ={
-    fiber.asInstanceOf[HasContext].setContext(Kamon.currentContext())
-  }
-
 }
 
 
@@ -42,13 +30,11 @@ class NewSupervisor extends Supervisor[Any] {
   override def value(implicit trace: zio.Trace): UIO[Any] = ZIO.unit
 
   override def onStart[R, E, A_](environment: ZEnvironment[R], effect: ZIO[R, E, A_], parent: Option[Fiber.Runtime[Any, Any]], fiber: Fiber.Runtime[E, A_])(implicit unsafe: Unsafe): Unit = {
-    val ctx = fiber.asInstanceOf[HasContext].context
-    Kamon.storeContext(ctx)
+    fiber.asInstanceOf[HasContext].setContext(Kamon.currentContext())
   }
 
   override def onSuspend[E, A_](fiber: Fiber.Runtime[E, A_])(implicit unsafe: Unsafe): Unit = {
-    val pctx = Kamon.currentContext()
-    fiber.asInstanceOf[HasContext].setContext(pctx)
+    fiber.asInstanceOf[HasContext].setContext(Kamon.currentContext())
   }
 
   override def onResume[E, A_](fiber: Fiber.Runtime[E, A_])(implicit unsafe: Unsafe): Unit = {
