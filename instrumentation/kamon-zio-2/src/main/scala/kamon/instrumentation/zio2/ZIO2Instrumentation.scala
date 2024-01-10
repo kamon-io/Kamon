@@ -1,12 +1,11 @@
 package kamon.instrumentation.zio2
 
 import kamon.Kamon
+import kamon.context.Storage
 import kamon.instrumentation.context.HasContext
 import kanela.agent.api.instrumentation.InstrumentationBuilder
-import kanela.agent.libs.net.bytebuddy.asm.Advice
 import zio.{Exit, Fiber, Supervisor, UIO, Unsafe, ZEnvironment, ZIO}
 
-import scala.annotation.static
 
 /**
  * This works as follows.
@@ -19,9 +18,41 @@ class ZIO2Instrumentation extends InstrumentationBuilder {
 
   onType("zio.internal.FiberRuntime")
     .mixin(classOf[HasContext.Mixin])
+    .mixin(classOf[HasStorage.Mixin])
 
   onType("zio.Runtime$")
     .advise(method("defaultSupervisor"), classOf[SupervisorAdvice.OverrideDefaultSupervisor])
+}
+
+/**
+ * Mixin that exposes access to the scope captured by an instrumented instance. The interface exposes means of getting and more importantly
+ * closing of the scope.
+ */
+trait HasStorage {
+
+  /**
+   * Returns the [[Storage.Scope]] stored in the instrumented instance.
+   */
+  def kamonScope: Storage.Scope
+
+  /**
+   * Updates the [[Storage.Scope]] stored in the instrumented instance
+   */
+  def setKamonScope(scope: Storage.Scope): Unit
+
+}
+
+object HasStorage {
+
+  /**
+   * [[HasStorage]] implementation that keeps the scope in a mutable field.
+   */
+  class Mixin(@transient private var _scope: Storage.Scope) extends HasStorage {
+
+    override def kamonScope: Storage.Scope = if (_scope != null) _scope else Storage.Scope.Empty
+
+    override def setKamonScope(scope: Storage.Scope): Unit = _scope = scope
+  }
 }
 
 
@@ -38,9 +69,13 @@ class NewSupervisor extends Supervisor[Any] {
   }
 
   override def onResume[E, A_](fiber: Fiber.Runtime[E, A_])(implicit unsafe: Unsafe): Unit = {
-    val ctx = fiber.asInstanceOf[HasContext].context
-    Kamon.storeContext(ctx)
+    val fiberInstance = fiber.asInstanceOf[HasContext with HasStorage]
+    val ctx = fiberInstance.context
+    fiberInstance.setKamonScope(Kamon.storeContext(ctx))
   }
 
-  override def onEnd[R, E, A_](value: Exit[E, A_], fiber: Fiber.Runtime[E, A_])(implicit unsafe: Unsafe): Unit = ()
+  override def onEnd[R, E, A_](value: Exit[E, A_], fiber: Fiber.Runtime[E, A_])(implicit unsafe: Unsafe): Unit = {
+    val fiberInstance = fiber.asInstanceOf[HasContext with HasStorage]
+    fiberInstance.kamonScope.close()
+  }
 }
