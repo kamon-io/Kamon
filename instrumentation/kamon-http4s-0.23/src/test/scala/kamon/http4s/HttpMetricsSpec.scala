@@ -21,7 +21,7 @@ import cats.effect.unsafe.implicits.global
 import cats.implicits._
 import kamon.http4s.middleware.server.KamonSupport
 import kamon.instrumentation.http.HttpServerMetrics
-import kamon.testkit.{InstrumentInspection, InitAndStopKamonAfterAll}
+import kamon.testkit.{InitAndStopKamonAfterAll, InstrumentInspection}
 import org.http4s.HttpRoutes
 import org.http4s.blaze.client.BlazeClientBuilder
 import org.http4s.blaze.server.BlazeServerBuilder
@@ -31,10 +31,10 @@ import org.http4s.implicits._
 import org.http4s.server.Server
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.SpanSugar
-import org.scalatest.OptionValues
-
+import org.scalatest.{OptionValues, time}
 import org.scalatest.wordspec.AnyWordSpec
 import org.scalatest.matchers.should.Matchers
+
 
 class HttpMetricsSpec
     extends AnyWordSpec
@@ -74,6 +74,15 @@ class HttpMetricsSpec
   ): A =
     (srv, client, metrics).tupled.use(f.tupled).unsafeRunSync()
 
+  def withServerAndClientEventually[A](timeout: time.Span, interval: time.Span)(
+    f: (Server, Client[IO], HttpServerMetrics.HttpServerInstruments) => IO[A]
+  ): A = {
+    implicit val patienceConfig = PatienceConfig(timeout = timeout, interval = interval)
+    eventually(
+      withServerAndClient(f)
+    )
+  }
+
   private def get[F[_]: Concurrent](
       path: String
   )(server: Server, client: Client[F]): F[String] = {
@@ -82,7 +91,7 @@ class HttpMetricsSpec
 
   "The HttpMetrics" should {
 
-    "track the total of active requests" in withServerAndClient {
+    "track the total of active requests" in withServerAndClientEventually(6 seconds, 1 second) {
       (server, client, serverMetrics) =>
         val requests = List
           .fill(100) {
@@ -94,7 +103,7 @@ class HttpMetricsSpec
           serverMetrics.activeRequests.distribution().max should be > 1L
           serverMetrics.activeRequests.distribution().min shouldBe 0L
         }
-        requests *> IO.sleep(2.seconds) *> test
+        requests *> test
     }
 
     "track the response time with status code 2xx" in withServerAndClient {

@@ -134,7 +134,7 @@ object BaseProject extends AutoPlugin {
 
   private lazy val compilationSettings = Seq(
     crossPaths := true,
-    scalaVersion := autoImport.`scala_2.12_version`,
+    scalaVersion := autoImport.`scala_2.13_version`,
     crossScalaVersions := Seq(
       autoImport.`scala_2.11_version`,
       autoImport.`scala_2.12_version`,
