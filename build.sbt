@@ -144,7 +144,7 @@ val instrumentationProjects = Seq[ProjectReference](
   `kamon-finagle`,
   `kamon-aws-sdk`,
   `kamon-alpakka-kafka`,
-  `kamon-http4s-1`,
+  `kamon-http4s-1_0`,
   `kamon-http4s-0_23`
 )
 
@@ -770,6 +770,7 @@ lazy val `kamon-http4s-0_23` = (project in file("instrumentation/kamon-http4s-0.
   .settings(instrumentationSettings)
   .settings(
     name := "kamon-http4s-0.23",
+    scalacOptions ++= { if(scalaBinaryVersion.value == "2.12") Seq("-Ypartial-unification") else Seq.empty },
     crossScalaVersions := Seq(`scala_2.12_version`, `scala_2.13_version`, `scala_3_version`),
     libraryDependencies ++= Seq(
       "org.http4s" %% "http4s-client" % "0.23.19" % Provided,

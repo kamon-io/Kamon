@@ -163,7 +163,7 @@ object BaseProject extends AutoPlugin {
       "-language:implicitConversions"
     ) ++ (CrossVersion.partialVersion(scalaVersion.value) match {
       case Some((2,11)) => Seq("-Xfuture", "-Ybackend:GenASM")
-      case Some((2,12)) => Seq("-Xfuture", "-opt:l:method,-closure-invocations", "-Ypartial-unification")
+      case Some((2,12)) => Seq("-Xfuture", "-opt:l:method,-closure-invocations")
       case Some((2,13)) => Seq.empty
       case Some((3, _)) => Seq("-source:3.0-migration", "-Xtarget:8")
       case _ => Seq.empty
