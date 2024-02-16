@@ -33,8 +33,8 @@ configs(
 val scalatestLocal = "org.scalatest" %% "scalatest" % "3.2.15"
 
 val `http4s_0.23_deps` = List(
-  "org.http4s" %% "http4s-client" % "0.23.19" % `Compile-Http4s-0.23`,
-  "org.http4s" %% "http4s-server" % "0.23.19" % `Compile-Http4s-0.23`,
+  "org.http4s" %% "http4s-client" % "0.23.19" % "http4s-0.23,provided",
+  "org.http4s" %% "http4s-server" % "0.23.19" % "http4s-0.23,provided",
   "org.http4s" %% "http4s-blaze-client" % "0.23.14" % `Test-Http4s-0.23`,
   "org.http4s" %% "http4s-blaze-server" % "0.23.14" % `Test-Http4s-0.23`,
   "org.http4s" %% "http4s-dsl" % "0.23.19" % `Test-Http4s-0.23`,
@@ -42,8 +42,8 @@ val `http4s_0.23_deps` = List(
 )
 
 val `http4s_1.0_deps` = List(
-  "org.http4s" %% "http4s-client" % "1.0.0-M38" % `Compile-Http4s-1.0`,
-  "org.http4s" %% "http4s-server" % "1.0.0-M38" % `Compile-Http4s-1.0`,
+  "org.http4s" %% "http4s-client" % "1.0.0-M38" % "http4s-1.0,provided",
+  "org.http4s" %% "http4s-server" % "1.0.0-M38" % "http4s-1.0,provided",
   "org.http4s" %% "http4s-blaze-client" % "1.0.0-M38" % `Test-Http4s-1.0`,
   "org.http4s" %% "http4s-blaze-server" % "1.0.0-M38" % `Test-Http4s-1.0`,
   "org.http4s" %% "http4s-dsl" % "1.0.0-M38" % `Test-Http4s-1.0`,

@@ -750,8 +750,8 @@ lazy val `kamon-http4s` = (project in file("instrumentation/kamon-http4s"))
     crossScalaVersions := Seq(`scala_2.12_version`, `scala_2.13_version`, `scala_3_version`),
   )
 .dependsOn(
-    `kamon-core` % "compile,compile-common,http4s-0.23,http4s-1.0",
-    `kamon-instrumentation-common` % "compile,compile-common,http4s-0.23,http4s-1.0",
+    `kamon-core` % "compile,common,http4s-0.23,http4s-1.0",
+    `kamon-instrumentation-common` % "compile,common,http4s-0.23,http4s-1.0",
     `kamon-testkit` % "test,test-common,test-http4s-0.23,test-http4s-1.0")
 
 /**
