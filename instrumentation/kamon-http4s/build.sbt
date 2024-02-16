@@ -83,6 +83,24 @@ Compile / compile := Def.taskDyn {
   }
 }.value
 
+// Ensure that the packaged sources contains the instrumentation for all Http4s versions.
+Compile / packageSrc / mappings := Def.taskDyn {
+  if(scalaBinaryVersion.value == "2.12") {
+    Def.task {
+      (`Compile-Http4s-0.23` / packageSrc / mappings).value ++
+        (Common / packageSrc / mappings).value
+    }
+  } else {
+    Def.task {
+      (`Compile-Http4s-0.23` / packageSrc / mappings).value ++
+        (`Compile-Http4s-1.0` / packageSrc / mappings).value ++
+        (Common / packageSrc / mappings).value
+    }
+  }
+}.value
+
+exportJars := true
+
 /**
  * Test-related settings
  */
