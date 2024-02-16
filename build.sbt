@@ -144,7 +144,8 @@ val instrumentationProjects = Seq[ProjectReference](
   `kamon-finagle`,
   `kamon-aws-sdk`,
   `kamon-alpakka-kafka`,
-  `kamon-http4s`
+  `kamon-http4s-1`,
+  `kamon-http4s-0_23`
 )
 
 lazy val instrumentation = (project in file("instrumentation"))
@@ -742,17 +743,48 @@ lazy val `kamon-alpakka-kafka` = (project in file("instrumentation/kamon-alpakka
     )
   ).dependsOn(`kamon-core`, `kamon-akka`, `kamon-testkit` % "test")
 
-lazy val `kamon-http4s` = (project in file("instrumentation/kamon-http4s"))
+lazy val `kamon-http4s-1_0` = (project in file("instrumentation/kamon-http4s-1.0"))
   .disablePlugins(AssemblyPlugin)
   .enablePlugins(JavaAgent)
   .settings(instrumentationSettings)
   .settings(
-    crossScalaVersions := Seq(`scala_2.12_version`, `scala_2.13_version`, `scala_3_version`),
+    name := "kamon-http4s-1.0",
+    crossScalaVersions := Seq(`scala_2.13_version`, `scala_3_version`),
+    libraryDependencies ++= Seq(
+      "org.http4s" %% "http4s-client" % "1.0.0-M38" % Provided,
+      "org.http4s" %% "http4s-server" % "1.0.0-M38" % Provided,
+      "org.http4s" %% "http4s-blaze-client" % "1.0.0-M38" % Test,
+      "org.http4s" %% "http4s-blaze-server" % "1.0.0-M38" % Test,
+      "org.http4s" %% "http4s-dsl" % "1.0.0-M38" % Test,
+      scalatest % Test,
+    )
   )
-.dependsOn(
-    `kamon-core` % "compile,common,http4s-0.23,http4s-1.0",
-    `kamon-instrumentation-common` % "compile,common,http4s-0.23,http4s-1.0",
-    `kamon-testkit` % "test,test-common,test-http4s-0.23,test-http4s-1.0")
+  .dependsOn(
+      `kamon-core`,
+      `kamon-instrumentation-common`,
+      `kamon-testkit` % Test)
+
+lazy val `kamon-http4s-0_23` = (project in file("instrumentation/kamon-http4s-0.23"))
+  .disablePlugins(AssemblyPlugin)
+  .enablePlugins(JavaAgent)
+  .settings(instrumentationSettings)
+  .settings(
+    name := "kamon-http4s-0.23",
+    crossScalaVersions := Seq(`scala_2.12_version`, `scala_2.13_version`, `scala_3_version`),
+    libraryDependencies ++= Seq(
+      "org.http4s" %% "http4s-client" % "0.23.19" % Provided,
+      "org.http4s" %% "http4s-server" % "0.23.19" % Provided,
+      "org.http4s" %% "http4s-blaze-client" % "0.23.14" % Test,
+      "org.http4s" %% "http4s-blaze-server" % "0.23.14" % Test,
+      "org.http4s" %% "http4s-dsl" % "0.23.19" % Test,
+      scalatest % Test
+    )
+  )
+  .dependsOn(
+    `kamon-core`,
+    `kamon-instrumentation-common`,
+    `kamon-testkit` % Test
+  )
 
 /**
  * Reporters
