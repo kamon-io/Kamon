@@ -684,7 +684,7 @@ lazy val `kamon-caffeine` = (project in file("instrumentation/kamon-caffeine"))
 lazy val `kamon-lagom` = (project in file("instrumentation/kamon-lagom"))
   .disablePlugins(AssemblyPlugin)
   .settings(
-    crossScalaVersions := Seq(`scala_2.12_version`, `scala_2.13_version`, `scala_2.13_version`),
+    crossScalaVersions := Seq(`scala_2.11_version`, `scala_2.12_version`, `scala_2.13_version`),
     libraryDependencies ++= {
       CrossVersion.partialVersion(scalaVersion.value) match {
         case Some((2, scalaMajor)) if scalaMajor == 11 => providedScope("com.lightbend.lagom" %% "lagom-server" % "1.4.13")
@@ -746,7 +746,10 @@ lazy val `kamon-http4s` = (project in file("instrumentation/kamon-http4s"))
   .disablePlugins(AssemblyPlugin)
   .enablePlugins(JavaAgent)
   .settings(instrumentationSettings)
-  .dependsOn(
+  .settings(
+    crossScalaVersions := Seq(`scala_2.12_version`, `scala_2.13_version`, `scala_3_version`),
+  )
+.dependsOn(
     `kamon-core` % "compile,compile-common,http4s-0.23,http4s-1.0",
     `kamon-instrumentation-common` % "compile,compile-common,http4s-0.23,http4s-1.0",
     `kamon-testkit` % "test,test-common,test-http4s-0.23,test-http4s-1.0")

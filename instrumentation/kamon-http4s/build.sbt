@@ -38,7 +38,7 @@ val `http4s_0.23_deps` = List(
   "org.http4s" %% "http4s-blaze-client" % "0.23.14" % `Test-Http4s-0.23`,
   "org.http4s" %% "http4s-blaze-server" % "0.23.14" % `Test-Http4s-0.23`,
   "org.http4s" %% "http4s-dsl" % "0.23.19" % `Test-Http4s-0.23`,
-  scalatestLocal
+  scalatestLocal % `Test-Http4s-0.23`
 )
 
 val `http4s_1.0_deps` = List(
@@ -47,7 +47,7 @@ val `http4s_1.0_deps` = List(
   "org.http4s" %% "http4s-blaze-client" % "1.0.0-M38" % `Test-Http4s-1.0`,
   "org.http4s" %% "http4s-blaze-server" % "1.0.0-M38" % `Test-Http4s-1.0`,
   "org.http4s" %% "http4s-dsl" % "1.0.0-M38" % `Test-Http4s-1.0`,
-  scalatestLocal
+  scalatestLocal % `Test-Http4s-1.0`
 )
 
 inConfig(Common)(Defaults.compileSettings ++ Seq(
@@ -57,6 +57,7 @@ inConfig(Common)(Defaults.compileSettings ++ Seq(
 libraryDependencies ++= `http4s_0.23_deps`
 
 inConfig(`Compile-Http4s-0.23`)(Defaults.compileSettings ++ Seq(
+  crossScalaVersions := Seq(`scala_2.12_version`, `scala_2.13_version`, scala_3_version),
   sources := joinSources(Common, `Compile-Http4s-0.23`).value,
 ))
 
