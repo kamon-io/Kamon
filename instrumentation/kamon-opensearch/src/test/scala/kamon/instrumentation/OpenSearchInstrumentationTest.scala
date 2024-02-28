@@ -1,6 +1,6 @@
 package kamon.instrumentation
 
-import com.dimafeng.testcontainers.{ElasticsearchContainer, ForAllTestContainer}
+import com.dimafeng.testcontainers.{GenericContainer, ForAllTestContainer}
 import kamon.tag.Lookups.plain
 import kamon.testkit.{InitAndStopKamonAfterAll, Reconfigure, TestSpanReporter}
 import org.apache.http.HttpHost
@@ -12,6 +12,7 @@ import org.scalatest.matchers.should.Matchers
 import org.scalatest.time.SpanSugar
 import org.scalatest.wordspec.AnyWordSpec
 import org.scalatest.OptionValues
+import org.testcontainers.containers.wait.strategy.Wait
 
 
 class OpenSearchInstrumentationTest
@@ -85,7 +86,12 @@ class OpenSearchInstrumentationTest
   }
 
 
-  override val container: ElasticsearchContainer = ElasticsearchContainer()
+  override val container: GenericContainer = GenericContainer(
+    "opensearchproject/opensearch:1.3.14",
+    exposedPorts = Seq(9200),
+    env = Map("discovery.type" -> "single-node", "plugins.security.disabled" -> "true"),
+    waitStrategy = Wait.forHttp("/_cluster/health")
+  )
   var client: RestClient = _
   var highLevelClient: RestHighLevelClient = _
 
@@ -94,11 +100,11 @@ class OpenSearchInstrumentationTest
     container.start()
 
     client = RestClient
-      .builder(HttpHost.create(container.httpHostAddress))
+      .builder(HttpHost.create(s"${container.host}:${container.mappedPort(9200)}"))
       .build()
 
     highLevelClient = new RestHighLevelClient(
-      RestClient.builder(HttpHost.create(container.httpHostAddress)))
+      RestClient.builder(HttpHost.create(s"${container.host}:${container.mappedPort(9200)}")))
   }
 
   override protected def afterAll(): Unit = {

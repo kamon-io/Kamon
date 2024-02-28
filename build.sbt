@@ -400,7 +400,6 @@ lazy val `kamon-opensearch` = (project in file("instrumentation/kamon-opensearch
       scalatest % "test",
       logbackClassic % "test",
       "com.dimafeng" %% "testcontainers-scala" % "0.41.0" % "test",
-      "com.dimafeng" %% "testcontainers-scala-elasticsearch" % "0.41.0" % "test"
     )
   ).dependsOn(`kamon-core`, `kamon-instrumentation-common`, `kamon-testkit` % "test")
 
