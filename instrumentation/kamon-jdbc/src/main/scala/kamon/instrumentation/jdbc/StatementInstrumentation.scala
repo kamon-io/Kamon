@@ -90,7 +90,7 @@ class StatementInstrumentation extends InstrumentationBuilder {
     * information in that Statement to have the proper pool information and ensure that the check round trips will be
     * observed appropriately.
     */
-  onType("org.postgresql.jdbc.PgConnection")
+  onTypesMatching(named("org.postgresql.jdbc.PgConnection").and(declaresField(named("checkConnectionQuery"))))
     .bridge(classOf[PgConnectionIsAliveAdvice.PgConnectionPrivateAccess])
     .advise(method("isValid"), PgConnectionIsAliveAdvice)
 
