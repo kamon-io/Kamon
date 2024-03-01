@@ -126,6 +126,7 @@ val instrumentationProjects = Seq[ProjectReference](
   `kamon-mongo-legacy`,
   `kamon-cassandra`,
   `kamon-elasticsearch`,
+  `kamon-opensearch`,
   `kamon-spring`,
   `kamon-annotation`,
   `kamon-annotation-api`,
@@ -401,6 +402,22 @@ lazy val `kamon-elasticsearch` = (project in file("instrumentation/kamon-elastic
       logbackClassic % "test",
       "com.dimafeng" %% "testcontainers-scala" % "0.41.0" % "test",
       "com.dimafeng" %% "testcontainers-scala-elasticsearch" % "0.41.0" % "test"
+    )
+  ).dependsOn(`kamon-core`, `kamon-instrumentation-common`, `kamon-testkit` % "test")
+
+lazy val `kamon-opensearch` = (project in file("instrumentation/kamon-opensearch"))
+  .disablePlugins(AssemblyPlugin)
+  .enablePlugins(JavaAgent)
+  .settings(instrumentationSettings)
+  .settings(
+    Test / run / fork := true,
+    libraryDependencies ++= Seq(
+      kanelaAgent % "provided",
+      "org.opensearch.client" % "opensearch-rest-client" % "1.3.14" % "provided",
+      "org.opensearch.client" % "opensearch-rest-high-level-client" % "1.3.14" % "provided",
+      scalatest % "test",
+      logbackClassic % "test",
+      "com.dimafeng" %% "testcontainers-scala" % "0.41.0" % "test",
     )
   ).dependsOn(`kamon-core`, `kamon-instrumentation-common`, `kamon-testkit` % "test")
 
@@ -1058,6 +1075,7 @@ lazy val `kamon-bundle-dependencies-all` = (project in file("bundle/kamon-bundle
     `kamon-mongo-legacy`,
     `kamon-cassandra`,
     `kamon-elasticsearch`,
+    `kamon-opensearch`,
     `kamon-spring`,
     `kamon-annotation`,
     `kamon-annotation-api`,
@@ -1117,6 +1135,7 @@ lazy val `kamon-bundle-dependencies-3` = (project in file("bundle/kamon-bundle-d
     `kamon-jdbc`,
     `kamon-kafka`,
     `kamon-elasticsearch`,
+    `kamon-opensearch`,
     `kamon-spring`,
     `kamon-annotation`,
     `kamon-annotation-api`,
