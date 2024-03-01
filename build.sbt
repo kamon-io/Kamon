@@ -118,6 +118,7 @@ val instrumentationProjects = Seq[ProjectReference](
   `kamon-scalaz-future`,
   `kamon-cats-io`,
   `kamon-cats-io-3`,
+  `kamon-zio-2`,
   `kamon-logback`,
   `kamon-jdbc`,
   `kamon-kafka`,
@@ -262,6 +263,21 @@ lazy val `kamon-cats-io-3` = (project in file("instrumentation/kamon-cats-io-3")
     libraryDependencies ++= Seq(
       kanelaAgent % "provided",
       "org.typelevel" %% "cats-effect" % "3.3.14" % "provided",
+      scalatest % "test",
+      logbackClassic % "test"
+    ),
+
+  ).dependsOn(`kamon-core`, `kamon-executors`, `kamon-testkit` % "test")
+
+lazy val `kamon-zio-2` = (project in file("instrumentation/kamon-zio-2"))
+  .disablePlugins(AssemblyPlugin)
+  .enablePlugins(JavaAgent)
+  .settings(instrumentationSettings)
+  .settings(
+    crossScalaVersions := Seq(`scala_2.12_version`, `scala_2.13_version`, scala_3_version),
+    libraryDependencies ++= Seq(
+      kanelaAgent % "provided",
+      "dev.zio" %% "zio" % "2.0.21" % "provided",
       scalatest % "test",
       logbackClassic % "test"
     ),
@@ -1028,6 +1044,7 @@ lazy val `kamon-bundle-dependencies-2-12-and-up` = (project in file("bundle/kamo
     `kamon-bundle-dependencies-all`,
     `kamon-akka-grpc`,
     `kamon-cats-io-3`,
+    `kamon-zio-2`,
     `kamon-finagle`,
     `kamon-pekko`,
     `kamon-pekko-http`,
@@ -1066,6 +1083,7 @@ lazy val `kamon-bundle-dependencies-3` = (project in file("bundle/kamon-bundle-d
     `kamon-caffeine`,
     `kamon-aws-sdk`,
     `kamon-cats-io-3`,
+    `kamon-zio-2`,
     `kamon-pekko`,
     `kamon-pekko-http`,
     `kamon-pekko-grpc`
