@@ -15,7 +15,6 @@
  */
 package kamon.instrumentation.pekko
 
-
 import org.apache.pekko.actor.{Actor, ActorLogging, ActorSystem, Props}
 import org.apache.pekko.event.Logging.LogEvent
 import org.apache.pekko.testkit.{ImplicitSender, TestKit}
@@ -26,7 +25,8 @@ import org.scalatest.BeforeAndAfterAll
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
 
-class ActorLoggingInstrumentationSpec extends TestKit(ActorSystem("ActorCellInstrumentationSpec")) with AnyWordSpecLike with Matchers
+class ActorLoggingInstrumentationSpec extends TestKit(ActorSystem("ActorCellInstrumentationSpec")) with AnyWordSpecLike
+    with Matchers
     with BeforeAndAfterAll with ImplicitSender {
   import ContextTesting._
 
@@ -39,16 +39,16 @@ class ActorLoggingInstrumentationSpec extends TestKit(ActorSystem("ActorCellInst
 
       val logEvent = fishForMessage() {
         case event: LogEvent if event.message.toString startsWith "TestLogEvent" => true
-        case _: LogEvent => false
+        case _: LogEvent                                                         => false
       }
 
       Kamon.runWithContext(logEvent.asInstanceOf[HasContext].context) {
-        val keyValueFromContext = Kamon.currentContext().getTag(option(ContextTesting.TestKey)).getOrElse("Missing Context Tag")
+        val keyValueFromContext =
+          Kamon.currentContext().getTag(option(ContextTesting.TestKey)).getOrElse("Missing Context Tag")
         keyValueFromContext should be("propagate-when-logging")
       }
     }
   }
-
 
   override protected def beforeAll(): Unit = system.eventStream.subscribe(testActor, classOf[LogEvent])
 
@@ -60,4 +60,3 @@ class LoggerActor extends Actor with ActorLogging {
     case "info" => log.info("TestLogEvent")
   }
 }
-

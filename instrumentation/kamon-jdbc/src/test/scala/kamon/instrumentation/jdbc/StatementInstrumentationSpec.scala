@@ -36,19 +36,19 @@ import scala.concurrent.{ExecutionContext, ExecutionContextExecutor, Future}
 import scala.util.{Failure, Success, Try}
 
 class StatementInstrumentationSpec extends AnyWordSpec
-  with Matchers
-  with Eventually
-  with SpanSugar
-  with BeforeAndAfterEach
-  with MetricInspection.Syntax
-  with InstrumentInspection.Syntax
-  with Reconfigure
-  with OptionValues
-  with InitAndStopKamonAfterAll
-  with TestSpanReporter {
+    with Matchers
+    with Eventually
+    with SpanSugar
+    with BeforeAndAfterEach
+    with MetricInspection.Syntax
+    with InstrumentInspection.Syntax
+    with Reconfigure
+    with OptionValues
+    with InitAndStopKamonAfterAll
+    with TestSpanReporter {
 
-  implicit val parallelQueriesExecutor: ExecutionContextExecutor = ExecutionContext.fromExecutor(Executors.newFixedThreadPool(10))
-
+  implicit val parallelQueriesExecutor: ExecutionContextExecutor =
+    ExecutionContext.fromExecutor(Executors.newFixedThreadPool(10))
 
   override protected def beforeAll(): Unit = {
     super.beforeAll()
@@ -70,7 +70,6 @@ class StatementInstrumentationSpec extends AnyWordSpec
     DriverSuite.MySQL,
     DriverSuite.HikariH2
   ).filter(canRunInCurrentEnvironment)
-
 
   "the StatementInstrumentation" when {
     drivers.foreach { driver =>
@@ -99,7 +98,6 @@ class StatementInstrumentationSpec extends AnyWordSpec
           val statement = connection.createStatement()
           statement.execute(select)
           validateNextRow(statement.getResultSet, valueNr = 2, valueName = "foo")
-
 
           eventually(timeout(scaled(5 seconds)), interval(200 millis)) {
             val span = commonSpanValidations(testSpanReporter(), driver)
@@ -229,7 +227,6 @@ class StatementInstrumentationSpec extends AnyWordSpec
             span.tags.get(option("db.statement")) shouldBe empty
           }
 
-
           val ps = connection.prepareStatement("INSERT INTO Address VALUES(?, ?)")
           ps.setInt(1, 1)
           ps.setString(2, "test")
@@ -253,7 +250,6 @@ class StatementInstrumentationSpec extends AnyWordSpec
             span.tags.get(option("db.statement")) shouldBe empty
           }
 
-
           val ps = connection.prepareStatement("INSERT INTO Address VALUES(?, ?)")
           ps.setInt(1, 1)
           ps.setString(2, "test")
@@ -275,7 +271,7 @@ class StatementInstrumentationSpec extends AnyWordSpec
                 driver.sleep(connection, Duration.ofMillis(1500))
                 connection
               }.onComplete {
-                case Success(conn) => conn.close()
+                case Success(conn)  => conn.close()
                 case Failure(error) => println(s"An error has occured ${error.getMessage}")
               }
             }
@@ -299,7 +295,10 @@ class StatementInstrumentationSpec extends AnyWordSpec
     }
   }
 
-  private def commonSpanValidations(testSpanReporter: BufferingSpanReporter, driver: DriverSuite with DriverSuite.AddressTableSetup) = {
+  private def commonSpanValidations(
+    testSpanReporter: BufferingSpanReporter,
+    driver: DriverSuite with DriverSuite.AddressTableSetup
+  ) = {
     val span = testSpanReporter.nextSpan().value
     span.metricTags.get(plain("db.vendor")) shouldBe driver.vendor
     span.metricTags.get(plain("component")) shouldBe "jdbc"
@@ -319,7 +318,12 @@ class StatementInstrumentationSpec extends AnyWordSpec
     span
   }
 
-  private def validateNextRow(resultSet: ResultSet, valueNr: Int, valueName: String, shouldBeMore: Boolean = false): Unit = {
+  private def validateNextRow(
+    resultSet: ResultSet,
+    valueNr: Int,
+    valueName: String,
+    shouldBeMore: Boolean = false
+  ): Unit = {
     resultSet.next() shouldBe true
     resultSet.getInt("Nr") shouldBe valueNr
     resultSet.getString("Name") shouldBe valueName
@@ -327,6 +331,7 @@ class StatementInstrumentationSpec extends AnyWordSpec
   }
 
   trait DriverSuite {
+
     /**
       * Name of the driver being tested.
       */
@@ -362,7 +367,6 @@ class StatementInstrumentationSpec extends AnyWordSpec
       */
     def sleep(connection: Connection, duration: Duration): Unit
 
-
     /**
       * Closes created connections and pools
       */
@@ -376,7 +380,6 @@ class StatementInstrumentationSpec extends AnyWordSpec
       val vendor = "h2"
       val url = "jdbc:h2:mem:jdbc-spec;MULTI_THREADED=1"
       val supportSleeping = true
-
 
       override def init(): Unit = {
         val connection = connect()

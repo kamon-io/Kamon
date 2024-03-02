@@ -52,25 +52,41 @@ class OpenTelemetryTraceReporterSpec extends AnyWordSpec with Matchers with Opti
       val (reporter, traceService) = openTelemetryTraceReporter()
       val span = finishedSpan()
       reporter.reportSpans(Seq(span))
-      //there should be a single span reported
+      // there should be a single span reported
       traceService.exportTraceServiceRequest.value.size() shouldEqual 1
       val spanData = traceService.exportTraceServiceRequest.value.iterator().next()
       val kamonVersion = Kamon.status().settings().version
-      spanData.getResource.getAttributes.asMap().asScala should contain(AttributeKey.stringKey("service.name"), "kamon-test-application")
-      spanData.getResource.getAttributes.asMap().asScala should contain(AttributeKey.stringKey("telemetry.sdk.name"), "kamon")
-      spanData.getResource.getAttributes.asMap().asScala should contain(AttributeKey.stringKey("telemetry.sdk.language"), "scala")
-      spanData.getResource.getAttributes.asMap().asScala should contain(AttributeKey.stringKey("telemetry.sdk.version"), kamonVersion)
-      spanData.getResource.getAttributes.asMap().asScala should contain(AttributeKey.stringKey("service.version"), "x.x.x")
+      spanData.getResource.getAttributes.asMap().asScala should contain(
+        AttributeKey.stringKey("service.name"),
+        "kamon-test-application"
+      )
+      spanData.getResource.getAttributes.asMap().asScala should contain(
+        AttributeKey.stringKey("telemetry.sdk.name"),
+        "kamon"
+      )
+      spanData.getResource.getAttributes.asMap().asScala should contain(
+        AttributeKey.stringKey("telemetry.sdk.language"),
+        "scala"
+      )
+      spanData.getResource.getAttributes.asMap().asScala should contain(
+        AttributeKey.stringKey("telemetry.sdk.version"),
+        kamonVersion
+      )
+      spanData.getResource.getAttributes.asMap().asScala should contain(
+        AttributeKey.stringKey("service.version"),
+        "x.x.x"
+      )
       spanData.getResource.getAttributes.asMap().asScala should contain(AttributeKey.stringKey("env"), "kamon-devint")
       spanData.getResource.getAttributes.asMap().asScala should contain(AttributeKey.stringKey("att1"), "v1")
       spanData.getResource.getAttributes.asMap().asScala should contain(AttributeKey.stringKey("att2"), "v2")
       spanData.getResource.getAttributes.asMap().asScala should contain(AttributeKey.stringKey("att3"), " a=b,c=d ")
       val host = spanData.getResource.getAttributes.asMap().asScala.get(AttributeKey.stringKey("host.name"))
       host shouldBe defined
-      val instance = spanData.getResource.getAttributes.asMap().asScala.get(AttributeKey.stringKey("service.instance.id"))
+      val instance =
+        spanData.getResource.getAttributes.asMap().asScala.get(AttributeKey.stringKey("service.instance.id"))
       instance should contain(s"kamon-test-application@${host.get}")
 
-      //assert instrumentation labels
+      // assert instrumentation labels
       val instrumentationScopeInfo = spanData.getInstrumentationScopeInfo
       instrumentationScopeInfo.getName should be("kamon-instrumentation")
       instrumentationScopeInfo.getVersion should be(kamonVersion)
@@ -86,11 +102,12 @@ class OpenTelemetryTraceReporterSpec extends AnyWordSpec with Matchers with Opti
     val (reporter, traceService) = openTelemetryTraceReporter()
     reporter.stop()
     traceService.hasBeenClosed should be(true)
-    reporter.stop() //stopping a second time should not matter
+    reporter.stop() // stopping a second time should not matter
   }
 
   "building instance with the factory should work" in {
-    val reporter = new OpenTelemetryTraceReporter.Factory().create(ModuleFactory.Settings(config, ExecutionContext.global))
+    val reporter =
+      new OpenTelemetryTraceReporter.Factory().create(ModuleFactory.Settings(config, ExecutionContext.global))
     reporter.stop()
   }
 

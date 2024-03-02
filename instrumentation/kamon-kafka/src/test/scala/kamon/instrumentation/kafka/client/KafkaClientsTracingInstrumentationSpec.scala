@@ -38,14 +38,13 @@ import java.time.Duration
 import java.util.{Collections, Properties}
 
 class KafkaClientsTracingInstrumentationSpec extends AnyWordSpec with Matchers
-  with Eventually
-  with SpanSugar
-  with BeforeAndAfter
-  with InitAndStopKamonAfterAll
-  with Reconfigure
-  with OptionValues
-  with TestSpanReporting {
-
+    with Eventually
+    with SpanSugar
+    with BeforeAndAfter
+    with InitAndStopKamonAfterAll
+    with Reconfigure
+    with OptionValues
+    with TestSpanReporting {
 
   implicit val stringSerializer: Serializer[String] = new StringSerializer
   implicit val stringDeserializer: Deserializer[String] = new StringDeserializer
@@ -125,8 +124,12 @@ class KafkaClientsTracingInstrumentationSpec extends AnyWordSpec with Matchers
       }
     }
 
-    "create a Producer/Consumer Span when publish/consume a message without follow-strategy and expect a linked span" in new SpanReportingTestScope(reporter) {
-      Kamon.reconfigure(ConfigFactory.parseString("kamon.instrumentation.kafka.client.tracing.continue-trace-on-consumer = false").withFallback(Kamon.config()))
+    "create a Producer/Consumer Span when publish/consume a message without follow-strategy and expect a linked span" in new SpanReportingTestScope(
+      reporter
+    ) {
+      Kamon.reconfigure(ConfigFactory.parseString(
+        "kamon.instrumentation.kafka.client.tracing.continue-trace-on-consumer = false"
+      ).withFallback(Kamon.config()))
       val testTopicName = "producer-consumer-span-with-links"
       publishStringMessageToKafka(testTopicName, "Hello world!!!")
       consumeFirstRawRecord(testTopicName).value() shouldBe "Hello world!!!"
@@ -161,12 +164,15 @@ class KafkaClientsTracingInstrumentationSpec extends AnyWordSpec with Matchers
       assertNoSpansReported()
     }
 
-    "create a Producer/Consumer Span when publish/consume a message with delayed spans" in new SpanReportingTestScope(reporter) {
+    "create a Producer/Consumer Span when publish/consume a message with delayed spans" in new SpanReportingTestScope(
+      reporter
+    ) {
       Kamon.reconfigure(ConfigFactory.parseString(
         """
           |kamon.instrumentation.kafka.client.tracing.use-delayed-spans = true
           |kamon.instrumentation.kafka.client.tracing.continue-trace-on-consumer = false
-      """.stripMargin).withFallback(Kamon.config()))
+      """.stripMargin
+      ).withFallback(Kamon.config()))
       KafkaInstrumentation.settings.useDelayedSpans shouldBe true
 
       val testTopicName = "producer-consumer-span-with-delayed"
@@ -205,7 +211,9 @@ class KafkaClientsTracingInstrumentationSpec extends AnyWordSpec with Matchers
       assertNoSpansReported()
     }
 
-    "create a Producer/Consumer Span when publish/consume a message with w3c format" in new SpanReportingTestScope(reporter) {
+    "create a Producer/Consumer Span when publish/consume a message with w3c format" in new SpanReportingTestScope(
+      reporter
+    ) {
       applyConfig("kamon.trace.identifier-scheme = double")
       applyConfig("kamon.instrumentation.kafka.client.tracing.propagator = w3c")
 
@@ -244,8 +252,12 @@ class KafkaClientsTracingInstrumentationSpec extends AnyWordSpec with Matchers
       }
     }
 
-    "create a Producer/Consumer Span when publish/consume a message with custom format" in new SpanReportingTestScope(reporter) {
-      applyConfig("kamon.instrumentation.kafka.client.tracing.propagator = kamon.instrumentation.kafka.testutil.CustomPropagationImplementation")
+    "create a Producer/Consumer Span when publish/consume a message with custom format" in new SpanReportingTestScope(
+      reporter
+    ) {
+      applyConfig(
+        "kamon.instrumentation.kafka.client.tracing.propagator = kamon.instrumentation.kafka.testutil.CustomPropagationImplementation"
+      )
 
       val testTopicName = "custom-context-propagation"
       publishStringMessageToKafka(testTopicName, "Hello world!!!")

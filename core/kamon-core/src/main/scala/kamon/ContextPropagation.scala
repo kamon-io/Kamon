@@ -33,7 +33,6 @@ trait ContextPropagation { self: Configuration =>
   init(self.config())
   self.onReconfigure(newConfig => self.init(newConfig))
 
-
   /**
     * Retrieves the HTTP propagation channel with the supplied name. Propagation channels are configured on the
     * kamon.propagation.http configuration section.

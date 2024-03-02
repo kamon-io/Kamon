@@ -24,7 +24,6 @@ import kamon.util.HexCodec
 
 import scala.util.Try
 
-
 /**
   * Encapsulates an identifier in its String and Byte representations. Since it is a very common practice to include
   * Trace and (sometimes) Span identifiers on logs we make heavy use of the String representation since Identifiers
@@ -42,7 +41,7 @@ case class Identifier(string: String, bytes: Array[Byte]) {
     string.isEmpty
 
   override def equals(obj: Any): Boolean = {
-    if(obj != null && obj.isInstanceOf[Identifier])
+    if (obj != null && obj.isInstanceOf[Identifier])
       obj.asInstanceOf[Identifier].string == string
     else false
   }
@@ -59,7 +58,7 @@ object Identifier {
     * @param traceIdFactory Factory to be used for the Trace identifiers
     * @param spanIdFactory Factory to be used for the Span identifiers
     */
-  case class Scheme (
+  case class Scheme(
     traceIdFactory: Factory,
     spanIdFactory: Factory
   )
@@ -77,7 +76,6 @@ object Identifier {
     val Double = Scheme(Factory.SixteenBytesIdentifier, Factory.EightBytesIdentifier)
 
   }
-
 
   /**
     * Generates random identifiers and parses identifiers from both string and binary representations.
@@ -100,7 +98,6 @@ object Identifier {
     def from(bytes: Array[Byte]): Identifier
   }
 
-
   object Factory {
 
     /**
@@ -117,20 +114,20 @@ object Identifier {
         Identifier(HexCodec.toLowerHex(random), data.array())
       }
 
-      override def from(string: String): Identifier =  Try {
+      override def from(string: String): Identifier = Try {
         val identifierLong = HexCodec.lowerHexToUnsignedLong(string)
         val data = ByteBuffer.allocate(8)
         data.putLong(identifierLong)
 
         Identifier(string, data.array())
-      } getOrElse(Empty)
+      } getOrElse (Empty)
 
       override def from(bytes: Array[Byte]): Identifier = Try {
         val buffer = ByteBuffer.wrap(bytes)
         val identifierLong = buffer.getLong
 
         Identifier(HexCodec.toLowerHex(identifierLong), bytes)
-      } getOrElse(Empty)
+      } getOrElse (Empty)
     }
 
     /**
@@ -148,7 +145,7 @@ object Identifier {
         Identifier(HexCodec.toLowerHex(highLong) + HexCodec.toLowerHex(lowLong), data.array())
       }
 
-      override def from(string: String): Identifier =  Try {
+      override def from(string: String): Identifier = Try {
         val highPart = HexCodec.lowerHexToUnsignedLong(string.substring(0, 16))
         val lowPart = HexCodec.lowerHexToUnsignedLong(string.substring(16, 32))
         val data = ByteBuffer.allocate(16)
@@ -156,7 +153,7 @@ object Identifier {
         data.putLong(lowPart)
 
         Identifier(string, data.array())
-      } getOrElse(Empty)
+      } getOrElse (Empty)
 
       override def from(bytes: Array[Byte]): Identifier = Try {
         val buffer = ByteBuffer.wrap(bytes)
@@ -164,7 +161,7 @@ object Identifier {
         val lowLong = buffer.getLong
 
         Identifier(HexCodec.toLowerHex(highLong) + HexCodec.toLowerHex(lowLong), bytes)
-      } getOrElse(Empty)
+      } getOrElse (Empty)
     }
 
   }

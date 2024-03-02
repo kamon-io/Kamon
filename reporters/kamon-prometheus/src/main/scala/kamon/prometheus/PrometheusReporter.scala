@@ -26,14 +26,16 @@ import kamon.prometheus.PrometheusReporter.DefaultConfigPath
 import kamon.prometheus.embeddedhttp.EmbeddedHttpServer
 import org.slf4j.LoggerFactory
 
-class PrometheusReporter(configPath: String = DefaultConfigPath, initialConfig: Config = Kamon.config()) extends MetricReporter with ScrapeSource {
+class PrometheusReporter(configPath: String = DefaultConfigPath, initialConfig: Config = Kamon.config())
+    extends MetricReporter with ScrapeSource {
 
   import PrometheusReporter.Settings.readSettings
   import PrometheusSettings.environmentTags
 
   private val _logger = LoggerFactory.getLogger(classOf[PrometheusReporter])
   private var _embeddedHttpServer: Option[EmbeddedHttpServer] = None
-  private val _snapshotAccumulator = PeriodSnapshot.accumulator(Duration.ofDays(365 * 5), Duration.ZERO, Duration.ofDays(365 * 5))
+  private val _snapshotAccumulator =
+    PeriodSnapshot.accumulator(Duration.ofDays(365 * 5), Duration.ZERO, Duration.ofDays(365 * 5))
 
   @volatile private var _preparedScrapeData: String =
     "# The kamon-prometheus module didn't receive any data just yet.\n"
@@ -56,7 +58,6 @@ class PrometheusReporter(configPath: String = DefaultConfigPath, initialConfig: 
     PrometheusReporter._lastCreatedInstance = None
   }
 
-
   override def reconfigure(newConfig: Config): Unit = {
     _reporterSettings = readSettings(newConfig.getConfig(configPath))
     _config = newConfig
@@ -71,7 +72,9 @@ class PrometheusReporter(configPath: String = DefaultConfigPath, initialConfig: 
 
     scrapeDataBuilder.appendCounters(currentData.counters)
     scrapeDataBuilder.appendGauges(currentData.gauges)
-    scrapeDataBuilder.appendDistributionMetricsAsGauges(snapshot.rangeSamplers ++ snapshot.histograms ++ snapshot.timers)
+    scrapeDataBuilder.appendDistributionMetricsAsGauges(
+      snapshot.rangeSamplers ++ snapshot.histograms ++ snapshot.timers
+    )
     scrapeDataBuilder.appendHistograms(currentData.histograms)
     scrapeDataBuilder.appendHistograms(currentData.timers)
     scrapeDataBuilder.appendHistograms(currentData.rangeSamplers)
@@ -84,12 +87,23 @@ class PrometheusReporter(configPath: String = DefaultConfigPath, initialConfig: 
   private def startEmbeddedServerIfEnabled(): Unit = {
     if (_reporterSettings.startEmbeddedServer) {
       val server = _reporterSettings.createEmbeddedHttpServerClass()
-          .getConstructor(Array[Class[_]](classOf[String], classOf[Int], classOf[String], classOf[ScrapeSource], classOf[Config]): _*)
-          .newInstance(_reporterSettings.embeddedServerHostname,
-            _reporterSettings.embeddedServerPort:Integer,
-            _reporterSettings.embeddedServerPath,
-            this, _config)
-      _logger.info(s"Started the embedded HTTP server on http://${_reporterSettings.embeddedServerHostname}:${_reporterSettings.embeddedServerPort}${_reporterSettings.embeddedServerPath}")
+        .getConstructor(Array[Class[_]](
+          classOf[String],
+          classOf[Int],
+          classOf[String],
+          classOf[ScrapeSource],
+          classOf[Config]
+        ): _*)
+        .newInstance(
+          _reporterSettings.embeddedServerHostname,
+          _reporterSettings.embeddedServerPort: Integer,
+          _reporterSettings.embeddedServerPath,
+          this,
+          _config
+        )
+      _logger.info(
+        s"Started the embedded HTTP server on http://${_reporterSettings.embeddedServerHostname}:${_reporterSettings.embeddedServerPort}${_reporterSettings.embeddedServerPath}"
+      )
       _embeddedHttpServer = Some(server)
     }
   }
@@ -117,7 +131,6 @@ object PrometheusReporter {
     _lastCreatedInstance.map(_.scrapeData())
   }
 
-
   class Factory extends ModuleFactory {
     override def create(settings: ModuleFactory.Settings): Module = {
       val reporter = new PrometheusReporter(DefaultConfigPath, settings.config)
@@ -131,17 +144,17 @@ object PrometheusReporter {
   }
 
   case class Settings(
-                         startEmbeddedServer: Boolean,
-                         embeddedServerHostname: String,
-                         embeddedServerPort: Int,
-                         embeddedServerPath: String,
-                         embeddedServerImpl: String,
-                         generic: PrometheusSettings.Generic
-                     ) {
+    startEmbeddedServer: Boolean,
+    embeddedServerHostname: String,
+    embeddedServerPort: Int,
+    embeddedServerPath: String,
+    embeddedServerImpl: String,
+    generic: PrometheusSettings.Generic
+  ) {
     def createEmbeddedHttpServerClass(): Class[_ <: EmbeddedHttpServer] = {
       val clz = embeddedServerImpl match {
         case "sun" => "kamon.prometheus.embeddedhttp.SunEmbeddedHttpServer"
-        case fqcn => fqcn
+        case fqcn  => fqcn
       }
       Class.forName(clz).asInstanceOf[Class[_ <: EmbeddedHttpServer]]
     }
@@ -165,4 +178,3 @@ object PrometheusReporter {
 trait ScrapeSource {
   def scrapeData(): String
 }
-

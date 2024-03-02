@@ -39,7 +39,7 @@ class ConstructorAdvice
 object ConstructorAdvice {
 
   @OnMethodExit(suppress = classOf[Throwable])
-  @static def exit(@This eventStream: HasSystem, @Argument(0) system:ActorSystem): Unit = {
+  @static def exit(@This eventStream: HasSystem, @Argument(0) system: ActorSystem): Unit = {
     eventStream.setSystem(system)
   }
 }
@@ -48,13 +48,13 @@ class PublishMethodAdvice
 object PublishMethodAdvice {
 
   @OnMethodExit(suppress = classOf[Throwable])
-  @static def exit(@This any: Any, @Argument(0) event: AnyRef):Unit =
+  @static def exit(@This any: Any, @Argument(0) event: AnyRef): Unit =
     try {
       val stream = any.asInstanceOf[HasSystem]
       event match {
-        case _: DeadLetter => PekkoMetrics.forSystem(stream.system.name).deadLetters.increment()
+        case _: DeadLetter       => PekkoMetrics.forSystem(stream.system.name).deadLetters.increment()
         case _: UnhandledMessage => PekkoMetrics.forSystem(stream.system.name).unhandledMessages.increment()
-        case _ => ()
+        case _                   => ()
       }
     } catch {
       case _: ClassCastException => ()

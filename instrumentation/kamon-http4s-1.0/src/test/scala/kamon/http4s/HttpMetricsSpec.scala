@@ -70,7 +70,7 @@ class HttpMetricsSpec
     )
 
   def withServerAndClient[A](
-      f: (Server, Client[IO], HttpServerMetrics.HttpServerInstruments) => IO[A]
+    f: (Server, Client[IO], HttpServerMetrics.HttpServerInstruments) => IO[A]
   ): A =
     (srv, client, metrics).tupled.use(f.tupled).unsafeRunSync()
 
@@ -84,7 +84,7 @@ class HttpMetricsSpec
   }
 
   private def get[F[_]: Concurrent](
-      path: String
+    path: String
   )(server: Server, client: Client[F]): F[String] = {
     client.expect[String](s"http://127.0.0.1:${server.address.port}$path")
   }

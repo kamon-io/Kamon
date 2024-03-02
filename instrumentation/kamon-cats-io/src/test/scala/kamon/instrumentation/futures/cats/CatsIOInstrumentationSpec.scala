@@ -50,7 +50,6 @@ class CatsIoInstrumentationSpec extends AnyWordSpec with Matchers with ScalaFutu
 
         val contextTagFuture = contextTagAfterTransformations.unsafeToFuture()
 
-
         eventually(timeout(10 seconds)) {
           contextTagFuture.value.get.get shouldBe "value"
         }

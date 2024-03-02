@@ -45,11 +45,10 @@ class HostMetricsCollector(ec: ExecutionContext) extends ScheduledAction {
   private val _frequentCollector = new FrequentCollectionTask
   private val _infrequentCollector = new InfrequentCollectionTask
 
-
   override def run(): Unit = {
     _frequentCollector.run()
 
-    if(Duration.between(_lastInfrequentTick, Instant.now()).getSeconds() >= 10) {
+    if (Duration.between(_lastInfrequentTick, Instant.now()).getSeconds() >= 10) {
       _infrequentCollector.run()
       _lastInfrequentTick = Instant.now()
     }
@@ -107,7 +106,7 @@ class HostMetricsCollector(ec: ExecutionContext) extends ScheduledAction {
         val steal = ticksDiff(previousTicks, currentTicks, TickType.STEAL)
         val total = user + nice + system + idle + iowait + irq + softirq + steal
 
-        def toPercent(value: Long): Long = ((100D * value.toDouble) / total.toDouble).toLong
+        def toPercent(value: Long): Long = ((100d * value.toDouble) / total.toDouble).toLong
 
         _cpuInstruments.user.record(toPercent(user))
         _cpuInstruments.system.record(toPercent(system))
@@ -179,9 +178,9 @@ class HostMetricsCollector(ec: ExecutionContext) extends ScheduledAction {
 
     private def recordLoadAverage(): Unit = {
       val loadAverage = _hal.getProcessor.getSystemLoadAverage(3)
-      if (loadAverage(0) >= 0D) _loadAverageInstruments.oneMinute.update(loadAverage(0))
-      if (loadAverage(1) >= 0D) _loadAverageInstruments.fiveMinutes.update(loadAverage(1))
-      if (loadAverage(2) >= 0D) _loadAverageInstruments.fifteenMinutes.update(loadAverage(2))
+      if (loadAverage(0) >= 0d) _loadAverageInstruments.oneMinute.update(loadAverage(0))
+      if (loadAverage(1) >= 0d) _loadAverageInstruments.fiveMinutes.update(loadAverage(1))
+      if (loadAverage(2) >= 0d) _loadAverageInstruments.fifteenMinutes.update(loadAverage(2))
     }
 
     private def recordStorageUsage(): Unit = {
@@ -201,7 +200,7 @@ class HostMetricsCollector(ec: ExecutionContext) extends ScheduledAction {
       })
     }
 
-    private def toPercent(value: Long, total: Long): Long = ((100D * value.toDouble) / total.toDouble).toLong
+    private def toPercent(value: Long, total: Long): Long = ((100d * value.toDouble) / total.toDouble).toLong
 
     private def recordStorageActivity(): Unit = {
       val devices = _hal.getDiskStores

@@ -35,7 +35,8 @@ class MetricOverrideReporter(wrappedReporter: MetricReporter, config: Config = K
       timers = snapshot.timers.map(updateDistribution),
       rangeSamplers = snapshot.rangeSamplers.map(updateDistribution),
       gauges = snapshot.gauges.map(updateDistribution),
-      counters = snapshot.counters.map(updateDistribution))
+      counters = snapshot.counters.map(updateDistribution)
+    )
 
     wrappedReporter.reportPeriodSnapshot(updatedSnapshot)
   }
@@ -52,7 +53,7 @@ class MetricOverrideReporter(wrappedReporter: MetricReporter, config: Config = K
     val remappedTags = TagSet.builder()
 
     tags.iterator().foreach(tag => {
-      if(!mapping.tagsToDelete.contains(tag.key)) {
+      if (!mapping.tagsToDelete.contains(tag.key)) {
         remappedTags.add(mapping.tagsToRename.getOrElse(tag.key, tag.key), Tag.unwrapValue(tag).toString)
       }
     })
@@ -63,7 +64,8 @@ class MetricOverrideReporter(wrappedReporter: MetricReporter, config: Config = K
   private def updateDistribution[T <: Metric.Settings, U](metric: MetricSnapshot[T, U]): MetricSnapshot[T, U] = {
     metricsMap.get(metric.name).map(mapping => {
 
-      val mappedInstruments = if(mapping.tagsToRename.isEmpty && mapping.tagsToDelete.isEmpty) metric.instruments else {
+      val mappedInstruments = if (mapping.tagsToRename.isEmpty && mapping.tagsToDelete.isEmpty) metric.instruments
+      else {
         metric.instruments.map(inst => {
           inst.copy(tags = remapTags(inst.tags, mapping))
         })
@@ -92,15 +94,21 @@ class MetricOverrideReporter(wrappedReporter: MetricReporter, config: Config = K
     val mappingConfig = config.getConfig("kamon.prometheus.metric-overrides")
 
     mappingConfig.configurations.map { case (name, config) =>
-      (name, MetricMapping(
-        if (config.hasPath("name"))
-          Some(config.getString("name")) else None,
-        if (config.hasPath("delete-tags"))
-          config.getStringList("delete-tags").asScala.toSet else Set.empty,
-        if (config.hasPath("rename-tags"))
-          config.getObject("rename-tags").unwrapped().asScala.toMap
-            .map { case (tagName, value) => (tagName, value.toString) } else Map.empty
-      ))
+      (
+        name,
+        MetricMapping(
+          if (config.hasPath("name"))
+            Some(config.getString("name"))
+          else None,
+          if (config.hasPath("delete-tags"))
+            config.getStringList("delete-tags").asScala.toSet
+          else Set.empty,
+          if (config.hasPath("rename-tags"))
+            config.getObject("rename-tags").unwrapped().asScala.toMap
+              .map { case (tagName, value) => (tagName, value.toString) }
+          else Map.empty
+        )
+      )
     }
   }
 

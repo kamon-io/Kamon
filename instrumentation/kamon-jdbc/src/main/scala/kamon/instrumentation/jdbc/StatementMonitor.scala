@@ -29,7 +29,6 @@ import java.sql.PreparedStatement
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 
-
 object StatementMonitor extends LoggingSupport {
 
   object StatementTypes {
@@ -65,7 +64,7 @@ object StatementMonitor extends LoggingSupport {
 
       case unrecognizedValue =>
         logger.warn(s"Unrecognized value [${unrecognizedValue}] for the [add-db-statement-as-span-tag] setting. " +
-                    s"Falling back to [always]")
+          s"Falling back to [always]")
     }
   }
 
@@ -76,7 +75,8 @@ object StatementMonitor extends LoggingSupport {
       // It could happen that there is no Pool Telemetry on the Pool when fail-fast is enabled and a connection is
       // created while the Pool's constructor is still executing.
       val (inFlightRangeSampler: RangeSampler, databaseTags: DatabaseTags) = statement match {
-        case cpt: HasConnectionPoolTelemetry if cpt.connectionPoolTelemetry != null && cpt.connectionPoolTelemetry.get() != null =>
+        case cpt: HasConnectionPoolTelemetry
+            if cpt.connectionPoolTelemetry != null && cpt.connectionPoolTelemetry.get() != null =>
           val poolTelemetry = cpt.connectionPoolTelemetry.get()
           (poolTelemetry.instruments.inFlightStatements, poolTelemetry.databaseTags)
 
@@ -106,11 +106,15 @@ object StatementMonitor extends LoggingSupport {
 
       val clientSpan = Kamon.clientSpanBuilder(spanName, "jdbc")
 
-      if(addStatementSQL || (statement.isInstanceOf[PreparedStatement] && addPreparedStatementSQL))
+      if (addStatementSQL || (statement.isInstanceOf[PreparedStatement] && addPreparedStatementSQL))
         clientSpan.tag("db.statement", sql)
 
-      databaseTags.spanTags.iterator().foreach(t => clientSpan.tag(t.key, databaseTags.spanTags.get(Lookups.coerce(t.key))))
-      databaseTags.metricTags.iterator().foreach(t => clientSpan.tagMetrics(t.key, databaseTags.metricTags.get(Lookups.coerce(t.key))))
+      databaseTags.spanTags.iterator().foreach(t =>
+        clientSpan.tag(t.key, databaseTags.spanTags.get(Lookups.coerce(t.key)))
+      )
+      databaseTags.metricTags.iterator().foreach(t =>
+        clientSpan.tagMetrics(t.key, databaseTags.metricTags.get(Lookups.coerce(t.key)))
+      )
       inFlightRangeSampler.increment()
 
       Some(Invocation(statement, clientSpan.start(startTimestamp), sql, startTimestamp, inFlightRangeSampler))

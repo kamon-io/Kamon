@@ -24,41 +24,40 @@ import java.time.Instant
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
 
-
 class ReporterSpec extends TestKit(ActorSystem("MetricReporterSpec"))
-  with AnyWordSpecLike with Matchers with BeforeAndAfterAll with ImplicitSender with BeforeAndAfterEach with Eventually {
+    with AnyWordSpecLike with Matchers with BeforeAndAfterAll with ImplicitSender with BeforeAndAfterEach
+    with Eventually {
 
   var server: Future[ServerBinding] = null
 
-  private var (helloCount, goodByeCount, ingestCount, tracingCount) = (0,0,0,0)
+  private var (helloCount, goodByeCount, ingestCount, tracingCount) = (0, 0, 0, 0)
 
   override def beforeAll(): Unit = {
     implicit val materializer: ActorMaterializer = ActorMaterializer()
     implicit val executionContext: ExecutionContext = system.dispatcher
 
-
     lazy val routes: Route = entity(as[Array[Byte]]) { buff =>
       post {
         pathPrefix("v2") {
           path("hello") {
-            helloCount+=1
+            helloCount += 1
             testActor ! "hello"
-            if(helloCount > 2) complete("hello") else complete(StatusCodes.InternalServerError)
+            if (helloCount > 2) complete("hello") else complete(StatusCodes.InternalServerError)
           } ~
           path("goodbye") {
-            goodByeCount+=1
+            goodByeCount += 1
             testActor ! "goodbye"
-            if(goodByeCount > 2) complete("good") else complete(StatusCodes.InternalServerError)
+            if (goodByeCount > 2) complete("good") else complete(StatusCodes.InternalServerError)
           } ~
           path("metrics") {
-            ingestCount+=1
+            ingestCount += 1
             testActor ! "metrics"
-            if(ingestCount > 2) complete("") else complete(StatusCodes.InternalServerError)
+            if (ingestCount > 2) complete("") else complete(StatusCodes.InternalServerError)
           } ~
-          path("spans")  {
-            tracingCount+=1
+          path("spans") {
+            tracingCount += 1
             testActor ! "spans"
-            if(tracingCount > 2) complete("") else complete(StatusCodes.InternalServerError)
+            if (tracingCount > 2) complete("") else complete(StatusCodes.InternalServerError)
           }
         }
       }
@@ -112,9 +111,22 @@ class ReporterSpec extends TestKit(ActorSystem("MetricReporterSpec"))
     }
 
     "retry span ingestion" in {
-      val span = Span.Finished(Identifier.Empty, Trace.Empty, Identifier.Empty, "", false, false,
-        Instant.now(), Instant.now(), Span.Kind.Unknown, Span.Position.Unknown,
-        TagSet.Empty, TagSet.Empty, Seq.empty, Seq.empty)
+      val span = Span.Finished(
+        Identifier.Empty,
+        Trace.Empty,
+        Identifier.Empty,
+        "",
+        false,
+        false,
+        Instant.now(),
+        Instant.now(),
+        Span.Kind.Unknown,
+        Span.Position.Unknown,
+        TagSet.Empty,
+        TagSet.Empty,
+        Seq.empty,
+        Seq.empty
+      )
 
       reporter.reportSpans(Seq(span))
       expectMsg("spans")

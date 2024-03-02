@@ -56,5 +56,3 @@ object RepointableActorRefPointAdvice {
       .setContext(Context.Empty)
   }
 }
-
-

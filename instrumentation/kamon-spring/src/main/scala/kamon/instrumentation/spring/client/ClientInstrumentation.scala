@@ -28,7 +28,9 @@ import scala.collection.mutable
 
 object ClientInstrumentation {
   private val instrumentation = HttpClientInstrumentation.from(
-    Kamon.config().getConfig("kamon.instrumentation.spring.client"), "spring.client")
+    Kamon.config().getConfig("kamon.instrumentation.spring.client"),
+    "spring.client"
+  )
 
   def getHandler(request: ClientRequest): RequestHandler[ClientRequest] = {
     instrumentation.createHandler(toRequestBuilder(request), Kamon.currentContext())

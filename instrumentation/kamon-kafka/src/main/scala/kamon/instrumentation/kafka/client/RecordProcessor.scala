@@ -34,7 +34,12 @@ private[kafka] object RecordProcessor {
    * linked to it's bundled span (if any is present). Context (either new or inbound) containing consumer
    * span is then propagated with the record via `HasContext` mixin
    */
-  def process[V, K](startTime: Instant, clientId: String, groupId: AnyRef, records: ConsumerRecords[K, V]): ConsumerRecords[K, V] = {
+  def process[V, K](
+    startTime: Instant,
+    clientId: String,
+    groupId: AnyRef,
+    records: ConsumerRecords[K, V]
+  ): ConsumerRecords[K, V] = {
 
     if (!records.isEmpty) {
       val consumerInfo = ConsumerInfo(resolve(groupId), clientId)
@@ -56,8 +61,8 @@ private[kafka] object RecordProcessor {
     * KafkaConsumer which versions < 2.5 relies on internal groupId: String and higher versions in Optional[String].
     */
   private def resolve(groupId: AnyRef): Option[String] = groupId match {
-      case opt: Optional[String] => if (opt.isPresent) Some(opt.get()) else None
-      case value: String => Option(value)
-      case _ => None
-    }
+    case opt: Optional[String] => if (opt.isPresent) Some(opt.get()) else None
+    case value: String         => Option(value)
+    case _                     => None
+  }
 }

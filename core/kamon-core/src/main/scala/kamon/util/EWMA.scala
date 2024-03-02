@@ -31,9 +31,9 @@ import org.slf4j.LoggerFactory
   * responsive; conversely, if the weighting factor is closer to 1, the moving average will take more iterations to
   * adapt to new data.
   */
-class EWMA private(weightingFactor: Double) {
-  @volatile private var _current = 0D
-  private val _newDataWeightFactor = 1D - weightingFactor
+class EWMA private (weightingFactor: Double) {
+  @volatile private var _current = 0d
+  private val _newDataWeightFactor = 1d - weightingFactor
   private var _count = 0L
 
   /**
@@ -56,7 +56,7 @@ class EWMA private(weightingFactor: Double) {
 
     _count += 1
     // Apply bias correction to the current value, if needed
-    _current = if(_count > 1L) currentValue else currentValue / (1D - Math.pow(weightingFactor, _count))
+    _current = if (_count > 1L) currentValue else currentValue / (1d - Math.pow(weightingFactor, _count))
   }
 }
 
@@ -66,7 +66,7 @@ object EWMA {
 
   // This roughly means that the moving average is equivalent to the average of the last 10 values. A rough idea of the
   // number of values represented in the moving average can be calculated via consideredValues = 1 / (1 - factor)
-  private val _fallbackWeightingFactor = 0.9D
+  private val _fallbackWeightingFactor = 0.9d
 
   /**
     * Creates a new EWMA instance with a weighting factor of 0.9.
@@ -79,10 +79,12 @@ object EWMA {
     * 0 and 1 (exclusive) then it will be ignored and the default factor of 0.9 will be used.
     */
   def create(weightingFactor: Double): EWMA =
-    if(weightingFactor > 0D && weightingFactor < 1D)
+    if (weightingFactor > 0d && weightingFactor < 1d)
       new EWMA(weightingFactor)
     else {
-      _logger.warn(s"Ignoring invalid weighting factor [$weightingFactor] and falling back to [${_fallbackWeightingFactor}]")
+      _logger.warn(
+        s"Ignoring invalid weighting factor [$weightingFactor] and falling back to [${_fallbackWeightingFactor}]"
+      )
       new EWMA(_fallbackWeightingFactor)
     }
 }

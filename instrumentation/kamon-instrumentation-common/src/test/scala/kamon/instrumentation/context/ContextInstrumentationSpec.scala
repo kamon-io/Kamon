@@ -99,7 +99,6 @@ object ContextInstrumentationSpec {
       .advise(method("doSomething"), CaptureCurrentContextOnExit)
       .advise(method("doWork"), InvokeWithCapturedContext)
 
-
     onType("kamon.instrumentation.context.ContextInstrumentationSpec$TargetWithInitializer")
       .mixin(classOf[HasContext.MixinWithInitializer])
       .advise(method("doSomething"), CaptureCurrentContextOnExit)

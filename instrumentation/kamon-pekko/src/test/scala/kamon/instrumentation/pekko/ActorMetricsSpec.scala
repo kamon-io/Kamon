@@ -29,8 +29,8 @@ import org.scalatest.wordspec.AnyWordSpecLike
 
 import scala.concurrent.duration._
 
-
-class ActorMetricsSpec extends TestKit(ActorSystem("ActorMetricsSpec")) with AnyWordSpecLike with MetricInspection.Syntax with InstrumentInspection.Syntax with Matchers
+class ActorMetricsSpec extends TestKit(ActorSystem("ActorMetricsSpec")) with AnyWordSpecLike
+    with MetricInspection.Syntax with InstrumentInspection.Syntax with Matchers
     with ImplicitSender with Eventually with InitAndStopKamonAfterAll {
 
   "the Kamon actor metrics" should {
@@ -53,8 +53,8 @@ class ActorMetricsSpec extends TestKit(ActorSystem("ActorMetricsSpec")) with Any
       createTestActor("measuring-processing-time", true) ! TrackTimings(sleep = Some(100 millis))
 
       val timings = expectMsgType[TrackedTimings]
-      val processingTimeDistribution = ActorProcessingTime.
-        withTags(actorTags("ActorMetricsSpec/user/measuring-processing-time")).distribution()
+      val processingTimeDistribution =
+        ActorProcessingTime.withTags(actorTags("ActorMetricsSpec/user/measuring-processing-time")).distribution()
 
       processingTimeDistribution.count should be(1L)
       processingTimeDistribution.buckets.size should be(1L)
@@ -70,50 +70,49 @@ class ActorMetricsSpec extends TestKit(ActorSystem("ActorMetricsSpec")) with Any
       ActorErrors.withTags(actorTags("ActorMetricsSpec/user/measuring-errors")).value() should be(10)
     }
 
-   "record the mailbox-size" in new ActorMetricsFixtures {
-     val trackedActor = createTestActor("measuring-mailbox-size", true)
-     trackedActor ! TrackTimings(sleep = Some(1 second))
-     10.times(trackedActor ! Discard)
-     trackedActor ! Ping
+    "record the mailbox-size" in new ActorMetricsFixtures {
+      val trackedActor = createTestActor("measuring-mailbox-size", true)
+      trackedActor ! TrackTimings(sleep = Some(1 second))
+      10.times(trackedActor ! Discard)
+      trackedActor ! Ping
 
-     val timings = expectMsgType[TrackedTimings]
-     expectMsg(Pong)
+      val timings = expectMsgType[TrackedTimings]
+      expectMsg(Pong)
 
-     val mailboxSizeDistribution = ActorMailboxSize
-       .withTags(actorTags("ActorMetricsSpec/user/measuring-mailbox-size")).distribution()
+      val mailboxSizeDistribution = ActorMailboxSize
+        .withTags(actorTags("ActorMetricsSpec/user/measuring-mailbox-size")).distribution()
 
-     mailboxSizeDistribution.min should be(0L +- 1L)
-     mailboxSizeDistribution.max should be(11L +- 1L)
-   }
+      mailboxSizeDistribution.min should be(0L +- 1L)
+      mailboxSizeDistribution.max should be(11L +- 1L)
+    }
 
-   "record the time-in-mailbox" in new ActorMetricsFixtures {
-     val trackedActor = createTestActor("measuring-time-in-mailbox", true)
-     trackedActor ! TrackTimings(sleep = Some(100 millis))
-     val timings = expectMsgType[TrackedTimings]
+    "record the time-in-mailbox" in new ActorMetricsFixtures {
+      val trackedActor = createTestActor("measuring-time-in-mailbox", true)
+      trackedActor ! TrackTimings(sleep = Some(100 millis))
+      val timings = expectMsgType[TrackedTimings]
 
-     val timeInMailboxDistribution = ActorTimeInMailbox
-       .withTags(actorTags("ActorMetricsSpec/user/measuring-time-in-mailbox")).distribution()
+      val timeInMailboxDistribution = ActorTimeInMailbox
+        .withTags(actorTags("ActorMetricsSpec/user/measuring-time-in-mailbox")).distribution()
 
-     timeInMailboxDistribution.count should be(1L)
-     timeInMailboxDistribution.buckets.head.frequency should be(1L)
-     timeInMailboxDistribution.buckets.head.value should be(timings.approximateTimeInMailbox +- 10.millis.toNanos)
-   }
+      timeInMailboxDistribution.count should be(1L)
+      timeInMailboxDistribution.buckets.head.frequency should be(1L)
+      timeInMailboxDistribution.buckets.head.value should be(timings.approximateTimeInMailbox +- 10.millis.toNanos)
+    }
 
-   "clean up the associated recorder when the actor is stopped" in new ActorMetricsFixtures {
-     val trackedActor = createTestActor("stop")
+    "clean up the associated recorder when the actor is stopped" in new ActorMetricsFixtures {
+      val trackedActor = createTestActor("stop")
 
-     // Killing the actor should remove it's ActorMetrics and registering again below should create a new one.
-     val deathWatcher = TestProbe()
-     deathWatcher.watch(trackedActor)
-     trackedActor ! PoisonPill
-     deathWatcher.expectTerminated(trackedActor)
+      // Killing the actor should remove it's ActorMetrics and registering again below should create a new one.
+      val deathWatcher = TestProbe()
+      deathWatcher.watch(trackedActor)
+      trackedActor ! PoisonPill
+      deathWatcher.expectTerminated(trackedActor)
 
-     eventually(timeout(1 second)) {
-       ActorProcessingTime.tagValues("path") shouldNot contain("ActorMetricsSpec/user/stop")
-     }
-   }
+      eventually(timeout(1 second)) {
+        ActorProcessingTime.tagValues("path") shouldNot contain("ActorMetricsSpec/user/stop")
+      }
+    }
   }
-
 
   override protected def afterAll(): Unit = {
     shutdown()
@@ -141,7 +140,7 @@ class ActorMetricsSpec extends TestKit(ActorSystem("ActorMetricsSpec")) with Any
       initialiseListener.expectMsg(Pong)
 
       // Cleanup all the metric recording instruments:
-      if(resetState) {
+      if (resetState) {
         val tags = actorTags(s"ActorMetricsSpec/user/$name")
 
         ActorTimeInMailbox.withTags(tags).distribution(resetState = true)

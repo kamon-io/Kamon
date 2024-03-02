@@ -28,9 +28,9 @@ class CatsIoInstrumentationSpec extends AnyWordSpec with Matchers with ScalaFutu
 
       "must capture the current context when creating and running fibers" in {
         val runtime = IORuntime.global
-        val anotherExecutionContext: ExecutionContext = ExecutionContext.fromExecutorService(Executors.newFixedThreadPool(10))
+        val anotherExecutionContext: ExecutionContext =
+          ExecutionContext.fromExecutorService(Executors.newFixedThreadPool(10))
         val context = Context.of("tool", "kamon")
-
 
         val effect = for {
           contextOnAnotherThread <- IO.delay(Kamon.currentContext())
@@ -60,7 +60,8 @@ class CatsIoInstrumentationSpec extends AnyWordSpec with Matchers with ScalaFutu
 
       "must allow the context to be cleaned" in {
         val runtime = IORuntime.global
-        val anotherExecutionContext: ExecutionContext = ExecutionContext.fromExecutorService(Executors.newFixedThreadPool(10))
+        val anotherExecutionContext: ExecutionContext =
+          ExecutionContext.fromExecutorService(Executors.newFixedThreadPool(10))
         val context = Context.of("key", "value")
 
         val test =
@@ -81,13 +82,14 @@ class CatsIoInstrumentationSpec extends AnyWordSpec with Matchers with ScalaFutu
 
       "must be available across asynchronous boundaries" in {
         val runtime = IORuntime.apply(
-          ExecutionContext.fromExecutor(Executors.newFixedThreadPool(1)), //pool 4
+          ExecutionContext.fromExecutor(Executors.newFixedThreadPool(1)), // pool 4
           ExecutionContext.fromExecutor(Executors.newFixedThreadPool(1)), // pool 5
-          Scheduler.fromScheduledExecutor(Executors.newSingleThreadScheduledExecutor()), //pool 6
+          Scheduler.fromScheduledExecutor(Executors.newSingleThreadScheduledExecutor()), // pool 6
           () => (),
           IORuntimeConfig.apply()
         )
-        val anotherExecutionContext: ExecutionContext = ExecutionContext.fromExecutorService(Executors.newFixedThreadPool(1)) //pool 7
+        val anotherExecutionContext: ExecutionContext =
+          ExecutionContext.fromExecutorService(Executors.newFixedThreadPool(1)) // pool 7
         val context = Context.of("key", "value")
         val test =
           for {
@@ -117,7 +119,7 @@ class CatsIoInstrumentationSpec extends AnyWordSpec with Matchers with ScalaFutu
         test.unsafeRunSync()(runtime)
       }
 
-     "must allow complex Span topologies to be created" in {
+      "must allow complex Span topologies to be created" in {
         val parentSpan = Span.Remote(
           Scheme.Single.spanIdFactory.generate(),
           Identifier.Empty,
@@ -125,6 +127,7 @@ class CatsIoInstrumentationSpec extends AnyWordSpec with Matchers with ScalaFutu
         )
         val context = Context.of(Span.Key, parentSpan)
         implicit val ec = ExecutionContext.global
+
         /**
           * test
           *   - nestedLevel0
@@ -135,8 +138,10 @@ class CatsIoInstrumentationSpec extends AnyWordSpec with Matchers with ScalaFutu
         val test = for {
           span <- IO.delay(Kamon.currentSpan())
           nestedLevel0 <- meteredWithSpanCapture("level1-A")(IO.sleep(100.millis))
-          nestedUpToLevel2 <- meteredWithSpanCapture("level1-B")(meteredWithSpanCapture("level2-B")(IO.sleep(100.millis)))
-          fiftyInParallel <- (0 to 49).toList.parTraverse(i => meteredWithSpanCapture(s"operation$i")(IO.sleep(100.millis)))
+          nestedUpToLevel2 <-
+            meteredWithSpanCapture("level1-B")(meteredWithSpanCapture("level2-B")(IO.sleep(100.millis)))
+          fiftyInParallel <-
+            (0 to 49).toList.parTraverse(i => meteredWithSpanCapture(s"operation$i")(IO.sleep(100.millis)))
           afterCede <- meteredWithSpanCapture("cede")(IO.cede *> IO.delay(Kamon.currentSpan()))
           afterEverything <- IO.delay(Kamon.currentSpan())
         } yield {
@@ -146,13 +151,15 @@ class CatsIoInstrumentationSpec extends AnyWordSpec with Matchers with ScalaFutu
           nestedUpToLevel2._1.id.string shouldBe nestedUpToLevel2._2._1.parentId.string
           fiftyInParallel.map(_._1.parentId.string).toSet shouldBe Set(span.id.string)
           fiftyInParallel.map(_._1.id.string).toSet should have size 50
-          afterCede._1.id.string shouldBe afterCede._2.id.string //A cede should not cause the span to be lost
+          afterCede._1.id.string shouldBe afterCede._2.id.string // A cede should not cause the span to be lost
           afterEverything.id.string shouldBe span.id.string
         }
         val runtime = IORuntime.global
 
         val result = scala.concurrent.Future.sequence(
-          (1 to 100).toList.map(_ => (IO.delay(Kamon.init()) *> IO.delay(Kamon.storeContext(context)) *> test).unsafeToFuture()(runtime))
+          (1 to 100).toList.map(_ =>
+            (IO.delay(Kamon.init()) *> IO.delay(Kamon.storeContext(context)) *> test).unsafeToFuture()(runtime)
+          )
         )
         Await.result(result, 100.seconds)
       }
@@ -170,20 +177,20 @@ class CatsIoInstrumentationSpec extends AnyWordSpec with Matchers with ScalaFutu
   }
 
   private def meteredWithSpanCapture[A](operation: String)(io: IO[A]): IO[(Span, A)] = {
-    Resource.make{
+    Resource.make {
+      for {
+        initialCtx <- IO(Kamon.currentContext())
+        parentSpan <- IO(Kamon.currentSpan())
+        newSpan <- IO(Kamon.spanBuilder(operation).context(initialCtx).asChildOf(parentSpan).start())
+        _ <- IO(Kamon.storeContext(initialCtx.withEntry(Span.Key, newSpan)))
+      } yield (initialCtx, newSpan)
+    } {
+      case (initialCtx, span) =>
         for {
-          initialCtx <- IO(Kamon.currentContext())
-          parentSpan <- IO(Kamon.currentSpan())
-          newSpan    <- IO(Kamon.spanBuilder(operation).context(initialCtx).asChildOf(parentSpan).start())
-          _          <- IO(Kamon.storeContext(initialCtx.withEntry(Span.Key, newSpan)))
-        } yield (initialCtx, newSpan)
-      }{
-        case (initialCtx, span) =>
-          for {
-            _ <- IO.delay(span.finish())
-              _ <- IO.delay(Kamon.storeContext(initialCtx))
-          } yield ()
-      }
+          _ <- IO.delay(span.finish())
+          _ <- IO.delay(Kamon.storeContext(initialCtx))
+        } yield ()
+    }
       .use(_ => (IO.delay(Kamon.currentSpan()), io).parBisequence)
   }
 }

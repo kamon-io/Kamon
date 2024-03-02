@@ -69,17 +69,16 @@ class HttpPropagationSpec extends AnyWordSpec with Matchers with OptionValues {
         context.getTag(plain("hello")) shouldBe "world"
         context.getTag(option("correlation")).value shouldBe "1234"
         context.getTag(option("unknown")) shouldBe empty
-        context.getTag(option("myLocalTag")) shouldBe empty //should be removed by the filter
-        context.getTag(option("privateMappedTag")) shouldBe empty //should be removed by the filter
+        context.getTag(option("myLocalTag")) shouldBe empty // should be removed by the filter
+        context.getTag(option("privateMappedTag")) shouldBe empty // should be removed by the filter
       }
     }
-
 
     "writing to outgoing requests" should {
       "at least write the upstream name when the context is empty" in {
         val headers = mutable.Map.empty[String, String]
         httpPropagation.write(Context.Empty, headerWriterFromMap(headers))
-        headers should contain only(
+        headers should contain only (
           "x-content-tags" -> "upstream.name=kamon-application;"
         )
       }
@@ -92,7 +91,7 @@ class HttpPropagationSpec extends AnyWordSpec with Matchers with OptionValues {
         )))
 
         httpPropagation.write(context, headerWriterFromMap(headers))
-        headers should contain only(
+        headers should contain only (
           "x-content-tags" -> "hello=world;upstream.name=kamon-application;",
           "x-mapped-tag" -> "value"
         )
@@ -101,15 +100,17 @@ class HttpPropagationSpec extends AnyWordSpec with Matchers with OptionValues {
       "write context entries when available" in {
         val headers = mutable.Map.empty[String, String]
         val context = Context.of(
-          HttpPropagationSpec.StringKey, "out-we-go",
-          HttpPropagationSpec.IntegerKey, 42
+          HttpPropagationSpec.StringKey,
+          "out-we-go",
+          HttpPropagationSpec.IntegerKey,
+          42
         )
 
         httpPropagation.write(context, headerWriterFromMap(headers))
-        headers should contain only(
+        headers should contain only (
           "x-content-tags" -> "upstream.name=kamon-application;",
           "string-header" -> "out-we-go"
-          )
+        )
       }
 
       "not write filtered context tags" in {
@@ -117,13 +118,13 @@ class HttpPropagationSpec extends AnyWordSpec with Matchers with OptionValues {
         val context = Context.of(TagSet.from(Map(
           "hello" -> "world",
           "mappedTag" -> "value",
-          "privateHello" -> "world", //should be filtered
-          "privateMappedTag" -> "value", //should be filtered
-          "myLocalTag" -> "value" //should be filtered
+          "privateHello" -> "world", // should be filtered
+          "privateMappedTag" -> "value", // should be filtered
+          "myLocalTag" -> "value" // should be filtered
         )))
 
         httpPropagation.write(context, headerWriterFromMap(headers))
-        headers should contain only(
+        headers should contain only (
           "x-content-tags" -> "hello=world;upstream.name=kamon-application;",
           "x-mapped-tag" -> "value"
         )
@@ -131,7 +132,6 @@ class HttpPropagationSpec extends AnyWordSpec with Matchers with OptionValues {
 
     }
   }
-
 
   val httpPropagation = HttpPropagation.from(
     ConfigFactory.parseString(
@@ -150,12 +150,13 @@ class HttpPropagationSpec extends AnyWordSpec with Matchers with OptionValues {
         |entries.outgoing.string = "kamon.context.HttpPropagationSpec$StringEntryCodec"
         |
       """.stripMargin
-    ).withFallback(ConfigFactory.load().getConfig("kamon.propagation")), identifierScheme = "single")
-
+    ).withFallback(ConfigFactory.load().getConfig("kamon.propagation")),
+    identifierScheme = "single"
+  )
 
   def headerReaderFromMap(map: Map[String, String]): HttpPropagation.HeaderReader = new HttpPropagation.HeaderReader {
     override def read(header: String): Option[String] = {
-      if(map.get("fail").nonEmpty)
+      if (map.get("fail").nonEmpty)
         sys.error("failing on purpose")
 
       map.get(header)
@@ -164,9 +165,10 @@ class HttpPropagationSpec extends AnyWordSpec with Matchers with OptionValues {
     override def readAll(): Map[String, String] = map
   }
 
-  def headerWriterFromMap(map: mutable.Map[String, String]): HttpPropagation.HeaderWriter = new HttpPropagation.HeaderWriter {
-    override def write(header: String, value: String): Unit = map.put(header, value)
-  }
+  def headerWriterFromMap(map: mutable.Map[String, String]): HttpPropagation.HeaderWriter =
+    new HttpPropagation.HeaderWriter {
+      override def write(header: String, value: String): Unit = map.put(header, value)
+    }
 }
 
 object HttpPropagationSpec {
@@ -174,7 +176,6 @@ object HttpPropagationSpec {
   val StringKey = Context.key[String]("string", null)
   val IntegerKey = Context.key[Int]("integer", 0)
   val OptionalKey = Context.key[Option[String]]("optional", None)
-
 
   class StringEntryCodec extends EntryReader[HeaderReader] with EntryWriter[HeaderWriter] {
     private val HeaderName = "string-header"

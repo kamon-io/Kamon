@@ -18,7 +18,10 @@ package kamon.instrumentation.system.jvm
 
 import java.lang.management.ManagementFactory
 import kamon.Kamon
-import kamon.instrumentation.system.jvm.JvmMetrics.MemoryUsageInstruments.{BufferPoolInstruments, MemoryRegionInstruments}
+import kamon.instrumentation.system.jvm.JvmMetrics.MemoryUsageInstruments.{
+  BufferPoolInstruments,
+  MemoryRegionInstruments
+}
 import kamon.instrumentation.system.jvm.JvmMetricsCollector.{Collector, MemoryPool, ThreadState}
 import kamon.metric.{Gauge, Histogram, InstrumentGroup, MeasurementUnit}
 import kamon.tag.TagSet
@@ -113,7 +116,7 @@ object JvmMetrics {
     name = "jvm.threads.daemon",
     description = "Tracks the current number of daemon threads on the JVM"
   )
-  
+
   val ThreadsStates = Kamon.gauge(
     name = "jvm.threads.states",
     description = "Tracks the current number of threads on each possible state"
@@ -158,14 +161,16 @@ object JvmMetrics {
     val promotionToOld = register(GcPromotion, "space", "old")
 
     def garbageCollectionTime(collector: Collector): Histogram =
-      _collectorCache.getOrElseUpdate(collector.alias, {
-        val collectorTags = TagSet.builder()
-          .add("collector", collector.alias)
-          .add("generation", collector.generation.toString)
-          .build()
+      _collectorCache.getOrElseUpdate(
+        collector.alias, {
+          val collectorTags = TagSet.builder()
+            .add("collector", collector.alias)
+            .add("generation", collector.generation.toString)
+            .build()
 
-        register(GC, collectorTags)
-      })
+          register(GC, collectorTags)
+        }
+      )
   }
 
   class MemoryUsageInstruments(tags: TagSet) extends InstrumentGroup(tags) {
@@ -176,40 +181,46 @@ object JvmMetrics {
     private val _memoryBuffersCache = mutable.Map.empty[String, BufferPoolInstruments]
 
     def regionInstruments(regionName: String): MemoryRegionInstruments =
-      _memoryRegionsCache.getOrElseUpdate(regionName, {
-        val region = TagSet.of("region", regionName)
+      _memoryRegionsCache.getOrElseUpdate(
+        regionName, {
+          val region = TagSet.of("region", regionName)
 
-        MemoryRegionInstruments(
-          register(MemoryUsed, region),
-          register(MemoryFree, region),
-          register(MemoryCommitted, region),
-          register(MemoryMax, region)
-        )
-      })
+          MemoryRegionInstruments(
+            register(MemoryUsed, region),
+            register(MemoryFree, region),
+            register(MemoryCommitted, region),
+            register(MemoryMax, region)
+          )
+        }
+      )
 
     def poolInstruments(pool: MemoryPool): MemoryRegionInstruments =
-      _memoryPoolsCache.getOrElseUpdate(pool.alias, {
-        val region = TagSet.of("pool", pool.alias)
+      _memoryPoolsCache.getOrElseUpdate(
+        pool.alias, {
+          val region = TagSet.of("pool", pool.alias)
 
-        MemoryRegionInstruments(
-          register(MemoryPoolUsed, region),
-          register(MemoryPoolFree, region),
-          register(MemoryPoolCommitted, region),
-          register(MemoryPoolMax, region)
-        )
-      })
+          MemoryRegionInstruments(
+            register(MemoryPoolUsed, region),
+            register(MemoryPoolFree, region),
+            register(MemoryPoolCommitted, region),
+            register(MemoryPoolMax, region)
+          )
+        }
+      )
 
     def bufferPoolInstruments(poolName: String): BufferPoolInstruments = {
-      _memoryBuffersCache.getOrElseUpdate(poolName, {
-        val bufferTags = tags
-          .withTag("pool", poolName)
+      _memoryBuffersCache.getOrElseUpdate(
+        poolName, {
+          val bufferTags = tags
+            .withTag("pool", poolName)
 
-        BufferPoolInstruments(
-          register(BufferPoolCount, bufferTags),
-          register(BufferPoolUsed, bufferTags),
-          register(BufferPoolCapacity, bufferTags)
-        )
-      })
+          BufferPoolInstruments(
+            register(BufferPoolCount, bufferTags),
+            register(BufferPoolUsed, bufferTags),
+            register(BufferPoolCapacity, bufferTags)
+          )
+        }
+      )
     }
   }
 
@@ -224,30 +235,30 @@ object JvmMetrics {
     val total = register(ThreadsTotal)
     val peak = register(ThreadsPeak)
     val daemon = register(ThreadsDaemon)
-    
+
     def threadState(threadState: ThreadState): Gauge = {
-      _threadsStatesCache.getOrElseUpdate(threadState, {
-        val stateTag = TagSet.of("state", threadState.toString)
-        
-        register(ThreadsStates, stateTag)
-      })
+      _threadsStatesCache.getOrElseUpdate(
+        threadState, {
+          val stateTag = TagSet.of("state", threadState.toString)
+
+          register(ThreadsStates, stateTag)
+        }
+      )
     }
   }
 
   object MemoryUsageInstruments {
-    case class MemoryRegionInstruments (
+    case class MemoryRegionInstruments(
       used: Histogram,
       free: Histogram,
       committed: Gauge,
       max: Gauge
     )
 
-    case class BufferPoolInstruments (
+    case class BufferPoolInstruments(
       count: Gauge,
       used: Gauge,
       capacity: Gauge
     )
   }
 }
-
-

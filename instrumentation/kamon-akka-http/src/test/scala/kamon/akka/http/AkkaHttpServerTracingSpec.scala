@@ -12,7 +12,7 @@
  * either express or implied. See the License for the specific language governing permissions
  * and limitations under the License.
  * =========================================================================================
-*/
+ */
 
 package kamon.akka.http
 
@@ -34,8 +34,10 @@ import scala.collection.JavaConverters._
 import scala.concurrent.ExecutionContextExecutor
 import scala.util.Try
 
-class AkkaHttpServerTracingSpec extends AnyWordSpecLike with Matchers with ScalaFutures with Inside with InitAndStopKamonAfterAll
-    with MetricInspection.Syntax with Reconfigure with TestWebServer with Eventually with OptionValues with TestSpanReporter {
+class AkkaHttpServerTracingSpec extends AnyWordSpecLike with Matchers with ScalaFutures with Inside
+    with InitAndStopKamonAfterAll
+    with MetricInspection.Syntax with Reconfigure with TestWebServer with Eventually with OptionValues
+    with TestSpanReporter {
 
   import TestWebServer.Endpoints._
 
@@ -73,7 +75,6 @@ class AkkaHttpServerTracingSpec extends AnyWordSpecLike with Matchers with Scala
       "create a server Span when receiving requests" in {
         val target = s"$protocol://$interface:$port/$dummyPathOk"
         client.newCall(new Request.Builder().url(target).build()).execute()
-
 
         eventually(timeout(10 seconds)) {
           val span = testSpanReporter().nextSpan().value
@@ -220,7 +221,7 @@ class AkkaHttpServerTracingSpec extends AnyWordSpecLike with Matchers with Scala
         eventually(timeout(10 seconds)) {
           val span = testSpanReporter().nextSpan().value
           span.operationName shouldBe "unhandled"
-          span.tags.get(plain("http.url"))  should endWith(s"$interface:$port/unknown-path")
+          span.tags.get(plain("http.url")) should endWith(s"$interface:$port/unknown-path")
           span.metricTags.get(plain("component")) shouldBe "akka.http.server"
           span.metricTags.get(plain("http.method")) shouldBe "GET"
           span.metricTags.get(plainBoolean("error")) shouldBe false
@@ -243,11 +244,11 @@ class AkkaHttpServerTracingSpec extends AnyWordSpecLike with Matchers with Scala
           span
         }
 
-        inside(span.marks){
-          case List(_ @ Mark(_, "http.response.ready")) =>
+        inside(span.marks) {
+          case List(_ @Mark(_, "http.response.ready")) =>
         }
 
-        span.tags.get(plain("http.url"))  should endWith(s"$interface:$port/$stream")
+        span.tags.get(plain("http.url")) should endWith(s"$interface:$port/$stream")
         span.metricTags.get(plain("component")) shouldBe "akka.http.server"
         span.metricTags.get(plain("http.method")) shouldBe "GET"
       }
@@ -280,4 +281,3 @@ class AkkaHttpServerTracingSpec extends AnyWordSpecLike with Matchers with Scala
     httpsWebServer.shutdown()
   }
 }
-

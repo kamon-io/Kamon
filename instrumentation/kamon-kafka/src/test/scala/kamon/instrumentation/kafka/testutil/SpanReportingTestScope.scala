@@ -19,10 +19,10 @@ import kamon.trace.Span
 import org.scalatest.concurrent.{Eventually, PatienceConfiguration}
 import org.scalatest.matchers.should.Matchers
 
-abstract class SpanReportingTestScope(_reporter: TestSpanReporter.BufferingSpanReporter) extends Eventually with Matchers {
+abstract class SpanReportingTestScope(_reporter: TestSpanReporter.BufferingSpanReporter) extends Eventually
+    with Matchers {
   private var _reportedSpans: List[Span.Finished] = Nil
   _reporter.clear()
-
 
   def reportedSpans: List[Span.Finished] = _reportedSpans
 
@@ -33,7 +33,7 @@ abstract class SpanReportingTestScope(_reporter: TestSpanReporter.BufferingSpanR
     def doIt(prevNumReportedSpans: Int): Unit = {
       Thread.sleep(waitBetweenPollInMs)
       collectReportedSpans()
-      if(reportedSpans.size != prevNumReportedSpans)
+      if (reportedSpans.size != prevNumReportedSpans)
         doIt(reportedSpans.size)
     }
     doIt(reportedSpans.size)
@@ -45,7 +45,7 @@ abstract class SpanReportingTestScope(_reporter: TestSpanReporter.BufferingSpanR
       _reportedSpans.size shouldBe numOfExpectedSpans
     }
     Thread.sleep(300)
-    if(_reporter.nextSpan().isDefined) {
+    if (_reporter.nextSpan().isDefined) {
       fail(s"Expected only $numOfExpectedSpans spans to be reported, but got more!")
     }
   }

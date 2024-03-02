@@ -31,20 +31,23 @@ object PoolConstructorAdvice {
 
   @Advice.OnMethodExit
   @static def onConstructed(
-      @Advice.This poolWithMetrics:                      HostConnectionPool with HasPoolMetrics,
-      @Advice.FieldValue("host") host:                   Host,
-      @Advice.FieldValue("totalInFlight") totalInflight: AtomicInteger
+    @Advice.This poolWithMetrics: HostConnectionPool with HasPoolMetrics,
+    @Advice.FieldValue("host") host: Host,
+    @Advice.FieldValue("totalInFlight") totalInflight: AtomicInteger
   ): Unit = {
-    val node             = CassandraInstrumentation.createNode(host)
+    val node = CassandraInstrumentation.createNode(host)
     val samplingInterval = CassandraInstrumentation.settings.sampleInterval
 
     poolWithMetrics.setNodeMonitor(new NodeMonitor(node))
 
-    if(poolWithMetrics.nodeMonitor.poolMetricsEnabled) {
-      poolWithMetrics.nodeMonitor.poolMetrics.inFlight.autoUpdate(inFlightTracker => {
-        inFlightTracker.record(totalInflight.longValue())
-        ()
-      }, samplingInterval)
+    if (poolWithMetrics.nodeMonitor.poolMetricsEnabled) {
+      poolWithMetrics.nodeMonitor.poolMetrics.inFlight.autoUpdate(
+        inFlightTracker => {
+          inFlightTracker.record(totalInflight.longValue())
+          ()
+        },
+        samplingInterval
+      )
     }
   }
 }
@@ -72,10 +75,10 @@ object BorrowAdvice {
 
   @Advice.OnMethodExit(suppress = classOf[Throwable], inline = false)
   @static def onBorrowed(
-      @Advice.Return connection:  ListenableFuture[Connection],
-      @Advice.Enter start:        Long,
-      @Advice.This poolMetrics:   HasPoolMetrics,
-      @Advice.FieldValue("totalInFlight") totalInflight: AtomicInteger
+    @Advice.Return connection: ListenableFuture[Connection],
+    @Advice.Enter start: Long,
+    @Advice.This poolMetrics: HasPoolMetrics,
+    @Advice.FieldValue("totalInFlight") totalInflight: AtomicInteger
   ): Unit = {
 
     GuavaCompatibility.INSTANCE.addCallback(
@@ -100,16 +103,19 @@ object InitPoolAdvice {
 
   @Advice.OnMethodExit
   @static def onPoolInited(
-      @Advice.This hasPoolMetrics:                HasPoolMetrics,
-      @Advice.Return done:                        ListenableFuture[_],
-      @Advice.FieldValue("open") openConnections: AtomicInteger
+    @Advice.This hasPoolMetrics: HasPoolMetrics,
+    @Advice.Return done: ListenableFuture[_],
+    @Advice.FieldValue("open") openConnections: AtomicInteger
   ): Unit = {
 
-    done.addListener(new Runnable {
-      override def run(): Unit = {
-        hasPoolMetrics.nodeMonitor.connectionsOpened(openConnections.get())
-      }
-    }, CallingThreadExecutionContext)
+    done.addListener(
+      new Runnable {
+        override def run(): Unit = {
+          hasPoolMetrics.nodeMonitor.connectionsOpened(openConnections.get())
+        }
+      },
+      CallingThreadExecutionContext
+    )
   }
 }
 
@@ -118,8 +124,8 @@ object CreateConnectionAdvice {
 
   @Advice.OnMethodExit
   @static def onConnectionCreated(
-      @Advice.This hasPoolMetrics: HasPoolMetrics,
-      @Advice.Return created:      Boolean
+    @Advice.This hasPoolMetrics: HasPoolMetrics,
+    @Advice.Return created: Boolean
   ): Unit =
     if (created) {
       hasPoolMetrics.nodeMonitor.connectionsOpened(1)
@@ -131,8 +137,8 @@ object TrashConnectionAdvice {
 
   @Advice.OnMethodExit
   @static def onConnectionTrashed(
-      @Advice.This hasPoolMetrics:     HasPoolMetrics,
-      @Advice.FieldValue("host") host: Host
+    @Advice.This hasPoolMetrics: HasPoolMetrics,
+    @Advice.FieldValue("host") host: Host
   ): Unit = {
     hasPoolMetrics.nodeMonitor.connectionTrashed
   }

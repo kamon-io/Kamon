@@ -46,8 +46,10 @@ class SimpleSpanBatchSenderBuilder() extends SpanBatchSenderBuilder {
   def buildConfig(config: Config): SenderConfiguration = {
     val nrConfig = NewRelicConfig.fromConfig(config)
     if (nrConfig.apiKey == InsightsInsertKey("none")) {
-      logger.error("One of kamon.newrelic.license-key or kamon.newrelic.nr-insights-insert-key config settings should be defined. " +
-        "No spans will be sent to New Relic.")
+      logger.error(
+        "One of kamon.newrelic.license-key or kamon.newrelic.nr-insights-insert-key config settings should be defined. " +
+        "No spans will be sent to New Relic."
+      )
     }
     val senderConfig = SpanBatchSender.configurationBuilder()
       .apiKey(nrConfig.apiKey.value)

@@ -22,47 +22,47 @@ import kamon.tag.TagSet
 
 object ExecutorMetrics {
 
-  val MinThreads = Kamon.gauge (
+  val MinThreads = Kamon.gauge(
     name = "executor.threads.min",
     description = "Tracks executor minimum number of Threads"
   )
 
-  val MaxThreads = Kamon.gauge (
+  val MaxThreads = Kamon.gauge(
     name = "executor.threads.max",
     description = "Tracks executor maximum number of Threads"
   )
 
-  val Parallelism = Kamon.gauge (
+  val Parallelism = Kamon.gauge(
     name = "executor.parallelism",
     description = "Tracks executor parallelism"
   )
 
-  val ThreadsActive = Kamon.histogram (
+  val ThreadsActive = Kamon.histogram(
     name = "executor.threads.active",
     description = "Samples the number of active threads on the executor service"
   )
 
-  val ThreadsTotal = Kamon.histogram (
+  val ThreadsTotal = Kamon.histogram(
     name = "executor.threads.total",
     description = "Samples the total number of threads on the executor service"
   )
 
-  val TasksCompleted = Kamon.counter (
+  val TasksCompleted = Kamon.counter(
     name = "executor.tasks.completed",
     description = "Tracks the number of tasks that completed execution on the executor service"
   )
 
-  val TasksSubmitted = Kamon.counter (
+  val TasksSubmitted = Kamon.counter(
     name = "executor.tasks.submitted",
     description = "Tracks the number of tasks submitted to the executor service"
   )
 
-  val TimeInQueue = Kamon.timer (
+  val TimeInQueue = Kamon.timer(
     name = "executor.time-in-queue",
     description = "Tracks the time that tasks spend on the executor service's queue"
   )
 
-  val QueueSize = Kamon.histogram (
+  val QueueSize = Kamon.histogram(
     name = "executor.queue-size",
     description = "Samples the number of tasks queued for execution on the executor service"
   )

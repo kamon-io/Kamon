@@ -13,9 +13,8 @@ import org.scalatest.time.SpanSugar
 import org.scalatest.wordspec.AnyWordSpec
 import org.scalatest.OptionValues
 
-
 class ElasticSearchInstrumentationTest
-  extends AnyWordSpec
+    extends AnyWordSpec
     with Matchers
     with Eventually
     with SpanSugar
@@ -41,11 +40,13 @@ class ElasticSearchInstrumentationTest
     }
 
     "records a span for a basic async request" in {
-      client.performRequestAsync(new Request("GET", "/_cluster/health"),
+      client.performRequestAsync(
+        new Request("GET", "/_cluster/health"),
         new ResponseListener() {
           override def onSuccess(response: Response): Unit = ()
           override def onFailure(exception: Exception): Unit = ()
-        })
+        }
+      )
 
       eventually(timeout(5 seconds)) {
         val span = testSpanReporter().nextSpan().value
@@ -84,7 +85,6 @@ class ElasticSearchInstrumentationTest
     }
   }
 
-
   override val container: ElasticsearchContainer = ElasticsearchContainer()
   var client: RestClient = _
   var highLevelClient: RestHighLevelClient = _
@@ -98,7 +98,8 @@ class ElasticSearchInstrumentationTest
       .build()
 
     highLevelClient = new RestHighLevelClient(
-      RestClient.builder(HttpHost.create(container.httpHostAddress)))
+      RestClient.builder(HttpHost.create(container.httpHostAddress))
+    )
   }
 
   override protected def afterAll(): Unit = {

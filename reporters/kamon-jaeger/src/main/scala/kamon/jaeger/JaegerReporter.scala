@@ -46,4 +46,3 @@ class JaegerReporter(@volatile private var jaegerClient: JaegerClient) extends S
     jaegerClient.sendSpans(spans)
   }
 }
-

@@ -16,7 +16,6 @@
 
 package kamon.instrumentation.pekko
 
-
 import kamon.Kamon
 import kamon.instrumentation.pekko.ContextTesting._
 import kamon.tag.Lookups._
@@ -30,8 +29,9 @@ import org.scalatest.wordspec.AnyWordSpecLike
 import scala.concurrent.ExecutionContextExecutor
 import scala.util.control.NonFatal
 
-class SystemMessageInstrumentationSpec extends TestKit(ActorSystem("ActorSystemMessageInstrumentationSpec")) with AnyWordSpecLike with Matchers
-  with BeforeAndAfterAll with ImplicitSender {
+class SystemMessageInstrumentationSpec extends TestKit(ActorSystem("ActorSystemMessageInstrumentationSpec"))
+    with AnyWordSpecLike with Matchers
+    with BeforeAndAfterAll with ImplicitSender {
   implicit lazy val executionContext: ExecutionContextExecutor = system.dispatcher
 
   "the system message passing instrumentation" should {
@@ -99,7 +99,7 @@ class SystemMessageInstrumentationSpec extends TestKit(ActorSystem("ActorSystemM
 
         expectMsg("fail-and-stop") // From the parent executing the supervision strategy
         expectMsg("fail-and-stop") // From the postStop hook
-        //TODO: FIXME expectNoMessage(1 second)
+        // TODO: FIXME expectNoMessage(1 second)
       }
 
       "the failure is escalated" in {
@@ -112,7 +112,7 @@ class SystemMessageInstrumentationSpec extends TestKit(ActorSystem("ActorSystemM
         expectMsg("fail-and-escalate") // From the grandparent executing the supervision strategy
         expectMsg("fail-and-escalate") // From the postStop hook in the child
         expectMsg("fail-and-escalate") // From the postStop hook in the parent
-        //TODO: FIXME expectNoMessage(1 second)
+        // TODO: FIXME expectNoMessage(1 second)
       }
     }
   }
@@ -120,8 +120,13 @@ class SystemMessageInstrumentationSpec extends TestKit(ActorSystem("ActorSystemM
   private def propagatedContextKey(): String =
     Kamon.currentContext().getTag(option(TestKey)).getOrElse("MissingContext")
 
-  def supervisorWithDirective(directive: SupervisorStrategy.Directive, sendPreRestart: Boolean = false, sendPostRestart: Boolean = false,
-    sendPostStop: Boolean = false, sendPreStart: Boolean = false): ActorRef = {
+  def supervisorWithDirective(
+    directive: SupervisorStrategy.Directive,
+    sendPreRestart: Boolean = false,
+    sendPostRestart: Boolean = false,
+    sendPostStop: Boolean = false,
+    sendPreStart: Boolean = false
+  ): ActorRef = {
 
     class GrandParent extends Actor {
       val child: ActorRef = context.actorOf(Props(new Parent))
@@ -182,4 +187,3 @@ class SystemMessageInstrumentationSpec extends TestKit(ActorSystem("ActorSystemM
     system.actorOf(Props(new GrandParent))
   }
 }
-

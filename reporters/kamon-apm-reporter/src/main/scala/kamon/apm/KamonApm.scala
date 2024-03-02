@@ -33,7 +33,6 @@ import java.util.concurrent.TimeUnit
 import scala.concurrent.{ExecutionContext, Future}
 import scala.collection.JavaConverters.seqAsJavaListConverter
 
-
 class KamonApm(configPath: String, executionContext: ExecutionContext) extends CombinedReporter {
   private val _maxSnapshotAge = Duration.ofMinutes(30)
   private var _settings = readSettings(Kamon.config(), configPath)
@@ -41,9 +40,11 @@ class KamonApm(configPath: String, executionContext: ExecutionContext) extends C
   private val _unitConverter = new UnitConverter(time.nanoseconds, information.bytes, DynamicRange.Default)
   private var _resource = buildResource()
 
-  if(isAcceptableApiKey(_settings.apiKey)) {
+  if (isAcceptableApiKey(_settings.apiKey)) {
     val serviceName = Kamon.environment.service
-    _logger.info(s"Starting the Kamon APM Reporter. Your service will be displayed as [${serviceName}] at https://apm.kamon.io/")
+    _logger.info(
+      s"Starting the Kamon APM Reporter. Your service will be displayed as [${serviceName}] at https://apm.kamon.io/"
+    )
     Future {
       reportBoot()
     }(executionContext).failed.foreach(t => _logger.error("Failed to say Hello to Kamon APM", t))(executionContext)
@@ -86,22 +87,26 @@ class KamonApm(configPath: String, executionContext: ExecutionContext) extends C
 
   override def reportPeriodSnapshot(snapshot: PeriodSnapshot): Unit = {
     val snapshotAge = java.time.Duration.between(snapshot.to, Kamon.clock().instant()).toMillis
-    if(snapshotAge >= 0 && snapshotAge < _maxSnapshotAge.toMillis)
-      if(isAcceptableApiKey(_settings.apiKey))
+    if (snapshotAge >= 0 && snapshotAge < _maxSnapshotAge.toMillis)
+      if (isAcceptableApiKey(_settings.apiKey))
         reportMetricsBatch(snapshot)
       else
         _logger.error(s"Dropping metrics because an invalid API key has been configured [${_settings.apiKey}]")
     else
-      _logger.warn("Dropping stale metrics for period from: [{}], to: [{}]. The snapshot is [{} millis] old",
-        snapshot.from.toEpochMilli().toString(), snapshot.to.toEpochMilli().toString(), snapshotAge.toString())
+      _logger.warn(
+        "Dropping stale metrics for period from: [{}], to: [{}]. The snapshot is [{} millis] old",
+        snapshot.from.toEpochMilli().toString(),
+        snapshot.to.toEpochMilli().toString(),
+        snapshotAge.toString()
+      )
   }
 
-  override def reportSpans(spans: Seq[Span.Finished]): Unit = if(spans.nonEmpty) {
-    if(isAcceptableApiKey(_settings.apiKey)) {
+  override def reportSpans(spans: Seq[Span.Finished]): Unit = if (spans.nonEmpty) {
+    if (isAcceptableApiKey(_settings.apiKey)) {
       val spansFinishLimit = Kamon.clock().instant().minus(_maxSnapshotAge)
       val recentSpans = spans.filter(_.to.isAfter(spansFinishLimit))
 
-      if(recentSpans.nonEmpty) {
+      if (recentSpans.nonEmpty) {
         val batch = ingestion.v2.IngestionV2.SpansBatch.newBuilder()
           .setApiKey(_settings.apiKey)
           .setResource(_resource)
@@ -124,7 +129,7 @@ class KamonApm(configPath: String, executionContext: ExecutionContext) extends C
     val gauges = snapshot.gauges.map(g => toApmGauge(g, fromEpoch, endEpoch))
     val counters = snapshot.counters.map(c => toApmCounter(c, fromEpoch, endEpoch))
     val allMetrics = histograms ++ timers ++ rangeSamplers ++ gauges ++ counters
-    val metricsBatch  = ingestion.v2.IngestionV2.MetricsBatch.newBuilder()
+    val metricsBatch = ingestion.v2.IngestionV2.MetricsBatch.newBuilder()
       .setApiKey(_settings.apiKey)
       .setResource(_resource)
       .addAllMetrics(allMetrics.asJava)
@@ -152,8 +157,11 @@ class KamonApm(configPath: String, executionContext: ExecutionContext) extends C
     _httpClient.foreach(_.postGoodbye(goodBye))
   }
 
-
-  private def toApmCounter(metric: MetricSnapshot.Values[Long], fromEpoch: Long, toEpoch: Long): ingestion.v2.IngestionV2.Metric = {
+  private def toApmCounter(
+    metric: MetricSnapshot.Values[Long],
+    fromEpoch: Long,
+    toEpoch: Long
+  ): ingestion.v2.IngestionV2.Metric = {
     val dataPoints = metric.instruments.map {
       case Instrument.Snapshot(tags, count) =>
         ingestion.v2.IngestionV2.Metric.DataPoint.newBuilder()
@@ -172,7 +180,11 @@ class KamonApm(configPath: String, executionContext: ExecutionContext) extends C
       .build()
   }
 
-  private def toApmGauge(metric: MetricSnapshot.Values[Double], fromEpoch: Long, toEpoch: Long): ingestion.v2.IngestionV2.Metric = {
+  private def toApmGauge(
+    metric: MetricSnapshot.Values[Double],
+    fromEpoch: Long,
+    toEpoch: Long
+  ): ingestion.v2.IngestionV2.Metric = {
     val dataPoints = metric.instruments.map {
       case Instrument.Snapshot(tags, value) =>
         ingestion.v2.IngestionV2.Metric.DataPoint.newBuilder()
@@ -191,7 +203,11 @@ class KamonApm(configPath: String, executionContext: ExecutionContext) extends C
       .build()
   }
 
-  private def toApmHistogram(metric: MetricSnapshot.Distributions, fromEpoch: Long, toEpoch: Long): ingestion.v2.IngestionV2.Metric = {
+  private def toApmHistogram(
+    metric: MetricSnapshot.Distributions,
+    fromEpoch: Long,
+    toEpoch: Long
+  ): ingestion.v2.IngestionV2.Metric = {
     val dataPoints = metric.instruments.map {
       case Instrument.Snapshot(tags, distribution) =>
         val convertedDistribution = _unitConverter.convertDistribution(distribution, metric.settings.unit)
@@ -216,9 +232,9 @@ class KamonApm(configPath: String, executionContext: ExecutionContext) extends C
     }
 
     val metricUnit = metric.settings.unit.dimension match {
-      case Dimension.Time         => time.nanoseconds.magnitude.name
-      case Dimension.Information  => information.bytes.magnitude.name
-      case _                      => metric.settings.unit.magnitude.name
+      case Dimension.Time        => time.nanoseconds.magnitude.name
+      case Dimension.Information => information.bytes.magnitude.name
+      case _                     => metric.settings.unit.magnitude.name
     }
 
     ingestion.v2.IngestionV2.Metric.newBuilder()
@@ -234,7 +250,7 @@ class KamonApm(configPath: String, executionContext: ExecutionContext) extends C
   }
 
   private def toApmTags(tagSet: TagSet): java.lang.Iterable[ingestion.v2.IngestionV2.Tag] = {
-    import ingestion.v2.IngestionV2.{ Tag => ApmTag }
+    import ingestion.v2.IngestionV2.{Tag => ApmTag}
     val tags = new util.LinkedList[ApmTag]()
 
     tagSet.iterator().foreach {
@@ -293,14 +309,13 @@ class KamonApm(configPath: String, executionContext: ExecutionContext) extends C
   }
 
   private def convertSpanStatus(span: Span.Finished): ingestion.v2.IngestionV2.Span.Status = {
-    if(span.hasError)
+    if (span.hasError)
       ingestion.v2.IngestionV2.Span.Status.Error
     else
       ingestion.v2.IngestionV2.Span.Status.Ok
   }
 
 }
-
 
 object KamonApm {
 
@@ -309,4 +324,3 @@ object KamonApm {
       new KamonApm(settings.executionContext)
   }
 }
-

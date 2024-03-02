@@ -257,7 +257,7 @@ class SamplerSpec extends AnyWordSpec with Matchers with BeforeAndAfterEach {
     resetCounters()
 
   def simulate(duration: Duration)(perSecond: => Unit)(implicit sampler: AdaptiveSampler): Unit = {
-    duration.toSeconds.toInt.times{
+    duration.toSeconds.toInt.times {
       perSecond
       sampler.adapt()
     }

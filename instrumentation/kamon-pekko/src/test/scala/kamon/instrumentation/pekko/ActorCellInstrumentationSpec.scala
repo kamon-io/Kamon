@@ -32,9 +32,9 @@ import scala.collection.mutable.ListBuffer
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
-
 class ActorCellInstrumentationSpec extends TestKit(ActorSystem("ActorCellInstrumentationSpec")) with AnyWordSpecLike
-    with BeforeAndAfterAll with ImplicitSender with Eventually with MetricInspection.Syntax with Matchers with InitAndStopKamonAfterAll {
+    with BeforeAndAfterAll with ImplicitSender with Eventually with MetricInspection.Syntax with Matchers
+    with InitAndStopKamonAfterAll {
   implicit lazy val executionContext: ExecutionContext = system.dispatcher
   import ContextTesting._
 
@@ -69,7 +69,6 @@ class ActorCellInstrumentationSpec extends TestKit(ActorSystem("ActorCellInstrum
       expectMsg("propagate-with-ask")
     }
 
-
     "propagate the current context to actors behind a simple router" in new EchoSimpleRouterFixture {
       Kamon.runWithContext(testContext("propagate-with-router")) {
         router.route("test", testActor)
@@ -98,7 +97,7 @@ class ActorCellInstrumentationSpec extends TestKit(ActorSystem("ActorCellInstrum
       def actorPathTag(ref: ActorRef): String = system.name + "/" + ref.path.elements.mkString("/")
       val trackedActors = new ListBuffer[String]
 
-      for(j <- 1 to 10) {
+      for (j <- 1 to 10) {
         for (i <- 1 to 1000) {
           val a = system.actorOf(Props[ContextStringEcho], s"repointable-$j-$i")
           a ! PoisonPill
@@ -107,7 +106,7 @@ class ActorCellInstrumentationSpec extends TestKit(ActorSystem("ActorCellInstrum
 
         eventually(timeout(1 second)) {
           val trackedActors = kamon.instrumentation.pekko.PekkoMetrics.ActorProcessingTime.tagValues("path")
-          for(p <- trackedActors) {
+          for (p <- trackedActors) {
             trackedActors.find(_ == p) shouldBe empty
           }
         }
@@ -157,4 +156,3 @@ class ContextStringEcho extends Actor {
       sender ! Kamon.currentContext().getTag(plain(TestKey))
   }
 }
-

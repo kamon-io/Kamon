@@ -19,12 +19,16 @@ class PekkoPduProtobufCodecDecodeMessage
 object PekkoPduProtobufCodecDecodeMessage {
 
   @OnMethodEnter
-  @static def enter(@Argument(0) bs: ByteString, @Argument(1) provider: RemoteActorRefProvider, @Argument(2) localAddress: Address): Unit = {
+  @static def enter(
+    @Argument(0) bs: ByteString,
+    @Argument(1) provider: RemoteActorRefProvider,
+    @Argument(2) localAddress: Address
+  ): Unit = {
     val ackAndEnvelope = AckAndContextAwareEnvelopeContainer.parseFrom(bs.toArray)
     if (ackAndEnvelope.hasEnvelope && ackAndEnvelope.getEnvelope.hasTraceContext) {
       val remoteCtx = ackAndEnvelope.getEnvelope.getTraceContext
 
-      if(remoteCtx.getContext.size() > 0) {
+      if (remoteCtx.getContext.size() > 0) {
         val ctx = Kamon.defaultBinaryPropagation().read(ByteStreamReader.of(remoteCtx.getContext.toByteArray))
         Kamon.storeContext(ctx)
       }

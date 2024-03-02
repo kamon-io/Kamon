@@ -42,9 +42,11 @@ object InstrumentInspection {
     instrument.asInstanceOf[Instrument.Snapshotting[Distribution]].snapshot(resetState = true)
 
   /** Retrieves the current value of an instruments */
-  def distribution(instrument: Instrument[_, Metric.Settings.ForDistributionInstrument], resetState: Boolean): Distribution =
+  def distribution(
+    instrument: Instrument[_, Metric.Settings.ForDistributionInstrument],
+    resetState: Boolean
+  ): Distribution =
     instrument.asInstanceOf[Instrument.Snapshotting[Distribution]].snapshot(resetState)
-
 
   /**
     * Exposes an implicitly available syntax to extract values and distribution from instruments.
@@ -66,27 +68,30 @@ object InstrumentInspection {
     }
 
     /** Retrieves the current value of a Counter instrument */
-    implicit def counterInstrumentInspection(instrument: Instrument[Counter, Metric.Settings.ForValueInstrument]): RichCounterInstrument =
-        new RichCounterInstrument {
+    implicit def counterInstrumentInspection(instrument: Instrument[Counter, Metric.Settings.ForValueInstrument])
+      : RichCounterInstrument =
+      new RichCounterInstrument {
 
-      def value(): Long =
-        InstrumentInspection.longValue(instrument)
+        def value(): Long =
+          InstrumentInspection.longValue(instrument)
 
-      def value(resetState: Boolean): Long =
-        InstrumentInspection.longValue(instrument, resetState)
-    }
+        def value(resetState: Boolean): Long =
+          InstrumentInspection.longValue(instrument, resetState)
+      }
 
     /** Retrieves the current value of a Gauge instrument */
-    implicit def gaugeInstrumentInspection(instrument: Instrument[Gauge, Metric.Settings.ForValueInstrument]): RichGaugeInstrument =
-        new RichGaugeInstrument {
+    implicit def gaugeInstrumentInspection(instrument: Instrument[Gauge, Metric.Settings.ForValueInstrument])
+      : RichGaugeInstrument =
+      new RichGaugeInstrument {
 
-      def value(): Double =
-        InstrumentInspection.doubleValue(instrument)
-    }
+        def value(): Double =
+          InstrumentInspection.doubleValue(instrument)
+      }
 
     /** Retrieves the current distribution of a histogram, timer or range sampler instrument */
-    implicit def distributionInstrumentInspection[T <: Instrument[T, Metric.Settings.ForDistributionInstrument]]
-    (instrument: T): RichDistributionInstrument = new RichDistributionInstrument {
+    implicit def distributionInstrumentInspection[T <: Instrument[T, Metric.Settings.ForDistributionInstrument]](
+      instrument: T
+    ): RichDistributionInstrument = new RichDistributionInstrument {
 
       def distribution(): Distribution =
         InstrumentInspection.distribution(instrument)

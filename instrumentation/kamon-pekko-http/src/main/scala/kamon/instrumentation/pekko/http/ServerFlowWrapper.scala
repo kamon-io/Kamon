@@ -50,146 +50,169 @@ object ServerFlowWrapper {
   private val _defaultSettings = Settings("pekko.http.server", "kamon.instrumentation.pekko.http.server")
   @volatile private var _wrapperSettings = _defaultSettings
 
-  def apply(flow: Flow[HttpRequest, HttpResponse, NotUsed], interface: String, port: Int): Flow[HttpRequest, HttpResponse, NotUsed] =
+  def apply(
+    flow: Flow[HttpRequest, HttpResponse, NotUsed],
+    interface: String,
+    port: Int
+  ): Flow[HttpRequest, HttpResponse, NotUsed] =
     BidiFlow.fromGraph(wrapStage(_wrapperSettings, interface, port)).join(flow)
 
-  def wrapStage(settings: Settings, interface: String, port: Int) = new GraphStage[BidiShape[HttpRequest, HttpRequest, HttpResponse, HttpResponse]] {
-    val httpServerConfig = Kamon.config().getConfig(settings.configPath)
-    val httpServerInstrumentation = HttpServerInstrumentation.from(httpServerConfig, settings.component, interface, port)
-    val requestIn = Inlet.create[HttpRequest]("request.in")
-    val requestOut = Outlet.create[HttpRequest]("request.out")
-    val responseIn = Inlet.create[HttpResponse]("response.in")
-    val responseOut = Outlet.create[HttpResponse]("response.out")
+  def wrapStage(settings: Settings, interface: String, port: Int) =
+    new GraphStage[BidiShape[HttpRequest, HttpRequest, HttpResponse, HttpResponse]] {
+      val httpServerConfig = Kamon.config().getConfig(settings.configPath)
+      val httpServerInstrumentation =
+        HttpServerInstrumentation.from(httpServerConfig, settings.component, interface, port)
+      val requestIn = Inlet.create[HttpRequest]("request.in")
+      val requestOut = Outlet.create[HttpRequest]("request.out")
+      val responseIn = Inlet.create[HttpResponse]("response.in")
+      val responseOut = Outlet.create[HttpResponse]("response.out")
 
-    override val shape = BidiShape(requestIn, requestOut, responseIn, responseOut)
+      override val shape = BidiShape(requestIn, requestOut, responseIn, responseOut)
 
-    override def createLogic(inheritedAttributes: Attributes) = new GraphStageLogic(shape) {
+      override def createLogic(inheritedAttributes: Attributes) = new GraphStageLogic(shape) {
 
-      // There might be more than one outstanding request when HTTP pipelining is enabled but according to the Akka HTTP
-      // documentation, it is required by the applications to generate responses for all requests and to generate them
-      // in the appropriate order, so we can simply queue and dequeue the RequestHandlers as the requests flow through
-      // the Stage.
-      //
-      // More info: https://doc.akka.io/docs/akka-http/current/server-side/low-level-api.html#request-response-cycle
-      private val _pendingRequests = mutable.Queue.empty[RequestHandler]
-      private val _createdAt = Kamon.clock().instant()
-      private var _completedRequests = 0
+        // There might be more than one outstanding request when HTTP pipelining is enabled but according to the Akka HTTP
+        // documentation, it is required by the applications to generate responses for all requests and to generate them
+        // in the appropriate order, so we can simply queue and dequeue the RequestHandlers as the requests flow through
+        // the Stage.
+        //
+        // More info: https://doc.akka.io/docs/akka-http/current/server-side/low-level-api.html#request-response-cycle
+        private val _pendingRequests = mutable.Queue.empty[RequestHandler]
+        private val _createdAt = Kamon.clock().instant()
+        private var _completedRequests = 0
 
-      setHandler(requestIn, new InHandler {
-        override def onPush(): Unit = {
-          val request = grab(requestIn)
-          val requestHandler = httpServerInstrumentation.createHandler(toRequest(request), deferSamplingDecision = true)
-            .requestReceived()
+        setHandler(
+          requestIn,
+          new InHandler {
+            override def onPush(): Unit = {
+              val request = grab(requestIn)
+              val requestHandler =
+                httpServerInstrumentation.createHandler(toRequest(request), deferSamplingDecision = true)
+                  .requestReceived()
 
-          val defaultOperationName = httpServerInstrumentation.settings.defaultOperationName
-          val requestSpan = requestHandler.span
+              val defaultOperationName = httpServerInstrumentation.settings.defaultOperationName
+              val requestSpan = requestHandler.span
 
-          // Automatic Operation name changes will only be allowed if the initial name HTTP Server didn't assign a
-          // user-defined name to the operation (that would be, either via an Operation Name Generator or a custom
-          // operation mapping).
-          val allowAutomaticChanges = requestSpan.operationName() == defaultOperationName
+              // Automatic Operation name changes will only be allowed if the initial name HTTP Server didn't assign a
+              // user-defined name to the operation (that would be, either via an Operation Name Generator or a custom
+              // operation mapping).
+              val allowAutomaticChanges = requestSpan.operationName() == defaultOperationName
 
-          _pendingRequests.enqueue(requestHandler)
+              _pendingRequests.enqueue(requestHandler)
 
-          // The only reason why it's safe to leave the Thread dirty is because the Actor
-          // instrumentation will cleanup afterwards.
-          Kamon.storeContext(requestHandler.context.withEntry(
-            LastAutomaticOperationNameEdit.Key, Option(LastAutomaticOperationNameEdit(requestSpan.operationName(), allowAutomaticChanges))
-          ))
+              // The only reason why it's safe to leave the Thread dirty is because the Actor
+              // instrumentation will cleanup afterwards.
+              Kamon.storeContext(requestHandler.context.withEntry(
+                LastAutomaticOperationNameEdit.Key,
+                Option(LastAutomaticOperationNameEdit(requestSpan.operationName(), allowAutomaticChanges))
+              ))
 
-          push(requestOut, request)
-        }
-
-        override def onUpstreamFinish(): Unit =
-          complete(requestOut)
-      })
-
-      setHandler(requestOut, new OutHandler {
-        override def onPull(): Unit =
-          pull(requestIn)
-
-        override def onDownstreamFinish(t: Throwable): Unit =
-          cancel(requestIn, t)
-      })
-
-      setHandler(responseIn, new InHandler {
-        override def onPush(): Unit = {
-          val response = grab(responseIn)
-          val requestHandler = _pendingRequests.dequeue()
-          val requestSpan = requestHandler.span
-          val responseWithContext = requestHandler.buildResponse(toResponseBuilder(response), requestHandler.context)
-
-          if(response.status.intValue() == 404 && requestSpan.operationName() == httpServerInstrumentation.settings.defaultOperationName) {
-
-            // It might happen that if no route was able to handle the request or no directive that would force taking
-            // a sampling decision was run, the request would still not have any sampling decision so we both set the
-            // request as unhandled and take a sampling decision for that operation here.
-            requestSpan
-              .name(httpServerInstrumentation.settings.unhandledOperationName)
-              .takeSamplingDecision()
-          }
-
-          val entity = if(responseWithContext.entity.isKnownEmpty()) {
-            requestHandler.responseSent(0L)
-            responseWithContext.entity
-          } else {
-
-            requestSpan.mark("http.response.ready")
-
-            responseWithContext.entity match {
-              case strict @ HttpEntity.Strict(_, bs) =>
-                requestHandler.responseSent(bs.size)
-                strict
-
-              case default: HttpEntity.Default =>
-                requestHandler.responseSent(default.contentLength)
-                default
-
-              case _ =>
-                val responseSizeCounter = new AtomicLong(0L)
-                responseWithContext.entity.transformDataBytes(
-                  Flow[ByteString]
-                    .watchTermination()(Keep.right)
-                    .wireTap(bs => responseSizeCounter.addAndGet(bs.size))
-                    .mapMaterializedValue { f =>
-                      f.andThen {
-                        case Success(_) =>
-                          requestHandler.responseSent(responseSizeCounter.get())
-                        case Failure(e) =>
-                          requestSpan.fail("Response entity stream failed", e)
-                          requestHandler.responseSent(responseSizeCounter.get())
-
-                      }(CallingThreadExecutionContext)
-                    }
-                )
+              push(requestOut, request)
             }
+
+            override def onUpstreamFinish(): Unit =
+              complete(requestOut)
           }
+        )
 
-          _completedRequests += 1
-          push(responseOut, responseWithContext.withEntity(entity))
+        setHandler(
+          requestOut,
+          new OutHandler {
+            override def onPull(): Unit =
+              pull(requestIn)
+
+            override def onDownstreamFinish(t: Throwable): Unit =
+              cancel(requestIn, t)
+          }
+        )
+
+        setHandler(
+          responseIn,
+          new InHandler {
+            override def onPush(): Unit = {
+              val response = grab(responseIn)
+              val requestHandler = _pendingRequests.dequeue()
+              val requestSpan = requestHandler.span
+              val responseWithContext =
+                requestHandler.buildResponse(toResponseBuilder(response), requestHandler.context)
+
+              if (
+                response.status.intValue() == 404 && requestSpan.operationName() == httpServerInstrumentation.settings.defaultOperationName
+              ) {
+
+                // It might happen that if no route was able to handle the request or no directive that would force taking
+                // a sampling decision was run, the request would still not have any sampling decision so we both set the
+                // request as unhandled and take a sampling decision for that operation here.
+                requestSpan
+                  .name(httpServerInstrumentation.settings.unhandledOperationName)
+                  .takeSamplingDecision()
+              }
+
+              val entity = if (responseWithContext.entity.isKnownEmpty()) {
+                requestHandler.responseSent(0L)
+                responseWithContext.entity
+              } else {
+
+                requestSpan.mark("http.response.ready")
+
+                responseWithContext.entity match {
+                  case strict @ HttpEntity.Strict(_, bs) =>
+                    requestHandler.responseSent(bs.size)
+                    strict
+
+                  case default: HttpEntity.Default =>
+                    requestHandler.responseSent(default.contentLength)
+                    default
+
+                  case _ =>
+                    val responseSizeCounter = new AtomicLong(0L)
+                    responseWithContext.entity.transformDataBytes(
+                      Flow[ByteString]
+                        .watchTermination()(Keep.right)
+                        .wireTap(bs => responseSizeCounter.addAndGet(bs.size))
+                        .mapMaterializedValue { f =>
+                          f.andThen {
+                            case Success(_) =>
+                              requestHandler.responseSent(responseSizeCounter.get())
+                            case Failure(e) =>
+                              requestSpan.fail("Response entity stream failed", e)
+                              requestHandler.responseSent(responseSizeCounter.get())
+
+                          }(CallingThreadExecutionContext)
+                        }
+                    )
+                }
+              }
+
+              _completedRequests += 1
+              push(responseOut, responseWithContext.withEntity(entity))
+            }
+
+            override def onUpstreamFinish(): Unit =
+              completeStage()
+          }
+        )
+
+        setHandler(
+          responseOut,
+          new OutHandler {
+            override def onPull(): Unit =
+              pull(responseIn)
+
+            override def onDownstreamFinish(t: Throwable): Unit =
+              cancel(responseIn, t)
+          }
+        )
+
+        override def preStart(): Unit =
+          httpServerInstrumentation.connectionOpened()
+
+        override def postStop(): Unit = {
+          val connectionLifetime = Duration.between(_createdAt, Kamon.clock().instant())
+          httpServerInstrumentation.connectionClosed(connectionLifetime, _completedRequests)
         }
-
-        override def onUpstreamFinish(): Unit =
-          completeStage()
-      })
-
-      setHandler(responseOut, new OutHandler {
-        override def onPull(): Unit =
-          pull(responseIn)
-
-        override def onDownstreamFinish(t: Throwable): Unit =
-          cancel(responseIn, t)
-      })
-
-      override def preStart(): Unit =
-        httpServerInstrumentation.connectionOpened()
-
-      override def postStop(): Unit = {
-        val connectionLifetime = Duration.between(_createdAt, Kamon.clock().instant())
-        httpServerInstrumentation.connectionClosed(connectionLifetime, _completedRequests)
       }
     }
-  }
 
   def changeSettings(component: String, configPath: String): Unit =
     _wrapperSettings = Settings(component, configPath)
@@ -198,9 +221,11 @@ object ServerFlowWrapper {
     _wrapperSettings = _defaultSettings
 
   def defaultOperationName(listenPort: Int): String =
-    _defaultOperationNames.getOrElseUpdate(listenPort, {
-      _serverInstrumentations.get(listenPort).map(_.settings.defaultOperationName).getOrElse("http.server.request")
-    })
+    _defaultOperationNames.getOrElseUpdate(
+      listenPort, {
+        _serverInstrumentations.get(listenPort).map(_.settings.defaultOperationName).getOrElse("http.server.request")
+      }
+    )
 
   case class Settings(component: String, configPath: String)
 }

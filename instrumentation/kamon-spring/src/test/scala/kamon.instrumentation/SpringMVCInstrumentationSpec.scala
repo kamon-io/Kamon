@@ -14,7 +14,7 @@ import scala.concurrent.duration.DurationInt
 import scala.util.Try
 
 class SpringMVCInstrumentationSpec
-  extends AnyWordSpec
+    extends AnyWordSpec
     with Matchers
     with InitAndStopKamonAfterAll
     with TestSpanReporter {
@@ -82,8 +82,7 @@ class SpringMVCInstrumentationSpec
     val request = new Request.Builder()
       .url(url)
       .post(RequestBody
-        .create(MediaType.get("application/json; charset=utf-8"),
-          """{"name": "Simone", "role": "Dev"}"""))
+        .create(MediaType.get("application/json; charset=utf-8"), """{"name": "Simone", "role": "Dev"}"""))
       .build
 
     Try(client.newCall(request).execute)

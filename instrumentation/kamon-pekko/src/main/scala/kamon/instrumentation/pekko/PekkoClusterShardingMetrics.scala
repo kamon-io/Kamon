@@ -14,32 +14,33 @@ import scala.collection.concurrent.TrieMap
 
 object PekkoClusterShardingMetrics {
 
-  val RegionHostedShards = Kamon.rangeSampler (
+  val RegionHostedShards = Kamon.rangeSampler(
     name = "pekko.cluster.sharding.region.hosted-shards",
     description = "Tracks the number of shards hosted by a region"
   )
 
-  val RegionHostedEntities = Kamon.rangeSampler (
+  val RegionHostedEntities = Kamon.rangeSampler(
     name = "pekko.cluster.sharding.region.hosted-entities",
     description = "Tracks the number of entities hosted by a region"
   )
 
-  val RegionProcessedMessages = Kamon.counter (
+  val RegionProcessedMessages = Kamon.counter(
     name = "pekko.cluster.sharding.region.processed-messages",
     description = "Counts the number of messages processed by a region"
   )
 
-  val ShardHostedEntities = Kamon.histogram (
+  val ShardHostedEntities = Kamon.histogram(
     name = "pekko.cluster.sharding.shard.hosted-entities",
     description = "Tracks the distribution of entity counts hosted per shard"
   )
 
-  val ShardProcessedMessages = Kamon.histogram (
+  val ShardProcessedMessages = Kamon.histogram(
     name = "pekko.cluster.sharding.shard.processed-messages",
     description = "Tracks the distribution of processed messages per shard"
   )
 
-  class ShardingInstruments(system: String, typeName: String) extends InstrumentGroup(TagSet.of("type", typeName).withTag("system", system)) {
+  class ShardingInstruments(system: String, typeName: String)
+      extends InstrumentGroup(TagSet.of("type", typeName).withTag("system", system)) {
 
     val hostedShards = register(RegionHostedShards)
     val hostedEntities = register(RegionHostedEntities)
@@ -47,7 +48,8 @@ object PekkoClusterShardingMetrics {
     val shardHostedEntities = register(ShardHostedEntities)
     val shardProcessedMessages = register(ShardProcessedMessages)
 
-    private val _shardTelemetry = ShardingInstruments.shardTelemetry(system, typeName, shardHostedEntities, shardProcessedMessages)
+    private val _shardTelemetry =
+      ShardingInstruments.shardTelemetry(system, typeName, shardHostedEntities, shardProcessedMessages)
 
     def hostedEntitiesPerShardCounter(shardID: String): AtomicLong =
       _shardTelemetry.entitiesPerShard.getOrElseUpdate(shardID, new AtomicLong())
@@ -76,7 +78,7 @@ object PekkoClusterShardingMetrics {
       *
       * The totals per Shard are tracked locally and sampled in a fixed interval.
       */
-    case class ShardTelemetry (
+    case class ShardTelemetry(
       entitiesPerShard: TrieMap[String, AtomicLong],
       messagesPerShard: TrieMap[String, AtomicLong],
       schedule: Registration
@@ -84,29 +86,41 @@ object PekkoClusterShardingMetrics {
 
     private val _shardTelemetryMap = TrieMap.empty[String, ShardTelemetry]
 
-    private def shardTelemetry(system: String, typeName: String, shardEntities: Histogram, shardMessages: Histogram): ShardTelemetry = {
-      _shardTelemetryMap.atomicGetOrElseUpdate(shardTelemetryKey(system, typeName), {
-        val entitiesPerShard = TrieMap.empty[String, AtomicLong]
-        val messagesPerShard = TrieMap.empty[String, AtomicLong]
-        val samplingInterval = PekkoRemoteInstrumentation.settings().shardMetricsSampleInterval
+    private def shardTelemetry(
+      system: String,
+      typeName: String,
+      shardEntities: Histogram,
+      shardMessages: Histogram
+    ): ShardTelemetry = {
+      _shardTelemetryMap.atomicGetOrElseUpdate(
+        shardTelemetryKey(system, typeName), {
+          val entitiesPerShard = TrieMap.empty[String, AtomicLong]
+          val messagesPerShard = TrieMap.empty[String, AtomicLong]
+          val samplingInterval = PekkoRemoteInstrumentation.settings().shardMetricsSampleInterval
 
-        val schedule = Kamon.addScheduledAction(
-          s"pekko/shards/${typeName}",
-          Some(s"Updates health metrics for the ${system}/${typeName} shard every ${samplingInterval.getSeconds} seconds"),
-          new ScheduledAction {
-            override def run(): Unit = {
-              entitiesPerShard.foreach {case (shard, value) => shardEntities.record(value.get())}
-              messagesPerShard.foreach {case (shard, value) => shardMessages.record(value.getAndSet(0L))}
-            }
+          val schedule = Kamon.addScheduledAction(
+            s"pekko/shards/${typeName}",
+            Some(
+              s"Updates health metrics for the ${system}/${typeName} shard every ${samplingInterval.getSeconds} seconds"
+            ),
+            new ScheduledAction {
+              override def run(): Unit = {
+                entitiesPerShard.foreach { case (shard, value) => shardEntities.record(value.get()) }
+                messagesPerShard.foreach { case (shard, value) => shardMessages.record(value.getAndSet(0L)) }
+              }
 
-            override def stop(): Unit = {}
-            override def reconfigure(newConfig: Config): Unit = {}
+              override def stop(): Unit = {}
+              override def reconfigure(newConfig: Config): Unit = {}
 
-          }, samplingInterval)
+            },
+            samplingInterval
+          )
 
-
-        ShardTelemetry(entitiesPerShard, messagesPerShard, schedule)
-      }, _.schedule.cancel(): Unit, _ => ())
+          ShardTelemetry(entitiesPerShard, messagesPerShard, schedule)
+        },
+        _.schedule.cancel(): Unit,
+        _ => ()
+      )
     }
 
     private def removeShardTelemetry(system: String, typeName: String): Unit =

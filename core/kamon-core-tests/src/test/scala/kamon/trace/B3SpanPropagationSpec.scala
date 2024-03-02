@@ -24,7 +24,6 @@ import org.scalatest.wordspec.AnyWordSpec
 
 import scala.collection.mutable
 
-
 class B3SpanPropagationSpec extends AnyWordSpec with Matchers with OptionValues {
   val b3Propagation = SpanPropagation.B3()
 
@@ -102,18 +101,22 @@ class B3SpanPropagationSpec extends AnyWordSpec with Matchers with OptionValues 
     "not include the X-B3-Sampled header if the sampling decision is unknown" in {
       val context = testContext()
       val sampledSpan = context.get(Span.Key)
-      val notSampledSpanContext = Context.Empty.withEntry(Span.Key,
-        new Span.Remote(sampledSpan.id, sampledSpan.parentId, Trace(sampledSpan.trace.id, SamplingDecision.DoNotSample)))
-      val unknownSamplingSpanContext = Context.Empty.withEntry(Span.Key,
-        new Span.Remote(sampledSpan.id, sampledSpan.parentId, Trace(sampledSpan.trace.id, SamplingDecision.Unknown)))
+      val notSampledSpanContext = Context.Empty.withEntry(
+        Span.Key,
+        new Span.Remote(sampledSpan.id, sampledSpan.parentId, Trace(sampledSpan.trace.id, SamplingDecision.DoNotSample))
+      )
+      val unknownSamplingSpanContext = Context.Empty.withEntry(
+        Span.Key,
+        new Span.Remote(sampledSpan.id, sampledSpan.parentId, Trace(sampledSpan.trace.id, SamplingDecision.Unknown))
+      )
       val headersMap = mutable.Map.empty[String, String]
 
       b3Propagation.write(context, headerWriterFromMap(headersMap))
-      headersMap.get("X-B3-Sampled").value shouldBe("1")
+      headersMap.get("X-B3-Sampled").value shouldBe ("1")
       headersMap.clear()
 
       b3Propagation.write(notSampledSpanContext, headerWriterFromMap(headersMap))
-      headersMap.get("X-B3-Sampled").value shouldBe("0")
+      headersMap.get("X-B3-Sampled").value shouldBe ("0")
       headersMap.clear()
 
       b3Propagation.write(unknownSamplingSpanContext, headerWriterFromMap(headersMap))
@@ -221,13 +224,13 @@ class B3SpanPropagationSpec extends AnyWordSpec with Matchers with OptionValues 
       val writenHeaders = mutable.Map.empty[String, String]
       val context = b3Propagation.read(headerReaderFromMap(headers), Context.Empty)
       b3Propagation.write(context, headerWriterFromMap(writenHeaders))
-      writenHeaders should contain theSameElementsAs(headers)
+      writenHeaders should contain theSameElementsAs (headers)
     }
   }
 
   def headerReaderFromMap(map: Map[String, String]): HttpPropagation.HeaderReader = new HttpPropagation.HeaderReader {
     override def read(header: String): Option[String] = {
-      if(map.get("fail").nonEmpty)
+      if (map.get("fail").nonEmpty)
         sys.error("failing on purpose")
 
       map.get(header)
@@ -236,28 +239,35 @@ class B3SpanPropagationSpec extends AnyWordSpec with Matchers with OptionValues 
     override def readAll(): Map[String, String] = map
   }
 
-  def headerWriterFromMap(map: mutable.Map[String, String]): HttpPropagation.HeaderWriter = new HttpPropagation.HeaderWriter {
-    override def write(header: String, value: String): Unit = map.put(header, value)
-  }
+  def headerWriterFromMap(map: mutable.Map[String, String]): HttpPropagation.HeaderWriter =
+    new HttpPropagation.HeaderWriter {
+      override def write(header: String, value: String): Unit = map.put(header, value)
+    }
 
   def testContext(): Context =
-    Context.of(Span.Key, new Span.Remote(
-      id = Identifier("4321", Array[Byte](4, 3, 2, 1)),
-      parentId = Identifier("2222", Array[Byte](2, 2, 2, 2)),
-      trace = Trace(
-        id = Identifier("1234", Array[Byte](1, 2, 3, 4)),
-        samplingDecision = SamplingDecision.Sample
+    Context.of(
+      Span.Key,
+      new Span.Remote(
+        id = Identifier("4321", Array[Byte](4, 3, 2, 1)),
+        parentId = Identifier("2222", Array[Byte](2, 2, 2, 2)),
+        trace = Trace(
+          id = Identifier("1234", Array[Byte](1, 2, 3, 4)),
+          samplingDecision = SamplingDecision.Sample
+        )
       )
-    ))
+    )
 
   def testContextWithoutParent(): Context =
-    Context.of(Span.Key, new Span.Remote(
-      id = Identifier("4321", Array[Byte](4, 3, 2, 1)),
-      parentId = Identifier.Empty,
-      trace = Trace(
-        id = Identifier("1234", Array[Byte](1, 2, 3, 4)),
-        samplingDecision = SamplingDecision.Sample
+    Context.of(
+      Span.Key,
+      new Span.Remote(
+        id = Identifier("4321", Array[Byte](4, 3, 2, 1)),
+        parentId = Identifier.Empty,
+        trace = Trace(
+          id = Identifier("1234", Array[Byte](1, 2, 3, 4)),
+          samplingDecision = SamplingDecision.Sample
+        )
       )
-    ))
+    )
 
 }

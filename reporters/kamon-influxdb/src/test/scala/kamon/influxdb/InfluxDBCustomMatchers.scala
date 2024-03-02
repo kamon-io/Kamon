@@ -7,7 +7,6 @@ trait InfluxDBCustomMatchers {
   case class LineProtocol(measurement: String, tags: Seq[String], fields: Seq[String], timestamp: Option[String])
   class LineProtocolMatcher(expectedPoint: String) extends Matcher[String] {
 
-
     def apply(left: String) = {
 
       val leftLP = getLineProtocol(left)
@@ -54,11 +53,11 @@ trait InfluxDBCustomMatchers {
     val measurementAndTags = parts(0).split(",").toList
 
     val (measurement, tags): (String, List[String]) = measurementAndTags match {
-      case x::xs => (x, xs)
+      case x :: xs => (x, xs)
     }
 
     val metric = parts(1).split(",")
-    val timestamp = if(parts(2).nonEmpty) Some(parts(2)) else None
+    val timestamp = if (parts(2).nonEmpty) Some(parts(2)) else None
     LineProtocol(measurement, tags, metric, timestamp)
   }
 

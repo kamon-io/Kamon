@@ -28,8 +28,8 @@ import org.scalatest.wordspec.AnyWordSpecLike
 
 import scala.concurrent.duration._
 
-
-class ActorSystemMetricsSpec extends TestKit(ActorSystem("ActorSystemMetricsSpec")) with AnyWordSpecLike with MetricInspection.Syntax
+class ActorSystemMetricsSpec extends TestKit(ActorSystem("ActorSystemMetricsSpec")) with AnyWordSpecLike
+    with MetricInspection.Syntax
     with InstrumentInspection.Syntax with Matchers with InitAndStopKamonAfterAll with ImplicitSender with Eventually {
 
   val (baseActorCount, totalActorCount) = (8L, 29)

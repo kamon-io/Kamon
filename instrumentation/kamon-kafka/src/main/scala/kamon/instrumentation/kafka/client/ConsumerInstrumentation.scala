@@ -24,6 +24,7 @@ import kamon.instrumentation.kafka.client.advisor.PollMethodAdvisor
 import kanela.agent.api.instrumentation.InstrumentationBuilder
 
 class ConsumerInstrumentation extends InstrumentationBuilder {
+
   /**
     * Instruments org.apache.kafka.clients.consumer.KafkaConsumer::poll(Long)
     * Kafka version < 2.3
@@ -73,4 +74,3 @@ object ConsumedRecordData {
     }
   }
 }
-

@@ -21,27 +21,27 @@ import java.util
 import kamon.annotation.el.EnhancedELProcessor.Syntax
 
 object StringEvaluator {
-  def evaluate(obj: AnyRef)(str:String): String =
+  def evaluate(obj: AnyRef)(str: String): String =
     ELProcessorFactory.withObject(obj).evalToString(str)
 
-  def evaluate(clazz: Class[_])(str:String): String =
+  def evaluate(clazz: Class[_])(str: String): String =
     ELProcessorFactory.withClass(clazz).evalToString(str)
 }
 
 object TagsEvaluator {
-  def evaluate(obj:AnyRef)(str:String): Map[String, String] =
+  def evaluate(obj: AnyRef)(str: String): Map[String, String] =
     ELProcessorFactory.withObject(obj).evalToMap(str)
 
-  def eval(obj:AnyRef)(str:String): util.Map[String, String] = {
+  def eval(obj: AnyRef)(str: String): util.Map[String, String] = {
     import scala.collection.JavaConverters._
     evaluate(obj)(str).asJava
   }
 
-  def eval(clazz: Class[_])(str:String): util.Map[String, String] = {
+  def eval(clazz: Class[_])(str: String): util.Map[String, String] = {
     import scala.collection.JavaConverters._
     evaluate(clazz)(str).asJava
   }
 
-  def evaluate(clazz: Class[_])(str:String): Map[String, String] =
+  def evaluate(clazz: Class[_])(str: String): Map[String, String] =
     ELProcessorFactory.withClass(clazz).evalToMap(str)
 }

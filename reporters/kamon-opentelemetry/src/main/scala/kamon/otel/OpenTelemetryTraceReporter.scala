@@ -54,35 +54,44 @@ import OpenTelemetryTraceReporter._
 /**
   * Converts internal finished Kamon spans to OpenTelemetry format and sends to a configured OpenTelemetry endpoint using gRPC.
   */
-class OpenTelemetryTraceReporter(traceServiceFactory: Config => TraceService)(implicit ec: ExecutionContext) extends SpanReporter {
+class OpenTelemetryTraceReporter(traceServiceFactory: Config => TraceService)(implicit ec: ExecutionContext)
+    extends SpanReporter {
   private var traceService: Option[TraceService] = None
   private var spanConverterFunc: Seq[Span.Finished] => JCollection[SpanData] = (_ => new util.ArrayList[SpanData](0))
 
   override def reportSpans(spans: Seq[Span.Finished]): Unit = {
     if (spans.nonEmpty) {
-      traceService.foreach(ts => ts.exportSpans(spanConverterFunc(spans)).onComplete {
-        case Success(_) => logger.debug("Successfully exported traces")
+      traceService.foreach(ts =>
+        ts.exportSpans(spanConverterFunc(spans)).onComplete {
+          case Success(_) => logger.debug("Successfully exported traces")
 
-        //TODO is there result for which a retry is relevant? Perhaps a glitch in the receiving service
-        //Keeping logs to debug as the underlying exporter will log if it fails to export traces, and the failure isn't surfaced in the response anyway
-        case Failure(t) => logger.debug("Failed to export traces", t)
-      })
+          // TODO is there result for which a retry is relevant? Perhaps a glitch in the receiving service
+          // Keeping logs to debug as the underlying exporter will log if it fails to export traces, and the failure isn't surfaced in the response anyway
+          case Failure(t) => logger.debug("Failed to export traces", t)
+        }
+      )
     }
   }
 
   override def reconfigure(newConfig: Config): Unit = {
     logger.info("Reconfigure OpenTelemetry Trace Reporter")
 
-    //pre-generate the function for converting Kamon span to proto span
+    // pre-generate the function for converting Kamon span to proto span
     val attributes: Map[String, String] =
       newConfig.getString("kamon.otel.attributes").split(',').filter(_ contains '=').map(_.trim.split("=", 2)).map {
         case Array(k, v) =>
           val decoded = Try(URLDecoder.decode(v.trim, "UTF-8"))
-          decoded.failed.foreach(t => throw new IllegalArgumentException(s"value for attribute ${k.trim} is not a url-encoded string", t))
+          decoded.failed.foreach(t =>
+            throw new IllegalArgumentException(s"value for attribute ${k.trim} is not a url-encoded string", t)
+          )
           k.trim -> decoded.get
       }.toMap
     val resource: Resource = buildResource(attributes)
-    this.spanConverterFunc = SpanConverter.convert(newConfig.getBoolean("kamon.otel.trace.include-error-event"), resource, kamonSettings.version)
+    this.spanConverterFunc = SpanConverter.convert(
+      newConfig.getBoolean("kamon.otel.trace.include-error-event"),
+      resource,
+      kamonSettings.version
+    )
 
     this.traceService = Option(traceServiceFactory.apply(newConfig))
   }
@@ -109,11 +118,11 @@ class OpenTelemetryTraceReporter(traceServiceFactory: Config => TraceService)(im
       .put("telemetry.sdk.version", kamonSettings.version)
 
     attributes.foreach { case (k, v) => builder.put(k, v) }
-    //add all kamon.environment.tags as KeyValues to the Resource object
+    // add all kamon.environment.tags as KeyValues to the Resource object
     env.tags.iterator().foreach {
-      case t: Tag.String => builder.put(t.key, t.value)
+      case t: Tag.String  => builder.put(t.key, t.value)
       case t: Tag.Boolean => builder.put(t.key, t.value)
-      case t: Tag.Long => builder.put(t.key, t.value)
+      case t: Tag.Long    => builder.put(t.key, t.value)
     }
 
     builder.build()

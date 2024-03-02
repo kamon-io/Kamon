@@ -59,7 +59,8 @@ object NewRelicSpanConverter {
       val remoteEndpoint = Endpoint(
         getStringTag(kamonSpan, PeerKeys.IPv4),
         getStringTag(kamonSpan, PeerKeys.IPv6),
-        getLongTag(kamonSpan, PeerKeys.Port).toInt)
+        getLongTag(kamonSpan, PeerKeys.Port).toInt
+      )
 
       if (hasAnyData(remoteEndpoint)) {
         attributes.put("remoteEndpoint", remoteEndpoint.toString)
@@ -78,7 +79,6 @@ object NewRelicSpanConverter {
 
   private def getLongTag(span: Span.Finished, tagName: String): Long =
     span.tags.get(longOption(tagName)).orElse(span.metricTags.get(longOption(tagName))).getOrElse(0L)
-
 
   private def hasAnyData(endpoint: Endpoint): Boolean =
     endpoint.ipv4 != null || endpoint.ipv6 != null || endpoint.port != 0

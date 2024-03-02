@@ -30,6 +30,7 @@ import kamon.trace.Span
  */
 object SpanInitializer {
   private[kamon] val role = Stack.Role("SpanInitializer")
+
   /**
    * Set a Finagle trace for the duration of the call to `f`.
    *

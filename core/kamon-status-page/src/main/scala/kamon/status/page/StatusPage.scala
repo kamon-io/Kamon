@@ -41,7 +41,6 @@ class StatusPage(configPath: String) extends Module {
   override def reconfigure(newConfig: Config): Unit =
     init(newConfig.getConfig(configPath))
 
-
   private def init(config: Config): Unit = synchronized {
     val hostname = config.getString("listen.hostname")
     val port = config.getInt("listen.port")
@@ -55,14 +54,19 @@ class StatusPage(configPath: String) extends Module {
       // If the configuration has changed we will stop the previous version
       // and start a new one with the new hostname/port.
 
-      if(existentServer.getHostname != hostname || existentServer.getListeningPort != port) {
+      if (existentServer.getHostname != hostname || existentServer.getListeningPort != port) {
         stopServer()
         startServer(hostname, port, ClassLoading.classLoader(), retryOnRandomPort)
       }
     })
   }
 
-  private def startServer(hostname: String, port: Int, resourceLoader: ClassLoader, retryOnRandomPort: Boolean): Unit = {
+  private def startServer(
+    hostname: String,
+    port: Int,
+    resourceLoader: ClassLoader,
+    retryOnRandomPort: Boolean
+  ): Unit = {
     Try {
       val server = new StatusPageServer(hostname, port, resourceLoader, Kamon.status())
       server.start()

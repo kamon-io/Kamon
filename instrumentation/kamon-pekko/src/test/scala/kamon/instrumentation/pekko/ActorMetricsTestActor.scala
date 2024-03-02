@@ -58,4 +58,3 @@ object ActorMetricsTestActor {
     def approximateProcessingTime: Long = afterReceiveTimestamp - dequeueTimestamp
   }
 }
-

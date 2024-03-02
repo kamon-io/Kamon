@@ -54,7 +54,6 @@ trait Instrument[Inst <: Instrument[Inst, Sett], Sett <: Metric.Settings] extend
   override def withTags(tags: TagSet): Inst =
     metric.withTags(this.tags.withTags(tags))
 
-
   /**
     * Schedules a call to the provided consumer with a reference to this histogram as parameter, overriding the metric's
     * auto-update interval.
@@ -90,7 +89,7 @@ object Instrument {
     * Snapshot of an instrument's state at a given point. Snapshots are expected to have either Long, Double or
     * Distribution values, depending on the instrument type.
     */
-  case class Snapshot[T] (
+  case class Snapshot[T](
     tags: TagSet,
     value: T
   )
@@ -121,4 +120,3 @@ object Instrument {
     val RangeSampler = Type("rangeSampler", classOf[Metric.RangeSampler])
   }
 }
-

@@ -199,16 +199,18 @@ object HostMetrics {
     private val _mountsCache = mutable.Map.empty[String, MountInstruments]
 
     def mountInstruments(mountName: String): MountInstruments =
-      _mountsCache.getOrElseUpdate(mountName, {
-        val mount = TagSet.of("mount", mountName)
+      _mountsCache.getOrElseUpdate(
+        mountName, {
+          val mount = TagSet.of("mount", mountName)
 
-        MountInstruments(
-          register(FileSystemMountSpaceUsed, mount),
-          register(FileSystemMountSpaceUsage, mount),
-          register(FileSystemMountSpaceFree, mount),
-          register(FileSystemMountSpaceTotal, mount)
-        )
-      })
+          MountInstruments(
+            register(FileSystemMountSpaceUsed, mount),
+            register(FileSystemMountSpaceUsage, mount),
+            register(FileSystemMountSpaceFree, mount),
+            register(FileSystemMountSpaceTotal, mount)
+          )
+        }
+      )
   }
 
   object StorageMountInstruments {
@@ -228,16 +230,18 @@ object HostMetrics {
     private val _deviceInstrumentsCache = mutable.Map.empty[String, DeviceInstruments]
 
     def deviceInstruments(deviceName: String): DeviceInstruments =
-      _deviceInstrumentsCache.getOrElseUpdate(deviceName, {
-        val device = TagSet.of("device", deviceName)
+      _deviceInstrumentsCache.getOrElseUpdate(
+        deviceName, {
+          val device = TagSet.of("device", deviceName)
 
-        DeviceInstruments(
-          DiffCounter(register(StorageDeviceReadOps, device)),
-          DiffCounter(register(StorageDeviceRead, device)),
-          DiffCounter(register(StorageDeviceWriteOps, device)),
-          DiffCounter(register(StorageDeviceWrite, device))
-        )
-      })
+          DeviceInstruments(
+            DiffCounter(register(StorageDeviceReadOps, device)),
+            DiffCounter(register(StorageDeviceRead, device)),
+            DiffCounter(register(StorageDeviceWriteOps, device)),
+            DiffCounter(register(StorageDeviceWrite, device))
+          )
+        }
+      )
   }
 
   object StorageDeviceInstruments {
@@ -257,18 +261,20 @@ object HostMetrics {
     private val _interfaceCache = mutable.Map.empty[String, InterfaceInstruments]
 
     def interfaceInstruments(interfaceName: String): InterfaceInstruments =
-      _interfaceCache.getOrElseUpdate(interfaceName, {
-        val interface = TagSet.of("interface", interfaceName)
+      _interfaceCache.getOrElseUpdate(
+        interfaceName, {
+          val interface = TagSet.of("interface", interfaceName)
 
-        InterfaceInstruments(
-          DiffCounter(register(NetworkDataRead, interface)),
-          DiffCounter(register(NetworkPacketsRead, interface)),
-          DiffCounter(register(NetworkPacketsReadFailed, interface)),
-          DiffCounter(register(NetworkDataWrite, interface)),
-          DiffCounter(register(NetworkPacketsWrite, interface)),
-          DiffCounter(register(NetworkPacketsWriteFailed, interface))
-        )
-      })
+          InterfaceInstruments(
+            DiffCounter(register(NetworkDataRead, interface)),
+            DiffCounter(register(NetworkPacketsRead, interface)),
+            DiffCounter(register(NetworkPacketsReadFailed, interface)),
+            DiffCounter(register(NetworkDataWrite, interface)),
+            DiffCounter(register(NetworkPacketsWrite, interface)),
+            DiffCounter(register(NetworkPacketsWriteFailed, interface))
+          )
+        }
+      )
   }
 
   object NetworkActivityInstruments {
@@ -281,6 +287,7 @@ object HostMetrics {
       sendErrorPackets: DiffCounter
     )
   }
+
   /**
     * A modified Counter that keeps track of a monotonically increasing value and only records the difference between
     * the current and previous value on the target counter.

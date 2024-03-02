@@ -94,7 +94,6 @@ class MongoClientInstrumentation extends InstrumentationBuilder {
 
 }
 
-
 class CopyOperationNameIntoMixedBulkWriteOperation
 
 object CopyOperationNameIntoMixedBulkWriteOperation {
@@ -103,7 +102,7 @@ object CopyOperationNameIntoMixedBulkWriteOperation {
   def exit(@Advice.Return writeOperation: Any, @Advice.Origin("#m") methodName: String): Unit = {
     writeOperation match {
       case hon: HasOperationName => hon.setName(methodName)
-      case _ =>
+      case _                     =>
     }
   }
 }

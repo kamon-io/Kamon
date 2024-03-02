@@ -68,7 +68,6 @@ class StatementInstrumentation extends InstrumentationBuilder {
     .advise(method("executeQuery"), classOf[PreparedStatementExecuteQueryMethodAdvisor])
     .advise(method("executeUpdate"), classOf[PreparedStatementExecuteUpdateMethodAdvisor])
 
-
   /**
     * We are specifically targeting some of the SQLite Driver classes because due to the way in which inheritance is
     * handled within the Driver these advices were not applied at all. All other drivers tested so far should work just
@@ -128,11 +127,15 @@ class DriverConnectAdvice
 object DriverConnectAdvice {
 
   @Advice.OnMethodExit
-  @static def exit(@Advice.Argument(0) url: String, @Advice.Argument(1) properties: Properties, @Advice.Return connection: Any): Unit = {
+  @static def exit(
+    @Advice.Argument(0) url: String,
+    @Advice.Argument(1) properties: Properties,
+    @Advice.Return connection: Any
+  ): Unit = {
 
     // The connection could be null if there is more than one registered driver and the DriverManager is looping
     // through them to figure out which one accepts the URL.
-    if(connection != null) {
+    if (connection != null) {
       connection.asInstanceOf[HasDatabaseTags].setDatabaseTags(createDatabaseTags(url, properties))
     }
   }
@@ -155,7 +158,9 @@ object CreateStatementAdvice {
   @Advice.OnMethodExit
   @static def exit(@Advice.This connection: Any, @Advice.Return statement: Any): Unit = {
     statement.asInstanceOf[HasDatabaseTags].setDatabaseTags(connection.asInstanceOf[HasDatabaseTags].databaseTags())
-    statement.asInstanceOf[HasConnectionPoolTelemetry].setConnectionPoolTelemetry(connection.asInstanceOf[HasConnectionPoolTelemetry].connectionPoolTelemetry)
+    statement.asInstanceOf[HasConnectionPoolTelemetry].setConnectionPoolTelemetry(
+      connection.asInstanceOf[HasConnectionPoolTelemetry].connectionPoolTelemetry
+    )
   }
 }
 
@@ -163,9 +168,15 @@ class CreatePreparedStatementAdvice
 object CreatePreparedStatementAdvice {
 
   @Advice.OnMethodExit
-  @static def exit(@Advice.This connection: Any, @Advice.Argument(0) sql: String, @Advice.Return statement: Any): Unit = {
+  @static def exit(
+    @Advice.This connection: Any,
+    @Advice.Argument(0) sql: String,
+    @Advice.Return statement: Any
+  ): Unit = {
     statement.asInstanceOf[HasDatabaseTags].setDatabaseTags(connection.asInstanceOf[HasDatabaseTags].databaseTags())
-    statement.asInstanceOf[HasConnectionPoolTelemetry].setConnectionPoolTelemetry(statement.asInstanceOf[HasConnectionPoolTelemetry].connectionPoolTelemetry)
+    statement.asInstanceOf[HasConnectionPoolTelemetry].setConnectionPoolTelemetry(
+      statement.asInstanceOf[HasConnectionPoolTelemetry].connectionPoolTelemetry
+    )
     statement.asInstanceOf[HasStatementSQL].setStatementSQL(sql)
   }
 }
@@ -183,7 +194,6 @@ object ConnectionIsValidAdvice {
     scope.close()
 }
 
-
 class PgConnectionIsAliveAdvice
 object PgConnectionIsAliveAdvice {
 
@@ -195,10 +205,10 @@ object PgConnectionIsAliveAdvice {
 
   @Advice.OnMethodEnter
   @static def enter(@Advice.This connection: Any): Unit = {
-    if(connection != null) {
+    if (connection != null) {
       val statement = connection.asInstanceOf[PgConnectionPrivateAccess].getCheckConnectionStatement()
 
-      if(statement != null) {
+      if (statement != null) {
         val connectionPoolTelemetry = connection.asInstanceOf[HasConnectionPoolTelemetry].connectionPoolTelemetry
         statement.asInstanceOf[HasConnectionPoolTelemetry].setConnectionPoolTelemetry(connectionPoolTelemetry)
       }

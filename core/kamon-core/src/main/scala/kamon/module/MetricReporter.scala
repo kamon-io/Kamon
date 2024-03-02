@@ -42,16 +42,18 @@ object MetricReporter {
     * the period snapshots sent the provided reporter in the same order they are provided to this method.
     */
   def withTransformations(reporter: MetricReporter, transformations: Transformation*): MetricReporter =
-      new Module.Wrapped with MetricReporter {
+    new Module.Wrapped with MetricReporter {
 
-    override def stop(): Unit = reporter.stop()
-    override def reconfigure(newConfig: Config): Unit = reporter.reconfigure(newConfig)
-    override def originalClass: Class[_ <: Module] = reporter.getClass
+      override def stop(): Unit = reporter.stop()
+      override def reconfigure(newConfig: Config): Unit = reporter.reconfigure(newConfig)
+      override def originalClass: Class[_ <: Module] = reporter.getClass
 
-    override def reportPeriodSnapshot(snapshot: PeriodSnapshot): Unit = {
-      reporter.reportPeriodSnapshot(transformations.tail.foldLeft(transformations.head.apply(snapshot))((s, t) => t.apply(s)))
+      override def reportPeriodSnapshot(snapshot: PeriodSnapshot): Unit = {
+        reporter.reportPeriodSnapshot(transformations.tail.foldLeft(transformations.head.apply(snapshot))((s, t) =>
+          t.apply(s)
+        ))
+      }
     }
-  }
 
   /**
     * Creates a transformation that only report metrics whose name matches the provided filter.

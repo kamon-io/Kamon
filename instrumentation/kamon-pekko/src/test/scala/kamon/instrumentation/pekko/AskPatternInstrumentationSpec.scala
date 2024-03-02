@@ -16,7 +16,6 @@
 
 package kamon.instrumentation.pekko
 
-
 import com.typesafe.config.ConfigFactory
 import kamon.Kamon
 import kamon.instrumentation.pekko.ContextTesting._
@@ -87,7 +86,8 @@ class AskPatternInstrumentationSpec extends TestKit(ActorSystem("AskPatternInstr
   }
 
   def setAskPatternTimeoutWarningMode(mode: String): Unit = {
-    val newConfiguration = ConfigFactory.parseString(s"kamon.pekko.ask-pattern-timeout-warning=$mode").withFallback(Kamon.config())
+    val newConfiguration =
+      ConfigFactory.parseString(s"kamon.pekko.ask-pattern-timeout-warning=$mode").withFallback(Kamon.config())
     Kamon.reconfigure(newConfiguration)
   }
 }

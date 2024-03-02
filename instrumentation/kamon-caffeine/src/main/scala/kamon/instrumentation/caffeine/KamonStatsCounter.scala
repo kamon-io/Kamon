@@ -23,7 +23,6 @@ class KamonStatsCounter(name: String) extends StatsCounter {
 
   override def recordLoadFailure(loadTime: Long): Unit = loadFailureTime.record(loadTime)
 
-
   override def recordEviction(): Unit = {
     evictionCount.increment()
   }

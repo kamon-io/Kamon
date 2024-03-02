@@ -22,7 +22,6 @@ import org.apache.pekko.stream.Materializer
 import org.apache.pekko.stream.scaladsl.Sink
 import org.apache.pekko.stream.scaladsl.Source
 
-
 class GreeterServiceImpl(implicit mat: Materializer) extends GreeterService {
   import mat.executionContext
 

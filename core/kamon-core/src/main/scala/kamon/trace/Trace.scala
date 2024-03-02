@@ -90,7 +90,6 @@ object Trace {
   def create(id: Identifier, samplingDecision: SamplingDecision): Trace =
     new MutableTrace(id, samplingDecision)
 
-
   private class MutableTrace(val id: Identifier, initialDecision: Trace.SamplingDecision) extends Trace {
     @volatile private var _samplingDecision = initialDecision
     @volatile private var _failedSpansCount = new AtomicInteger(0)

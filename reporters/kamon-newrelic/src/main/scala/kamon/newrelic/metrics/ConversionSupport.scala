@@ -21,7 +21,7 @@ import kamon.metric.MetricSnapshot.Values
 
 object ConversionSupport {
 
-  def buildAttributes(metric: Values[_]) : Attributes = {
+  def buildAttributes(metric: Values[_]): Attributes = {
     val dimensionName = metric.settings.unit.dimension.name
     val magnitudeName = metric.settings.unit.magnitude.name
     val scaleFactor = metric.settings.unit.magnitude.scaleFactor

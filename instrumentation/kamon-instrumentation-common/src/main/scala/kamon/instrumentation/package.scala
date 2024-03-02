@@ -30,18 +30,23 @@ package object instrumentation {
       * underlying implementation is expecting a class with static methods, which can only be provided by plain companion
       * objects; any nested companion object will not be appropriately picked up.
       */
-    def advise[A](method: Junction[MethodDescription], advice: A)(implicit singletonEvidence: A <:< Singleton): InstrumentationBuilder.Target
+    def advise[A](method: Junction[MethodDescription], advice: A)(implicit
+      singletonEvidence: A <:< Singleton
+    ): InstrumentationBuilder.Target
   }
 
-  implicit def adviseWithCompanionObject(target: InstrumentationBuilder.Target): AdviseWithCompanionObject = new AdviseWithCompanionObject {
+  implicit def adviseWithCompanionObject(target: InstrumentationBuilder.Target): AdviseWithCompanionObject =
+    new AdviseWithCompanionObject {
 
-    override def advise[A](method: Junction[MethodDescription], advice: A)(implicit singletonEvidence: A <:< Singleton): InstrumentationBuilder.Target = {
-      // Companion object instances always have the '$' sign at the end of their class name, we must remove it to get
-      // to the class that exposes the static methods.
-      val className = advice.getClass.getName.dropRight(1)
-      val adviseClass = Class.forName(className, true, advice.getClass.getClassLoader)
+      override def advise[A](method: Junction[MethodDescription], advice: A)(implicit
+        singletonEvidence: A <:< Singleton
+      ): InstrumentationBuilder.Target = {
+        // Companion object instances always have the '$' sign at the end of their class name, we must remove it to get
+        // to the class that exposes the static methods.
+        val className = advice.getClass.getName.dropRight(1)
+        val adviseClass = Class.forName(className, true, advice.getClass.getClassLoader)
 
-      target.advise(method, adviseClass)
+        target.advise(method, adviseClass)
+      }
     }
-  }
 }

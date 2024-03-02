@@ -15,18 +15,22 @@ import scala.collection.mutable
 
 class ClusterInstrumentation extends InstrumentationBuilder {
 
-    onType("org.apache.pekko.cluster.Cluster$")
-      .advise(method("createExtension").and(takesArguments(1)), classOf[AfterClusterInitializationAdvice])
+  onType("org.apache.pekko.cluster.Cluster$")
+    .advise(method("createExtension").and(takesArguments(1)), classOf[AfterClusterInitializationAdvice])
 }
 
 class AfterClusterInitializationAdvice
 object AfterClusterInitializationAdvice {
 
   @Advice.OnMethodExit
-  @static def onClusterExtensionCreated(@Advice.Argument(0) system: ExtendedActorSystem, @Advice.Return clusterExtension: Cluster): Unit = {
+  @static def onClusterExtensionCreated(
+    @Advice.Argument(0) system: ExtendedActorSystem,
+    @Advice.Return clusterExtension: Cluster
+  ): Unit = {
     val settings = PekkoInstrumentation.settings()
-    if(settings.exposeClusterMetrics) {
-      val stateExporter = system.systemActorOf(Props[ClusterInstrumentation.ClusterStateExporter](), "kamon-cluster-state-exporter")
+    if (settings.exposeClusterMetrics) {
+      val stateExporter =
+        system.systemActorOf(Props[ClusterInstrumentation.ClusterStateExporter](), "kamon-cluster-state-exporter")
       clusterExtension.subscribe(stateExporter, classOf[ClusterEvent.ClusterDomainEvent])
     }
   }
@@ -74,19 +78,22 @@ object ClusterInstrumentation {
 
       // The status and reachability gauges will only be published for the subset of members that are currently being
       // monitored by this node.
-      val currentlyMonitoredMembers = clusterState.members.filter(m => clusterExtension.failureDetector.isMonitoring(m.address))
+      val currentlyMonitoredMembers =
+        clusterState.members.filter(m => clusterExtension.failureDetector.isMonitoring(m.address))
       val currentlyMonitoredAddresses = currentlyMonitoredMembers.map { member =>
-        val (statusGauge, reachabilityGauge) = monitoredNodes.getOrElseUpdate(member.address, {
-          val memberTags = clusterTags.withTag("member", member.address.toString)
+        val (statusGauge, reachabilityGauge) = monitoredNodes.getOrElseUpdate(
+          member.address, {
+            val memberTags = clusterTags.withTag("member", member.address.toString)
 
-          (
-            ClusterMemberStatus.withTags(memberTags),
-            ClusterMemberReachability.withTags(memberTags)
-          )
-        })
+            (
+              ClusterMemberStatus.withTags(memberTags),
+              ClusterMemberReachability.withTags(memberTags)
+            )
+          }
+        )
 
         statusGauge.update(statusToGaugeValue(member.status))
-        reachabilityGauge.update(if(clusterState.unreachable(member)) 1D else 0D)
+        reachabilityGauge.update(if (clusterState.unreachable(member)) 1d else 0d)
         member.address
       }
 
@@ -101,14 +108,14 @@ object ClusterInstrumentation {
     }
 
     private def statusToGaugeValue(memberStatus: MemberStatus): Double = memberStatus match {
-      case MemberStatus.Joining   => 1
-      case MemberStatus.WeaklyUp  => 2
-      case MemberStatus.Up        => 3
-      case MemberStatus.Leaving   => 4
-      case MemberStatus.Exiting   => 5
-      case MemberStatus.Down      => 6
-      case MemberStatus.Removed   => 7
-      case _ => 0 // This should never happen, but covering the bases here
+      case MemberStatus.Joining  => 1
+      case MemberStatus.WeaklyUp => 2
+      case MemberStatus.Up       => 3
+      case MemberStatus.Leaving  => 4
+      case MemberStatus.Exiting  => 5
+      case MemberStatus.Down     => 6
+      case MemberStatus.Removed  => 7
+      case _                     => 0 // This should never happen, but covering the bases here
     }
   }
 

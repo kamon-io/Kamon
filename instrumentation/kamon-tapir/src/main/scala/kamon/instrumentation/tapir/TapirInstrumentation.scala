@@ -33,7 +33,7 @@ class TapirInstrumentation extends InstrumentationBuilder {
 
 class TapirToRouteInterceptor
 
-object TapirToRouteInterceptor  {
+object TapirToRouteInterceptor {
   def toRoute[I, E, O](@Argument(0) arg: Any, @SuperCall superCall: Callable[Route]): Route = {
     arg match {
       case endpoint: ServerEndpoint[_, _] => {
@@ -45,7 +45,7 @@ object TapirToRouteInterceptor  {
 
           val operationName = endpoint.info.name match {
             case Some(endpointName) if useEndpointNameAsOperationName => endpointName
-            case _ => endpoint.showPathTemplate()
+            case _                                                    => endpoint.showPathTemplate()
           }
 
           Kamon.currentSpan()

@@ -12,7 +12,7 @@
  * either express or implied. See the License for the specific language governing permissions
  * and limitations under the License.
  * =========================================================================================
-*/
+ */
 
 package kamon.akka.http
 
@@ -34,7 +34,8 @@ import org.scalatest.OptionValues
 import scala.concurrent.ExecutionContextExecutor
 import scala.concurrent.duration._
 
-class AkkaHttpClientTracingSpec extends AnyWordSpecLike with Matchers with InitAndStopKamonAfterAll with MetricInspection.Syntax
+class AkkaHttpClientTracingSpec extends AnyWordSpecLike with Matchers with InitAndStopKamonAfterAll
+    with MetricInspection.Syntax
     with Reconfigure with TestWebServer with Eventually with OptionValues with TestSpanReporter {
 
   import TestWebServer.Endpoints._
@@ -90,7 +91,7 @@ class AkkaHttpClientTracingSpec extends AnyWordSpecLike with Matchers with InitA
         val httpResponse = response.value.value.get
         val headersMap = parse(httpResponse.data.utf8String).extract[Map[String, String]]
 
-        headersMap.keys.toList should contain allOf(
+        headersMap.keys.toList should contain allOf (
           "context-tags",
           "X-Foo",
           "X-B3-TraceId",
@@ -134,4 +135,3 @@ class AkkaHttpClientTracingSpec extends AnyWordSpecLike with Matchers with InitA
     webServer.shutdown()
   }
 }
-

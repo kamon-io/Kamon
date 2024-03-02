@@ -29,7 +29,6 @@ import io.opentelemetry.sdk.trace.`export`.SpanExporter
 import io.opentelemetry.sdk.trace.data.SpanData
 import org.slf4j.LoggerFactory
 
-
 /**
   * Service for exporting OpenTelemetry traces
   */
@@ -52,7 +51,8 @@ private[otel] object OtlpTraceService {
   def apply(config: Config): TraceService = {
     val otelExporterConfig = config.getConfig("kamon.otel.trace")
     val endpoint = otelExporterConfig.getString("endpoint")
-    val fullEndpoint = if (otelExporterConfig.hasPath("full-endpoint")) Some(otelExporterConfig.getString("full-endpoint")) else None
+    val fullEndpoint =
+      if (otelExporterConfig.hasPath("full-endpoint")) Some(otelExporterConfig.getString("full-endpoint")) else None
     val compression = otelExporterConfig.getString("compression") match {
       case "gzip" => true
       case x =>
@@ -61,13 +61,13 @@ private[otel] object OtlpTraceService {
     }
     val protocol = otelExporterConfig.getString("protocol") match {
       case "http/protobuf" => "http/protobuf"
-      case "grpc" => "grpc"
+      case "grpc"          => "grpc"
       case x =>
         logger.warn(s"Unrecognised opentelemetry schema type $x. Defaulting to grpc")
         "grpc"
     }
     val headers = otelExporterConfig.getString("headers").split(',').filter(_.nonEmpty).map(_.split("=", 2)).map {
-      case Array(k) => k -> ""
+      case Array(k)    => k -> ""
       case Array(k, v) => k -> v
     }.toSeq
     val timeout = otelExporterConfig.getDuration("timeout")
@@ -79,8 +79,8 @@ private[otel] object OtlpTraceService {
       // Seems to be some dispute as to whether the / should technically be added in the case that the base path doesn't
       // include it. Adding because it's probably what's desired most of the time, and can always be overridden by full-endpoint
       case ("http/protobuf", None) => if (endpoint.endsWith("/")) endpoint + "v1/traces" else endpoint + "/v1/traces"
-      case (_, Some(full)) => full
-      case (_, None) => endpoint
+      case (_, Some(full))         => full
+      case (_, None)               => endpoint
     }
 
     logger.info(s"Configured endpoint for OpenTelemetry trace reporting [$url] using $protocol protocol")
@@ -89,15 +89,23 @@ private[otel] object OtlpTraceService {
   }
 }
 
-private[otel] class OtlpTraceService(protocol: String, endpoint: String, compressionEnabled: Boolean, headers: Seq[(String, String)], timeout: Duration) extends TraceService {
+private[otel] class OtlpTraceService(
+  protocol: String,
+  endpoint: String,
+  compressionEnabled: Boolean,
+  headers: Seq[(String, String)],
+  timeout: Duration
+) extends TraceService {
   private val compressionMethod = if (compressionEnabled) "gzip" else "none"
   private val delegate: SpanExporter = protocol match {
     case "grpc" =>
-      val builder = OtlpGrpcSpanExporter.builder().setEndpoint(endpoint).setCompression(compressionMethod).setTimeout(timeout)
+      val builder =
+        OtlpGrpcSpanExporter.builder().setEndpoint(endpoint).setCompression(compressionMethod).setTimeout(timeout)
       headers.foreach { case (k, v) => builder.addHeader(k, v) }
       builder.build()
     case "http/protobuf" =>
-      val builder = OtlpHttpSpanExporter.builder().setEndpoint(endpoint).setCompression(compressionMethod).setTimeout(timeout)
+      val builder =
+        OtlpHttpSpanExporter.builder().setEndpoint(endpoint).setCompression(compressionMethod).setTimeout(timeout)
       headers.foreach { case (k, v) => builder.addHeader(k, v) }
       builder.build()
   }

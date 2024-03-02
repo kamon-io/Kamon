@@ -13,8 +13,9 @@ import java.util.concurrent.CompletableFuture
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
-class QuickSpanCreationSpec extends AnyWordSpec with Matchers with OptionValues with SpanInspection.Syntax with Eventually
-  with SpanSugar with TestSpanReporter with Reconfigure with InitAndStopKamonAfterAll {
+class QuickSpanCreationSpec extends AnyWordSpec with Matchers with OptionValues with SpanInspection.Syntax
+    with Eventually
+    with SpanSugar with TestSpanReporter with Reconfigure with InitAndStopKamonAfterAll {
 
   import kamon.Kamon.{currentSpan, span}
 
@@ -58,7 +59,7 @@ class QuickSpanCreationSpec extends AnyWordSpec with Matchers with OptionValues 
       eventually(timeout(5 seconds)) {
         val reportedSpan = testSpanReporter().nextSpan().value
         reportedSpan.operationName shouldBe "finishSimpleSpanWithComponent"
-        reportedSpan.metricTags.get(any("component")) should be ("customComponentTag")
+        reportedSpan.metricTags.get(any("component")) should be("customComponentTag")
       }
     }
 

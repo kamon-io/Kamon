@@ -29,7 +29,13 @@ object NewRelicCounters {
     val attributes = buildAttributes(counter)
     logger.debug("name: {} ; numberOfInstruments: {}", counter.name, counter.instruments.size)
     counter.instruments.map { inst: Instrument.Snapshot[Long] =>
-      new Count(counter.name, inst.value, start, end, addTagsFromTagSets(Seq(inst.tags), attributes.copy().put("sourceMetricType", "counter")))
+      new Count(
+        counter.name,
+        inst.value,
+        start,
+        end,
+        addTagsFromTagSets(Seq(inst.tags), attributes.copy().put("sourceMetricType", "counter"))
+      )
     }
   }
 }

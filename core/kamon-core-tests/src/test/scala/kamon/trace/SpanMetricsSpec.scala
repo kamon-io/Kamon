@@ -130,10 +130,12 @@ class SpanMetricsSpec extends AnyWordSpec with Matchers with InstrumentInspectio
         .fail("Terrible Error with Throwable", new Throwable with NoStackTrace)
         .finish()
 
-      val histogram = Span.Metrics.ProcessingTime.withTags(TagSet.from(Map(operationTag, noErrorTag, parentOperationTag)))
+      val histogram =
+        Span.Metrics.ProcessingTime.withTags(TagSet.from(Map(operationTag, noErrorTag, parentOperationTag)))
       histogram.distribution().count shouldBe 1
 
-      val errorHistogram = Span.Metrics.ProcessingTime.withTags(TagSet.from(Map(operationTag, errorTag, parentOperationTag)))
+      val errorHistogram =
+        Span.Metrics.ProcessingTime.withTags(TagSet.from(Map(operationTag, errorTag, parentOperationTag)))
       errorHistogram.distribution().count shouldBe 2
     }
 
@@ -161,10 +163,12 @@ class SpanMetricsSpec extends AnyWordSpec with Matchers with InstrumentInspectio
         .fail("Terrible Error with Throwable", new Throwable with NoStackTrace)
         .finish()
 
-      val histogram = Span.Metrics.ProcessingTime.withTags(TagSet.from(Map(operationTag, noErrorTag, parentOperationTag)))
+      val histogram =
+        Span.Metrics.ProcessingTime.withTags(TagSet.from(Map(operationTag, noErrorTag, parentOperationTag)))
       histogram.distribution().count shouldBe 0
 
-      val errorHistogram = Span.Metrics.ProcessingTime.withTags(TagSet.from(Map(operationTag, errorTag, parentOperationTag)))
+      val errorHistogram =
+        Span.Metrics.ProcessingTime.withTags(TagSet.from(Map(operationTag, errorTag, parentOperationTag)))
       errorHistogram.distribution().count shouldBe 0
     }
 
@@ -180,7 +184,8 @@ class SpanMetricsSpec extends AnyWordSpec with Matchers with InstrumentInspectio
 
       val waitTime = Span.Metrics.WaitTime.withTags(TagSet.from(Map(operationTag, noErrorTag))).distribution()
       val elapsedTime = Span.Metrics.ElapsedTime.withTags(TagSet.from(Map(operationTag, noErrorTag))).distribution()
-      val processingTime = Span.Metrics.ProcessingTime.withTags(TagSet.from(Map(operationTag, noErrorTag))).distribution()
+      val processingTime =
+        Span.Metrics.ProcessingTime.withTags(TagSet.from(Map(operationTag, noErrorTag))).distribution()
 
       waitTime.count shouldBe 1
       waitTime.buckets.head.value shouldBe 10
@@ -226,5 +231,3 @@ class SpanMetricsSpec extends AnyWordSpec with Matchers with InstrumentInspectio
     evaluated
   }
 }
-
-

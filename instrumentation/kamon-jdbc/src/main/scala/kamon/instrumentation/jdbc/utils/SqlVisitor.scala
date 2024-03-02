@@ -1,7 +1,23 @@
 package kamon.instrumentation.jdbc.utils
 
 import net.sf.jsqlparser.schema.Table
-import net.sf.jsqlparser.statement.{Block, Commit, CreateFunctionalStatement, DeclareStatement, DescribeStatement, ExplainStatement, ResetStatement, RollbackStatement, SavepointStatement, SetStatement, ShowColumnsStatement, ShowStatement, StatementVisitor, Statements, UseStatement}
+import net.sf.jsqlparser.statement.{
+  Block,
+  Commit,
+  CreateFunctionalStatement,
+  DeclareStatement,
+  DescribeStatement,
+  ExplainStatement,
+  ResetStatement,
+  RollbackStatement,
+  SavepointStatement,
+  SetStatement,
+  ShowColumnsStatement,
+  ShowStatement,
+  StatementVisitor,
+  Statements,
+  UseStatement
+}
 import net.sf.jsqlparser.statement.alter.{Alter, AlterSession}
 import net.sf.jsqlparser.statement.alter.sequence.AlterSequence
 import net.sf.jsqlparser.statement.comment.Comment
@@ -18,14 +34,27 @@ import net.sf.jsqlparser.statement.grant.Grant
 import net.sf.jsqlparser.statement.insert.Insert
 import net.sf.jsqlparser.statement.merge.Merge
 import net.sf.jsqlparser.statement.replace.Replace
-import net.sf.jsqlparser.statement.select.{FromItemVisitor, LateralSubSelect, ParenthesisFromItem, PlainSelect, Select, SelectVisitor, SetOperationList, SubJoin, SubSelect, TableFunction, ValuesList, WithItem}
+import net.sf.jsqlparser.statement.select.{
+  FromItemVisitor,
+  LateralSubSelect,
+  ParenthesisFromItem,
+  PlainSelect,
+  Select,
+  SelectVisitor,
+  SetOperationList,
+  SubJoin,
+  SubSelect,
+  TableFunction,
+  ValuesList,
+  WithItem
+}
 import net.sf.jsqlparser.statement.show.ShowTablesStatement
 import net.sf.jsqlparser.statement.truncate.Truncate
 import net.sf.jsqlparser.statement.update.Update
 import net.sf.jsqlparser.statement.upsert.Upsert
 import net.sf.jsqlparser.statement.values.ValuesStatement
 
-class SqlVisitor(var operation: String) extends StatementVisitor with FromItemVisitor with SelectVisitor  {
+class SqlVisitor(var operation: String) extends StatementVisitor with FromItemVisitor with SelectVisitor {
   override def visit(comment: Comment): Unit = {}
 
   override def visit(commit: Commit): Unit = operation = "commit"
@@ -76,7 +105,8 @@ class SqlVisitor(var operation: String) extends StatementVisitor with FromItemVi
 
   override def visit(subjoin: SubJoin): Unit = operation = s"select ${subjoin.getAlias.toString}"
 
-  override def visit(lateralSubSelect: LateralSubSelect): Unit = operation = s"select ${lateralSubSelect.getAlias.toString}"
+  override def visit(lateralSubSelect: LateralSubSelect): Unit =
+    operation = s"select ${lateralSubSelect.getAlias.toString}"
 
   override def visit(valuesList: ValuesList): Unit = operation = s"select ${valuesList.getAlias}"
 
@@ -106,9 +136,11 @@ class SqlVisitor(var operation: String) extends StatementVisitor with FromItemVi
 
   override def visit(grant: Grant): Unit = operation = "grant"
 
-  override def visit(createSequence: CreateSequence): Unit = operation = s"create_sequnce ${createSequence.sequence.getName}"
+  override def visit(createSequence: CreateSequence): Unit =
+    operation = s"create_sequnce ${createSequence.sequence.getName}"
 
-  override def visit(alterSequence: AlterSequence): Unit = operation = s"alter_sequence ${alterSequence.sequence.getName}"
+  override def visit(alterSequence: AlterSequence): Unit =
+    operation = s"alter_sequence ${alterSequence.sequence.getName}"
 
   override def visit(createFunctionalStatement: CreateFunctionalStatement): Unit = {}
 

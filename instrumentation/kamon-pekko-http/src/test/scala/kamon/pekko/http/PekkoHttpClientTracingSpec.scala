@@ -12,7 +12,7 @@
  * either express or implied. See the License for the specific language governing permissions
  * and limitations under the License.
  * =========================================================================================
-*/
+ */
 
 package kamon.pekko.http
 
@@ -34,7 +34,8 @@ import org.scalatest.wordspec.AnyWordSpecLike
 import scala.concurrent.ExecutionContextExecutor
 import scala.concurrent.duration._
 
-class PekkoHttpClientTracingSpec extends AnyWordSpecLike with Matchers with InitAndStopKamonAfterAll with MetricInspection.Syntax
+class PekkoHttpClientTracingSpec extends AnyWordSpecLike with Matchers with InitAndStopKamonAfterAll
+    with MetricInspection.Syntax
     with Reconfigure with TestWebServer with Eventually with OptionValues with TestSpanReporter {
 
   import TestWebServer.Endpoints._
@@ -90,7 +91,7 @@ class PekkoHttpClientTracingSpec extends AnyWordSpecLike with Matchers with Init
         val httpResponse = response.value.value.get
         val headersMap = parse(httpResponse.data.utf8String).extract[Map[String, String]]
 
-        headersMap.keys.toList should contain allOf(
+        headersMap.keys.toList should contain allOf (
           "context-tags",
           "X-Foo",
           "X-B3-TraceId",
@@ -134,4 +135,3 @@ class PekkoHttpClientTracingSpec extends AnyWordSpecLike with Matchers with Init
     webServer.shutdown()
   }
 }
-

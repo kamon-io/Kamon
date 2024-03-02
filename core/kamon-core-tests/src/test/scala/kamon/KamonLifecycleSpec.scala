@@ -52,7 +52,6 @@ class KamonLifecycleSpec extends AnyWordSpec with Matchers with Eventually {
     }
   }
 
-
   def createProcessCommand(mainClass: String): String = {
     System.getProperty("java.home") + File.separator + "bin" + File.separator + "java" +
     " -cp " + System.getProperty("java.class.path") + " " + mainClass
@@ -95,7 +94,7 @@ object UsingKamonApisWithoutInit extends App {
     .asScala
     .filter(_.getName.startsWith("kamon"))
 
-  if(allKamonThreadNames.nonEmpty)
+  if (allKamonThreadNames.nonEmpty)
     sys.error("Kamon shouldn't start or create threads until init is called")
 }
 

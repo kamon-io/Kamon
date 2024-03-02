@@ -52,7 +52,7 @@ package object http4s {
     }
 
   def getResponseBuilder[F[_]](
-      response: Response[F]
+    response: Response[F]
   ): ResponseBuilder[Response[F]] =
     new HttpMessage.ResponseBuilder[Response[F]] {
       private var _headers = response.headers
@@ -66,7 +66,7 @@ package object http4s {
     }
 
   def getRequestBuilder[F[_]](
-      request: Request[F]
+    request: Request[F]
   ): HttpMessage.RequestBuilder[Request[F]] =
     new HttpMessage.RequestBuilder[Request[F]] {
       private var _headers = request.headers

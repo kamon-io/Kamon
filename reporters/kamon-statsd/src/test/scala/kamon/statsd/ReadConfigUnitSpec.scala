@@ -9,25 +9,25 @@ class ReadConfigUnitSpec extends AnyWordSpec with Matchers {
   "time unit config" should {
 
     "read seconds" in {
-      readTimeUnit("s") should be (time.seconds)
+      readTimeUnit("s") should be(time.seconds)
     }
 
     "read milliseconds" in {
-      readTimeUnit("ms") should be (time.milliseconds)
+      readTimeUnit("ms") should be(time.milliseconds)
     }
 
     "read microseconds" in {
-      readTimeUnit("µs") should be (time.microseconds)
+      readTimeUnit("µs") should be(time.microseconds)
     }
 
     "read nanoseconds" in {
-      readTimeUnit("ns") should be (time.nanoseconds)
+      readTimeUnit("ns") should be(time.nanoseconds)
     }
 
     "not read other units" in {
-      val error = intercept[RuntimeException]{readTimeUnit("h")}
-      error.getMessage should include ("Invalid time unit")
-      error.getMessage should include ("[h]")
+      val error = intercept[RuntimeException] { readTimeUnit("h") }
+      error.getMessage should include("Invalid time unit")
+      error.getMessage should include("[h]")
     }
 
   }
@@ -35,28 +35,27 @@ class ReadConfigUnitSpec extends AnyWordSpec with Matchers {
   "information unit config" should {
 
     "read bytes" in {
-      readInformationUnit("b") should be (information.bytes)
+      readInformationUnit("b") should be(information.bytes)
     }
 
     "read kilobytes" in {
-      readInformationUnit("kb") should be (information.kilobytes)
+      readInformationUnit("kb") should be(information.kilobytes)
     }
 
     "read megabytes" in {
-      readInformationUnit("mb") should be (information.megabytes)
+      readInformationUnit("mb") should be(information.megabytes)
     }
 
     "read gigabytes" in {
-      readInformationUnit("gb") should be (information.gigabytes)
+      readInformationUnit("gb") should be(information.gigabytes)
     }
 
     "not read other units" in {
-      val error = intercept[RuntimeException]{readInformationUnit("tb")}
-      error.getMessage should include ("Invalid information unit")
-      error.getMessage should include ("[tb]")
+      val error = intercept[RuntimeException] { readInformationUnit("tb") }
+      error.getMessage should include("Invalid information unit")
+      error.getMessage should include("[tb]")
     }
 
   }
-
 
 }

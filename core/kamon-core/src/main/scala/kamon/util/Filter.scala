@@ -23,7 +23,6 @@ import com.typesafe.config.Config
 
 import scala.collection.JavaConverters.collectionAsScalaIterableConverter
 
-
 /**
   * Decides whether a given String satisfy a group of includes and excludes patterns.
   */
@@ -73,7 +72,7 @@ object Filter {
     * empty.
     */
   def from(path: String): Filter =
-    if(Kamon.config().hasPath(path))
+    if (Kamon.config().hasPath(path))
       from(Kamon.config().getConfig(path))
     else
       Filter.Deny
@@ -94,7 +93,7 @@ object Filter {
     val includes = readFilters(config, "includes")
     val excludes = readFilters(config, "excludes")
 
-    if(includes.isEmpty)
+    if (includes.isEmpty)
       Filter.Deny
     else
       new Filter.IncludeExclude(includes, excludes)
@@ -113,15 +112,15 @@ object Filter {
     Filter.SingleMatcher(Regex(regexPattern))
 
   private def readFilters(filtersConfig: Config, key: String): Seq[Filter.Matcher] =
-    if(filtersConfig.hasPath(key))
+    if (filtersConfig.hasPath(key))
       filtersConfig.getStringList(key).asScala.map(readMatcher).toSeq
     else
       Seq.empty
 
   private def readMatcher(pattern: String): Filter.Matcher = {
-    if(pattern.startsWith("regex:"))
+    if (pattern.startsWith("regex:"))
       new Filter.Regex(pattern.drop(6))
-    else if(pattern.startsWith("glob:"))
+    else if (pattern.startsWith("glob:"))
       new Filter.Glob(pattern.drop(5))
     else
       new Filter.Glob(pattern)
@@ -206,25 +205,20 @@ object Filter {
           if (grp1.length == 2) {
             // it's a *workers are able to process multiple metrics*
             patternBuilder.append(".*")
-          }
-          else {
+          } else {
             // it's a *
             patternBuilder.append("[^/]*")
           }
-        }
-        else if (grp2 != null) {
+        } else if (grp2 != null) {
           // match a '?' glob pattern; any non-slash character
           patternBuilder.append("[^/]")
-        }
-        else if (grp3 != null) {
+        } else if (grp3 != null) {
           // backslash-escaped value
           patternBuilder.append(Pattern.quote(grp3.substring(1)))
-        }
-        else if (grp4 != null) {
+        } else if (grp4 != null) {
           // match any number of / chars
           patternBuilder.append("/+")
-        }
-        else {
+        } else {
           // some other string
           patternBuilder.append(Pattern.quote(matcher.group))
         }

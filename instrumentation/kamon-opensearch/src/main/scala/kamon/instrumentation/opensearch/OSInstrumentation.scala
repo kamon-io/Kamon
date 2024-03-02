@@ -29,7 +29,10 @@ class OSInstrumentation extends InstrumentationBuilder {
 
   onType("org.opensearch.client.RestHighLevelClient")
     .advise(method("internalPerformRequest").and(takesArguments(5)), classOf[HighLevelOpensearchClientInstrumentation])
-    .advise(method("internalPerformRequestAsync").and(takesArguments(6)), classOf[HighLevelOpensearchClientInstrumentation])
+    .advise(
+      method("internalPerformRequestAsync").and(takesArguments(6)),
+      classOf[HighLevelOpensearchClientInstrumentation]
+    )
 }
 
 class InstrumentedListener(inner: ResponseListener, span: Span) extends ResponseListener {

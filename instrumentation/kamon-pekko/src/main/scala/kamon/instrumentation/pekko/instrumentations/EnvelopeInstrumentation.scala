@@ -22,7 +22,6 @@ import kanela.agent.libs.net.bytebuddy.asm.Advice
 
 import scala.annotation.static
 
-
 class EnvelopeInstrumentation extends InstrumentationBuilder {
 
   /**
@@ -43,4 +42,3 @@ object EnvelopeCopyAdvice {
     newEnvelope.asInstanceOf[HasTimestamp].setTimestamp(envelope.asInstanceOf[HasTimestamp].timestamp)
   }
 }
-

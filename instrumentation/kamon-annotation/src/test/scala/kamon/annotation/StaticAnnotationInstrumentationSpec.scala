@@ -30,19 +30,19 @@ import org.scalatest.wordspec.AnyWordSpec
 import org.scalatest.OptionValues
 
 class StaticAnnotationInstrumentationSpec extends AnyWordSpec
-  with Matchers
-  with Eventually
-  with SpanSugar
-  with Reconfigure
-  with InstrumentInspection.Syntax
-  with SpanInspection
-  with MetricInspection.Syntax
-  with InitAndStopKamonAfterAll
-  with OptionValues {
+    with Matchers
+    with Eventually
+    with SpanSugar
+    with Reconfigure
+    with InstrumentInspection.Syntax
+    with SpanInspection
+    with MetricInspection.Syntax
+    with InitAndStopKamonAfterAll
+    with OptionValues {
 
   "the Kamon Annotation module" should {
     "create a new trace when is invoked a method annotated with @Trace in a Scala Object" in {
-      for (_<- 1 to 10) AnnotatedObject.trace()
+      for (_ <- 1 to 10) AnnotatedObject.trace()
 
       eventually(timeout(10 seconds)) {
         val span = reporter.nextSpan().value
@@ -68,7 +68,7 @@ class StaticAnnotationInstrumentationSpec extends AnyWordSpec
     "count the invocations of a method annotated with @Count and evaluate EL expressions in a Scala Object" in {
       for (_ <- 1 to 2) AnnotatedObject.countWithEL()
 
-      Kamon.counter("count:10").withTags(TagSet.from(Map("counter" -> "1", "env" -> "prod"))).value()should be(2)
+      Kamon.counter("count:10").withTags(TagSet.from(Map("counter" -> "1", "env" -> "prod"))).value() should be(2)
     }
 
     "count the current invocations of a method annotated with @TrackConcurrency in a Scala Object" in {
@@ -85,7 +85,9 @@ class StaticAnnotationInstrumentationSpec extends AnyWordSpec
       for (_ <- 1 to 10) AnnotatedObject.countMinMaxWithEL()
 
       eventually(timeout(5 seconds)) {
-        Kamon.rangeSampler("minMax:10").withTags(TagSet.from(Map("minMax" -> "1", "env" -> "dev"))).distribution().sum should be(0)
+        Kamon.rangeSampler("minMax:10").withTags(
+          TagSet.from(Map("minMax" -> "1", "env" -> "dev"))
+        ).distribution().sum should be(0)
       }
     }
 
@@ -98,7 +100,9 @@ class StaticAnnotationInstrumentationSpec extends AnyWordSpec
     "measure the time spent in the execution of a method annotated with @Time and evaluate EL expressions in a Scala Object" in {
       AnnotatedObject.timeWithEL()
 
-      Kamon.timer("time:10").withTags(TagSet.from(Map("slow-service" -> "service", "env" -> "prod"))).distribution().count should be(1)
+      Kamon.timer("time:10").withTags(
+        TagSet.from(Map("slow-service" -> "service", "env" -> "prod"))
+      ).distribution().count should be(1)
     }
 
     "record the operationName returned by a method annotated with @Histogram in a Scala Object" in {
@@ -114,7 +118,8 @@ class StaticAnnotationInstrumentationSpec extends AnyWordSpec
     "record the operationName returned by a method annotated with @Histogram and evaluate EL expressions in a Scala Object" in {
       for (operationName <- 1 to 2) AnnotatedObject.histogramWithEL(operationName)
 
-      val snapshot = Kamon.histogram("histogram:10").withTags(TagSet.from(Map("histogram" -> "hdr", "env" -> "prod"))).distribution()
+      val snapshot =
+        Kamon.histogram("histogram:10").withTags(TagSet.from(Map("histogram" -> "hdr", "env" -> "prod"))).distribution()
       snapshot.count should be(2)
       snapshot.min should be(1)
       snapshot.max should be(2)

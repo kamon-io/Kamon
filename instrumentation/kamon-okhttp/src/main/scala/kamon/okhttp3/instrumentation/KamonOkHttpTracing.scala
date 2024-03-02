@@ -34,7 +34,10 @@ object KamonOkHttpTracing {
     instrumentation.createHandler(getRequestBuilder(request), Kamon.currentContext)
   }
 
-  def successContinuation(requestHandler: HttpClientInstrumentation.RequestHandler[Request], response: Response): Response = {
+  def successContinuation(
+    requestHandler: HttpClientInstrumentation.RequestHandler[Request],
+    response: Response
+  ): Response = {
     requestHandler.processResponse(toKamonResponse(response))
     response
   }
@@ -44,39 +47,40 @@ object KamonOkHttpTracing {
     requestHandler.span.finish()
   }
 
-  def getRequestBuilder(request: Request): HttpMessage.RequestBuilder[Request] = new HttpMessage.RequestBuilder[Request]() {
-    private val _headers = mutable.Map[String, String]()
+  def getRequestBuilder(request: Request): HttpMessage.RequestBuilder[Request] =
+    new HttpMessage.RequestBuilder[Request]() {
+      private val _headers = mutable.Map[String, String]()
 
-    override def read(header: String): Option[String] = Option.apply(request.header(header))
+      override def read(header: String): Option[String] = Option.apply(request.header(header))
 
-    override def readAll: Map[String, String] = {
-      JavaConverters
-        .mapAsScalaMapConverter(request.headers.toMultimap)
-        .asScala
-        .mapValues((values: util.List[String]) => values.get(0))
-        .toMap
+      override def readAll: Map[String, String] = {
+        JavaConverters
+          .mapAsScalaMapConverter(request.headers.toMultimap)
+          .asScala
+          .mapValues((values: util.List[String]) => values.get(0))
+          .toMap
+      }
+
+      override def url: String = request.url.toString
+
+      override def path: String = request.url.uri.getPath
+
+      override def method: String = request.method
+
+      override def host: String = request.url.host
+
+      override def port: Int = request.url.port
+
+      override def write(header: String, value: String): Unit = {
+        _headers += (header -> value)
+      }
+
+      override def build: Request = {
+        val newHeadersMap = request.headers.newBuilder
+        _headers.foreach { case (key, value) => newHeadersMap.add(key, value) }
+        request.newBuilder.headers(newHeadersMap.build).build
+      }
     }
-
-    override def url: String = request.url.toString
-
-    override def path: String = request.url.uri.getPath
-
-    override def method: String = request.method
-
-    override def host: String = request.url.host
-
-    override def port: Int = request.url.port
-
-    override def write(header: String, value: String): Unit = {
-      _headers += (header -> value)
-    }
-
-    override def build: Request = {
-      val newHeadersMap = request.headers.newBuilder
-      _headers.foreach { case (key, value) => newHeadersMap.add(key, value) }
-      request.newBuilder.headers(newHeadersMap.build).build
-    }
-  }
 
   def toKamonResponse(response: Response): HttpMessage.Response = new HttpMessage.Response() {
     override def statusCode: Int = response.code()

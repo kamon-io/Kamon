@@ -12,7 +12,7 @@
  * either express or implied. See the License for the specific language governing permissions
  * and limitations under the License.
  * =========================================================================================
-*/
+ */
 
 package kamon.akka.http
 
@@ -32,8 +32,9 @@ import org.scalatest.OptionValues
 import scala.concurrent.{ExecutionContextExecutor, Future}
 import scala.concurrent.duration._
 
-class AkkaHttpServerMetricsSpec extends AnyWordSpecLike with Matchers with InitAndStopKamonAfterAll with InstrumentInspection.Syntax
-  with Reconfigure with TestWebServer with Eventually with OptionValues {
+class AkkaHttpServerMetricsSpec extends AnyWordSpecLike with Matchers with InitAndStopKamonAfterAll
+    with InstrumentInspection.Syntax
+    with Reconfigure with TestWebServer with Eventually with OptionValues {
 
   import TestWebServer.Endpoints._
 
@@ -50,18 +51,18 @@ class AkkaHttpServerMetricsSpec extends AnyWordSpecLike with Matchers with InitA
     "track the number of open connections and active requests on the Server side" in {
       val httpServerMetrics = HttpServerMetrics.of("akka.http.server", interface, port)
 
-      for(_ <- 1 to 8) yield {
+      for (_ <- 1 to 8) yield {
         sendRequest(HttpRequest(uri = s"http://$interface:$port/$waitTen"))
       }
 
       eventually(timeout(10 seconds)) {
-        httpServerMetrics.openConnections.distribution().max shouldBe(8)
-        httpServerMetrics.activeRequests.distribution().max shouldBe(8)
+        httpServerMetrics.openConnections.distribution().max shouldBe (8)
+        httpServerMetrics.activeRequests.distribution().max shouldBe (8)
       }
 
       eventually(timeout(20 seconds)) {
-        httpServerMetrics.openConnections.distribution().max shouldBe(0)
-        httpServerMetrics.activeRequests.distribution().max shouldBe(0)
+        httpServerMetrics.openConnections.distribution().max shouldBe (0)
+        httpServerMetrics.activeRequests.distribution().max shouldBe (0)
       }
     }
   }
@@ -70,7 +71,7 @@ class AkkaHttpServerMetricsSpec extends AnyWordSpecLike with Matchers with InitA
     val connectionSettings = ClientConnectionSettings(system).withIdleTimeout(1 second)
     Source.single(request)
       .via(Http().outgoingConnection(interface, port, settings = connectionSettings))
-      .map{r =>
+      .map { r =>
         r.discardEntityBytes()
         r
       }
@@ -82,4 +83,3 @@ class AkkaHttpServerMetricsSpec extends AnyWordSpecLike with Matchers with InitA
     webServer.shutdown()
   }
 }
-

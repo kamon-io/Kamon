@@ -27,39 +27,39 @@ object HttpServerMetrics {
 
   private val _logger = LoggerFactory.getLogger("kamon.instrumentation.http.HttpServerMetrics")
 
-  val CompletedRequests = Kamon.counter (
+  val CompletedRequests = Kamon.counter(
     name = "http.server.requests",
     description = "Number of completed requests per status code"
   )
 
-  val ActiveRequests = Kamon.rangeSampler (
+  val ActiveRequests = Kamon.rangeSampler(
     name = "http.server.request.active",
     description = "Number of requests being processed simultaneously at any point in time"
   )
 
-  val RequestSize = Kamon.histogram (
+  val RequestSize = Kamon.histogram(
     name = "http.server.request.size",
     description = "Request size distribution (including headers and body) for all requests received by the server",
     unit = information.bytes
   )
 
-  val ResponseSize = Kamon.histogram (
+  val ResponseSize = Kamon.histogram(
     name = "http.server.response.size",
     description = "Response size distribution (including headers and body) for all responses served by the server",
     unit = information.bytes
   )
 
-  val ConnectionLifetime = Kamon.timer (
+  val ConnectionLifetime = Kamon.timer(
     name = "http.server.connection.lifetime",
     description = "Tracks the time elapsed between connection creation and connection close"
   )
 
-  val ConnectionUsage = Kamon.histogram (
+  val ConnectionUsage = Kamon.histogram(
     name = "http.server.connection.usage",
     description = "Distribution of number of requests handled per connection during their entire lifetime"
   )
 
-  val OpenConnections = Kamon.rangeSampler (
+  val OpenConnections = Kamon.rangeSampler(
     name = "http.server.connection.open",
     description = "Number of open connections"
   )
@@ -85,15 +85,15 @@ object HttpServerMetrics {
       * Increments the appropriate response counter depending on the the status code.
       */
     def countCompletedRequest(statusCode: Int): Unit = {
-      if(statusCode >= 200 && statusCode <= 299)
+      if (statusCode >= 200 && statusCode <= 299)
         requestsSuccessful.increment()
-      else if(statusCode >= 500 && statusCode <= 599)
+      else if (statusCode >= 500 && statusCode <= 599)
         requestsServerError.increment()
-      else if(statusCode >= 400 && statusCode <= 499)
+      else if (statusCode >= 400 && statusCode <= 499)
         requestsClientError.increment()
-      else if(statusCode >= 300 && statusCode <= 399)
+      else if (statusCode >= 300 && statusCode <= 399)
         requestsRedirection.increment()
-      else if(statusCode >= 100 && statusCode <= 199)
+      else if (statusCode >= 100 && statusCode <= 199)
         requestsInformational.increment()
       else {
         _logger.warn("Unknown HTTP status code {} found when recording HTTP server metrics", statusCode.toString)
@@ -105,7 +105,7 @@ object HttpServerMetrics {
     * Creates a new HttpServer.Metrics instance with the provided component, interface and port tags.
     */
   def of(component: String, interface: String, port: Int): HttpServerInstruments =
-    new HttpServerInstruments (
+    new HttpServerInstruments(
       TagSet.builder()
         .add(TagKeys.Component, component)
         .add(TagKeys.Interface, interface)

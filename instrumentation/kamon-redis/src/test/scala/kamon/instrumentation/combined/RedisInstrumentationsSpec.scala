@@ -1,6 +1,5 @@
 package kamon.instrumentation.combined
 
-
 import io.lettuce.core.{RedisClient => LettuceClient}
 import kamon.tag.Lookups
 import kamon.tag.Lookups._
@@ -20,15 +19,14 @@ import java.time.Duration
 import scala.concurrent.duration.DurationInt
 import scala.util.control.NonFatal
 
-
 class RedisInstrumentationsSpec extends AnyWordSpec
-  with Matchers
-  with ScalaFutures
-  with Eventually
-  with InitAndStopKamonAfterAll
-  with MetricInspection.Syntax
-  with OptionValues
-  with TestSpanReporter {
+    with Matchers
+    with ScalaFutures
+    with Eventually
+    with InitAndStopKamonAfterAll
+    with MetricInspection.Syntax
+    with OptionValues
+    with TestSpanReporter {
 
   private val logger = LoggerFactory.getLogger(classOf[RedisInstrumentationsSpec])
   var container: GenericContainer[Nothing] = _

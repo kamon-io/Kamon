@@ -26,57 +26,57 @@ object NodeConnectionPoolMetrics {
   private val NodePoolPrefix = "cassandra.driver.node.pool."
 
   val BorrowTime = Kamon.timer(
-    name        = NodePoolPrefix + "borrow-time",
+    name = NodePoolPrefix + "borrow-time",
     description = "Time spent acquiring connection to the node"
   )
 
   val OpenConnections = Kamon.rangeSampler(
-    name        = NodePoolPrefix + "connections.open",
+    name = NodePoolPrefix + "connections.open",
     description = "Tracks the number of open connections to a node"
   )
 
   val InFlight = Kamon.histogram(
-    name        = NodePoolPrefix + "in-flight",
+    name = NodePoolPrefix + "in-flight",
     description = "Tracks the Number of in-flight request sent to a node"
   )
 
   val Errors = Kamon.counter(
-    name        = NodePoolPrefix + "errors",
+    name = NodePoolPrefix + "errors",
     description = "Counts the number of failed executions"
   )
 
   val Timeouts = Kamon.counter(
-    name        = NodePoolPrefix + "timeouts",
+    name = NodePoolPrefix + "timeouts",
     description = "Counts the Number of timed-out executions"
   )
 
   val Cancelled = Kamon.counter(
-    name        = NodePoolPrefix + "cancelled",
+    name = NodePoolPrefix + "cancelled",
     description = "Counts the number of cancelled executions"
   )
 
   val TriggeredSpeculations = Kamon.counter(
-    name        = NodePoolPrefix + "retries",
+    name = NodePoolPrefix + "retries",
     description = "Counts the number of retried executions"
   )
 
   class NodeConnectionPoolInstruments(node: Node) extends InstrumentGroup(createNodeTags(node)) {
-    val borrow:                Timer        = register(BorrowTime)
-    val openConnections:       RangeSampler = register(OpenConnections)
-    val inFlight:              Histogram    = register(InFlight)
-    val clientErrors:          Counter      = register(Errors, Tags.ErrorSource, "client")
-    val serverErrors:          Counter      = register(Errors, Tags.ErrorSource, "server")
-    val timeouts:              Counter      = register(Timeouts)
-    val canceled:              Counter      = register(Cancelled)
-    val triggeredSpeculations: Counter      = register(TriggeredSpeculations)
+    val borrow: Timer = register(BorrowTime)
+    val openConnections: RangeSampler = register(OpenConnections)
+    val inFlight: Histogram = register(InFlight)
+    val clientErrors: Counter = register(Errors, Tags.ErrorSource, "client")
+    val serverErrors: Counter = register(Errors, Tags.ErrorSource, "server")
+    val timeouts: Counter = register(Timeouts)
+    val canceled: Counter = register(Cancelled)
+    val triggeredSpeculations: Counter = register(TriggeredSpeculations)
   }
 
   private def createNodeTags(node: Node): TagSet =
     TagSet.from(
       Map(
-        Tags.DC      -> node.dc,
-        Tags.Rack    -> node.rack,
-        Tags.Node    -> node.address
+        Tags.DC -> node.dc,
+        Tags.Rack -> node.rack,
+        Tags.Node -> node.address
       )
     )
 

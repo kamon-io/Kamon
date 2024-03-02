@@ -7,7 +7,7 @@ import org.apache.pekko.event.slf4j.Slf4jLogger
 class TestLogger extends Slf4jLogger {
   override def receive: PartialFunction[Any, Unit] = {
     val filteredReceive: Actor.Receive = {
-      case event: LogEvent if(shouldDropEvent(event)) =>
+      case event: LogEvent if (shouldDropEvent(event)) =>
     }
 
     filteredReceive.orElse(super.receive)

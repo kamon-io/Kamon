@@ -24,7 +24,7 @@ import kanela.agent.libs.net.bytebuddy.asm.Advice
   * Advise that copies the current Context from Kamon into a HasContext instance when the advised method starts
   * executing.
   */
-class CaptureCurrentContextOnEnter private()
+class CaptureCurrentContextOnEnter private ()
 object CaptureCurrentContextOnEnter {
 
   @Advice.OnMethodEnter

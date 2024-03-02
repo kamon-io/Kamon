@@ -37,7 +37,6 @@ object InstrumentationStatus {
   private val _kanelaLoadedPropertyName = "kanela.loaded"
   private val _registryClassName = "kanela.agent.api.instrumentation.listener.InstrumentationRegistryListener"
 
-
   /**
     * Tries to fetch the current instrumentation information from Kanela and assemble a status instance. Since the
     * status information will be present on the System ClassLoader only after the Kanela agent has been activated (it
@@ -74,11 +73,12 @@ object InstrumentationStatus {
       Status.Instrumentation(present, Option(kanelaVersion), modules.toSeq, errors)
     } catch {
       case t: Throwable =>
-
-        if(warnIfFailed) {
+        if (warnIfFailed) {
           t match {
             case _: ClassNotFoundException if warnIfFailed =>
-              _logger.warn("Failed to load the instrumentation modules status because the Kanela agent is not available")
+              _logger.warn(
+                "Failed to load the instrumentation modules status because the Kanela agent is not available"
+              )
 
             case t: Throwable if warnIfFailed =>
               _logger.warn("Failed to load the instrumentation modules status", t)
@@ -93,7 +93,7 @@ object InstrumentationStatus {
     * Transforms a Map-encoded module into a typed instance. The property names are tied to Kanela's implementation
     */
   private def toModule(map: JavaMap[String, String]): Status.Instrumentation.ModuleInfo = {
-    Status.Instrumentation.ModuleInfo (
+    Status.Instrumentation.ModuleInfo(
       map.get("path"),
       map.get("name"),
       map.get("description"),

@@ -14,9 +14,8 @@ import org.scalatest.wordspec.AnyWordSpec
 import org.scalatest.OptionValues
 import org.testcontainers.containers.wait.strategy.Wait
 
-
 class OpenSearchInstrumentationTest
-  extends AnyWordSpec
+    extends AnyWordSpec
     with Matchers
     with Eventually
     with SpanSugar
@@ -42,11 +41,13 @@ class OpenSearchInstrumentationTest
     }
 
     "records a span for a basic async request" in {
-      client.performRequestAsync(new Request("GET", "/_cluster/health"),
+      client.performRequestAsync(
+        new Request("GET", "/_cluster/health"),
         new ResponseListener() {
           override def onSuccess(response: Response): Unit = ()
           override def onFailure(exception: Exception): Unit = ()
-        })
+        }
+      )
 
       eventually(timeout(5 seconds)) {
         val span = testSpanReporter().nextSpan().value
@@ -85,7 +86,6 @@ class OpenSearchInstrumentationTest
     }
   }
 
-
   override val container: GenericContainer = GenericContainer(
     "opensearchproject/opensearch:1.3.14",
     exposedPorts = Seq(9200),
@@ -104,7 +104,8 @@ class OpenSearchInstrumentationTest
       .build()
 
     highLevelClient = new RestHighLevelClient(
-      RestClient.builder(HttpHost.create(s"${container.host}:${container.mappedPort(9200)}")))
+      RestClient.builder(HttpHost.create(s"${container.host}:${container.mappedPort(9200)}"))
+    )
   }
 
   override protected def afterAll(): Unit = {

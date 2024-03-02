@@ -23,15 +23,14 @@ import kamon.newrelic.NewRelicConfig.NewRelicApiKey.{InsightsInsertKey, LicenseK
 import java.net.URL
 import java.time.Duration
 
-
 private case class NewRelicConfig(
-                                   apiKey: NewRelicApiKey,
-                                   enableAuditLogging: Boolean,
-                                   userAgent: String,
-                                   callTimeout: Duration,
-                                   spanIngestUri: Option[URL],
-                                   metricIngestUri: Option[URL]
-                                 )
+  apiKey: NewRelicApiKey,
+  enableAuditLogging: Boolean,
+  userAgent: String,
+  callTimeout: Duration,
+  spanIngestUri: Option[URL],
+  metricIngestUri: Option[URL]
+)
 
 private object NewRelicConfig {
 
@@ -41,7 +40,7 @@ private object NewRelicConfig {
     // TODO maybe some validation around these values?
     val apiKey = (nrConfig.getString("license-key"), nrConfig.getString("nr-insights-insert-key")) match {
       case (licenseKey, "none") if licenseKey != "none" => LicenseKey(licenseKey)
-      case (_, insightsInsertKey) => InsightsInsertKey(insightsInsertKey)
+      case (_, insightsInsertKey)                       => InsightsInsertKey(insightsInsertKey)
     }
 
     val enableAuditLogging = nrConfig.getBoolean("enable-audit-logging")
@@ -58,13 +57,13 @@ private object NewRelicConfig {
 
   sealed trait NewRelicApiKey {
     def value: String = this match {
-      case LicenseKey(licenseKey) => licenseKey
+      case LicenseKey(licenseKey)               => licenseKey
       case InsightsInsertKey(insightsInsertKey) => insightsInsertKey
     }
 
     def isLicenseKey: Boolean = this match {
       case LicenseKey(_) => true
-      case _ => false
+      case _             => false
     }
   }
 

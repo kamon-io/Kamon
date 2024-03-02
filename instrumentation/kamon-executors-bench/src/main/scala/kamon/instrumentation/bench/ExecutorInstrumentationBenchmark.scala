@@ -37,7 +37,7 @@ class ExecutorInstrumentationBenchmark {
   @Fork
   def control(blackhole: Blackhole): Unit = {
     MoreExecutors.directExecutor.execute(new BlackholeRunnable(blackhole))
- }
+  }
 
   /**
     * This benchmark attempts to measure the performance with manual context propagation.

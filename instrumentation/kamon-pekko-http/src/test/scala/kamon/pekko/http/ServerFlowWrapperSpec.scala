@@ -24,10 +24,14 @@ class ServerFlowWrapperSpec extends AnyWordSpecLike with Matchers with ScalaFutu
   }
 
   private val defaultReturningFlow = Flow[HttpRequest].map { _ =>
-    HttpResponse(status = StatusCodes.OK, entity = HttpEntity.Default(
-      ContentTypes.`text/plain(UTF-8)`,
-      2,
-      Source.single(ByteString.apply("OK"))))
+    HttpResponse(
+      status = StatusCodes.OK,
+      entity = HttpEntity.Default(
+        ContentTypes.`text/plain(UTF-8)`,
+        2,
+        Source.single(ByteString.apply("OK"))
+      )
+    )
   }
 
   "the server flow wrapper" should {

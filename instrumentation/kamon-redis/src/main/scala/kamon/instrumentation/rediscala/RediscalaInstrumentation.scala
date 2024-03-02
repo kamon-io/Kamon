@@ -11,8 +11,14 @@ import scala.concurrent.Future
 import scala.util.{Failure, Success}
 
 class RediscalaInstrumentation extends InstrumentationBuilder {
-  onTypes("redis.Request", "redis.ActorRequest", "redis.BufferedRequest",
-    "redis.commands.BLists", "redis.RoundRobinPoolRequest", "ActorRequest")
+  onTypes(
+    "redis.Request",
+    "redis.ActorRequest",
+    "redis.BufferedRequest",
+    "redis.commands.BLists",
+    "redis.RoundRobinPoolRequest",
+    "ActorRequest"
+  )
     .advise(method("send").and(takesArguments(1)), classOf[RequestInstrumentation])
 
   onTypes("redis.ActorRequest$class")
@@ -31,9 +37,7 @@ object RequestInstrumentation {
   }
 
   @Advice.OnMethodExit(onThrowable = classOf[Throwable], suppress = classOf[Throwable])
-  @static def exit(@Advice.Enter span: Span,
-           @Advice.Thrown t: Throwable,
-           @Advice.Return future: Future[_]) = {
+  @static def exit(@Advice.Enter span: Span, @Advice.Thrown t: Throwable, @Advice.Return future: Future[_]) = {
     if (t != null) {
       span.fail(t);
     }
@@ -62,9 +66,7 @@ object RoundRobinRequestInstrumentation {
   }
 
   @Advice.OnMethodExit(onThrowable = classOf[Throwable], suppress = classOf[Throwable])
-  @static def exit(@Advice.Enter span: Span,
-           @Advice.Thrown t: Throwable,
-           @Advice.Return future: Future[_]) = {
+  @static def exit(@Advice.Enter span: Span, @Advice.Thrown t: Throwable, @Advice.Return future: Future[_]) = {
     println("Exiting round robin")
     if (t != null) {
       span.fail(t);
@@ -92,9 +94,7 @@ object ActorRequestAdvice {
   }
 
   @Advice.OnMethodExit(onThrowable = classOf[Throwable], suppress = classOf[Throwable])
-  @static def exit(@Advice.Enter span: Span,
-           @Advice.Thrown t: Throwable,
-           @Advice.Return future: Future[_]) = {
+  @static def exit(@Advice.Enter span: Span, @Advice.Thrown t: Throwable, @Advice.Return future: Future[_]) = {
     if (t != null) {
       span.fail(t);
     }

@@ -48,14 +48,18 @@ class SpringMVCInstrumentation extends InstrumentationBuilder {
   onType("org.springframework.web.context.request.async.WebAsyncManager")
     .advise(
       method("startCallableProcessing")
-        .and(withArgument(0, classOf[Callable[_]])), classOf[CallableWrapper])
+        .and(withArgument(0, classOf[Callable[_]])),
+      classOf[CallableWrapper]
+    )
 }
 
 class DispatchAdvice
 object DispatchAdvice {
   @Advice.OnMethodEnter()
-  @static def enter(@Advice.This dispatcherServlet: HasServerInstrumentation,
-            @Advice.Argument(0) request: HttpServletRequest): (RequestHandler, Scope) = {
+  @static def enter(
+    @Advice.This dispatcherServlet: HasServerInstrumentation,
+    @Advice.Argument(0) request: HttpServletRequest
+  ): (RequestHandler, Scope) = {
     val requestHandler = Option(request.getAttribute("kamon-handler").asInstanceOf[RequestHandler])
       .getOrElse({
         val serverInstrumentation = dispatcherServlet.getServerInstrumentation(request)
@@ -70,9 +74,11 @@ object DispatchAdvice {
   }
 
   @Advice.OnMethodExit(onThrowable = classOf[Throwable], suppress = classOf[Throwable])
-  @static def exit(@Advice.Enter enter: (RequestHandler, Scope),
-           @Advice.Argument(0) request: HttpServletRequest,
-           @Advice.Argument(1) response: HttpServletResponse): Unit = {
+  @static def exit(
+    @Advice.Enter enter: (RequestHandler, Scope),
+    @Advice.Argument(0) request: HttpServletRequest,
+    @Advice.Argument(1) response: HttpServletResponse
+  ): Unit = {
     val (handler, scope) = enter
 
     if (response.isCommitted) {

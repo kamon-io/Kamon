@@ -40,7 +40,6 @@ class AkkaGrpcTracingSpec extends AnyWordSpec with InitAndStopKamonAfterAll with
     .newServerAt("127.0.0.1", 8598)
     .bind(greeterService)
 
-
   val client = GreeterServiceClient(GrpcClientSettings.connectToServiceAt("127.0.0.1", 8598).withTls(false))
 
   "the Akka gRPC instrumentation" should {

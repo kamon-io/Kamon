@@ -24,16 +24,20 @@ import kamon.metric.{Distribution, DynamicRange, MeasurementUnit}
   * keep fixed preferences regarding what time and information units to expect on the output and apply those conversion
   * when possible.
   */
-class UnitConverter(targetTimeUnit: MeasurementUnit, targetInformationUnit: MeasurementUnit, dynamicRange: DynamicRange) {
+class UnitConverter(
+  targetTimeUnit: MeasurementUnit,
+  targetInformationUnit: MeasurementUnit,
+  dynamicRange: DynamicRange
+) {
 
   /**
     * Tries to convert a value from its unit to the appropriate time/information unit set when creating this
     * UnitConverter. If the value unit's dimension is not time or information then values will be returned unchanged.
     */
   def convertValue(value: Double, unit: MeasurementUnit): Double =
-    if(unit.dimension == Dimension.Time)
+    if (unit.dimension == Dimension.Time)
       MeasurementUnit.convert(value, unit, targetTimeUnit)
-    else if(unit.dimension == Dimension.Information)
+    else if (unit.dimension == Dimension.Information)
       MeasurementUnit.convert(value, unit, targetInformationUnit)
     else
       value
@@ -44,9 +48,9 @@ class UnitConverter(targetTimeUnit: MeasurementUnit, targetInformationUnit: Meas
     * be converted to a different dynamic range, if necessary.
     */
   def convertDistribution(distribution: Distribution, unit: MeasurementUnit): Distribution =
-    if(unit.dimension == Dimension.Time)
+    if (unit.dimension == Dimension.Time)
       Distribution.convert(distribution, unit, targetTimeUnit, dynamicRange)
-    else if(unit.dimension == Dimension.Information)
+    else if (unit.dimension == Dimension.Information)
       Distribution.convert(distribution, unit, targetInformationUnit, dynamicRange)
     else
       Distribution.convert(distribution, unit, unit, dynamicRange)

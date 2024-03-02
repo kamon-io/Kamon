@@ -29,15 +29,15 @@ class ContextTagConverter extends ClassicConverter {
     super.start()
     val firstOption = getFirstOption()
 
-    if(firstOption != null && firstOption.nonEmpty) {
+    if (firstOption != null && firstOption.nonEmpty) {
       val optionParts = firstOption.split(':')
       _tagName = optionParts(0)
-      _default = if(optionParts.length > 1) optionParts(1) else ""
+      _default = if (optionParts.length > 1) optionParts(1) else ""
     }
   }
 
   override def convert(event: ILoggingEvent): String = {
-    if(_tagName != null) {
+    if (_tagName != null) {
       val context = Kamon.currentContext()
       context.tags.get(coerce(_tagName, _default))
     } else _default

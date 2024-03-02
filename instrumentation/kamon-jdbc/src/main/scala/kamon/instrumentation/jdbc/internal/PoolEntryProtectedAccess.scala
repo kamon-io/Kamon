@@ -25,6 +25,6 @@ object PoolEntryProtectedAccess {
     */
   def underlyingConnection(poolEntry: Any): Connection = poolEntry match {
     case pe: PoolEntry => pe.connection
-    case _ => null
+    case _             => null
   }
 }

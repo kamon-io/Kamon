@@ -97,13 +97,13 @@ class DriverInstrumentation extends InstrumentationBuilder {
     .mixin(classOf[HasPoolMetrics.Mixin])
     .advise(method("setLocationInfo"), classOf[HostLocationAdvice])
 
-
   /**
     * Cassandra Driver 4.10 support
     */
   onTypes(
-      "com.datastax.oss.driver.internal.core.cql.CqlPrepareHandler",
-      "com.datastax.oss.driver.internal.core.cql.CqlRequestHandler")
+    "com.datastax.oss.driver.internal.core.cql.CqlPrepareHandler",
+    "com.datastax.oss.driver.internal.core.cql.CqlRequestHandler"
+  )
     .mixin(classOf[HasContext.Mixin])
     .advise(isConstructor(), classOf[OnRequestHandlerConstructorAdvice])
     .advise(method("onThrottleReady"), classOf[OnThrottleReadyAdvice])
@@ -123,10 +123,10 @@ object OnRequestHandlerConstructorAdvice {
   @Advice.OnMethodExit()
   @static def exit(@Advice.This requestHandler: HasContext, @Advice.Argument(0) req: Any): Unit = {
     val (operationName, statement) = req match {
-      case pr: PrepareRequest => (QueryOperations.QueryPrepareOperationName, pr.getQuery())
+      case pr: PrepareRequest      => (QueryOperations.QueryPrepareOperationName, pr.getQuery())
       case ss: cql.SimpleStatement => (QueryOperations.QueryOperationName, ss.getQuery())
-      case bs: cql.BoundStatement => (QueryOperations.QueryOperationName, bs.getPreparedStatement.getQuery())
-      case bs: cql.BatchStatement =>  (QueryOperations.BatchOperationName, "")
+      case bs: cql.BoundStatement  => (QueryOperations.QueryOperationName, bs.getPreparedStatement.getQuery())
+      case bs: cql.BatchStatement  => (QueryOperations.BatchOperationName, "")
     }
 
     // Make that every case added to the "onTypes" clause for the Cassandra 4.x support
@@ -147,12 +147,11 @@ object OnRequestHandlerConstructorAdvice {
       */
     resultStage.whenComplete(new BiConsumer[Any, Throwable] {
       override def accept(result: Any, error: Throwable): Unit = {
-        if(error != null) {
+        if (error != null) {
           clientSpan
             .fail(error)
             .finish()
-        }
-        else {
+        } else {
           clientSpan.finish()
         }
       }
