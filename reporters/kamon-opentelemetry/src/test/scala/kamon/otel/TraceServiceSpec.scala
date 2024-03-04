@@ -17,6 +17,7 @@ package kamon.otel
 
 import com.typesafe.config.ConfigFactory
 import io.opentelemetry.sdk.resources.Resource
+import kamon.otel.OpenTelemetryConfiguration.Component
 import org.scalatest.concurrent.PatienceConfiguration.Timeout
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.matchers.should.Matchers
@@ -24,8 +25,8 @@ import org.scalatest.time.{Millis, Seconds, Span}
 import org.scalatest.wordspec.AnyWordSpec
 
 /**
-  * Tests for the [[TraceService]]
-  */
+ * Tests for the [[TraceService]]
+ */
 class TraceServiceSpec extends AnyWordSpec with Matchers with ScalaFutures with Utils {
   private implicit val defaultPatience: PatienceConfig =
     PatienceConfig(timeout = Span(2, Seconds), interval = Span(15, Millis))
@@ -41,18 +42,18 @@ class TraceServiceSpec extends AnyWordSpec with Matchers with ScalaFutures with 
 
   "exporting traces" should {
     "fail in case the remote service is not operable" in {
-      val traceService = OtlpTraceService(config)
+      val traceService = OtlpTraceService(OpenTelemetryConfiguration(config, Component.Trace))
 
       // the actual data does not really matter as this will fail due to connection issues
       val resources = SpanConverter.convert(false, resource, kamonVersion)(Seq(finishedSpan()))
       val f = traceService.exportSpans(resources)
       whenReady(f.failed, Timeout(Span.apply(12, Seconds))) { e =>
-        e shouldEqual StatusRuntimeException
+        e shouldEqual SpanStatusRuntimeException
       }
     }
   }
 
   "closing service should execute without errors" in {
-    OtlpTraceService(config).close()
+    OtlpTraceService(OpenTelemetryConfiguration(config, Component.Trace)).close()
   }
 }
