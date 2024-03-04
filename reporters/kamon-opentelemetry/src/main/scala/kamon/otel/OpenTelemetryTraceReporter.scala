@@ -15,24 +15,20 @@
  */
 package kamon.otel
 
-import java.util
-
 import com.typesafe.config.Config
-import kamon.Kamon
-import kamon.module.{Module, ModuleFactory, SpanReporter}
-import kamon.trace.Span
-import org.slf4j.LoggerFactory
-import java.net.URLDecoder
-import java.util.{Collection => JCollection}
-
-import scala.concurrent.ExecutionContext
-import scala.util.{Failure, Success, Try}
-
-import io.opentelemetry.sdk.common.InstrumentationLibraryInfo
 import io.opentelemetry.sdk.resources.Resource
 import io.opentelemetry.sdk.trace.data.SpanData
+import kamon.Kamon
+import kamon.module.{Module, ModuleFactory, SpanReporter}
+import kamon.otel.OpenTelemetryConfiguration.Component.Trace
 import kamon.status.Status
-import kamon.tag.Tag
+import kamon.trace.Span
+import org.slf4j.LoggerFactory
+
+import java.util
+import java.util.{Collection => JCollection}
+import scala.concurrent.ExecutionContext
+import scala.util.{Failure, Success}
 
 object OpenTelemetryTraceReporter {
   private val logger = LoggerFactory.getLogger(classOf[OpenTelemetryTraceReporter])
@@ -49,13 +45,14 @@ object OpenTelemetryTraceReporter {
   }
 }
 
-import OpenTelemetryTraceReporter._
+import kamon.otel.OpenTelemetryTraceReporter._
 
 /**
-  * Converts internal finished Kamon spans to OpenTelemetry format and sends to a configured OpenTelemetry endpoint using gRPC.
-  */
-class OpenTelemetryTraceReporter(traceServiceFactory: Config => TraceService)(implicit ec: ExecutionContext)
-    extends SpanReporter {
+ * Converts internal finished Kamon spans to OpenTelemetry format and sends to a configured OpenTelemetry endpoint using gRPC or REST.
+ */
+class OpenTelemetryTraceReporter(traceServiceFactory: OpenTelemetryConfiguration => TraceService)(implicit
+  ec: ExecutionContext
+) extends SpanReporter {
   private var traceService: Option[TraceService] = None
   private var spanConverterFunc: Seq[Span.Finished] => JCollection[SpanData] = (_ => new util.ArrayList[SpanData](0))
 
@@ -77,23 +74,16 @@ class OpenTelemetryTraceReporter(traceServiceFactory: Config => TraceService)(im
     logger.info("Reconfigure OpenTelemetry Trace Reporter")
 
     // pre-generate the function for converting Kamon span to proto span
-    val attributes: Map[String, String] =
-      newConfig.getString("kamon.otel.attributes").split(',').filter(_ contains '=').map(_.trim.split("=", 2)).map {
-        case Array(k, v) =>
-          val decoded = Try(URLDecoder.decode(v.trim, "UTF-8"))
-          decoded.failed.foreach(t =>
-            throw new IllegalArgumentException(s"value for attribute ${k.trim} is not a url-encoded string", t)
-          )
-          k.trim -> decoded.get
-      }.toMap
-    val resource: Resource = buildResource(attributes)
+    val attributes: Map[String, String] = OpenTelemetryConfiguration.getAttributes(newConfig)
+    val resource: Resource = OpenTelemetryConfiguration.buildResource(attributes)
+    val config = OpenTelemetryConfiguration(newConfig, Trace)
     this.spanConverterFunc = SpanConverter.convert(
       newConfig.getBoolean("kamon.otel.trace.include-error-event"),
       resource,
       kamonSettings.version
     )
 
-    this.traceService = Option(traceServiceFactory.apply(newConfig))
+    this.traceService = Option(traceServiceFactory.apply(config))
   }
 
   override def stop(): Unit = {
@@ -102,29 +92,4 @@ class OpenTelemetryTraceReporter(traceServiceFactory: Config => TraceService)(im
     this.traceService = None
   }
 
-  /**
-    * Builds the resource information added as resource labels to the exported traces
-    *
-    * @return
-    */
-  private def buildResource(attributes: Map[String, String]): Resource = {
-    val env = Kamon.environment
-    val builder = Resource.builder()
-      .put("host.name", kamonSettings.environment.host)
-      .put("service.instance.id", kamonSettings.environment.instance)
-      .put("service.name", env.service)
-      .put("telemetry.sdk.name", "kamon")
-      .put("telemetry.sdk.language", "scala")
-      .put("telemetry.sdk.version", kamonSettings.version)
-
-    attributes.foreach { case (k, v) => builder.put(k, v) }
-    // add all kamon.environment.tags as KeyValues to the Resource object
-    env.tags.iterator().foreach {
-      case t: Tag.String  => builder.put(t.key, t.value)
-      case t: Tag.Boolean => builder.put(t.key, t.value)
-      case t: Tag.Long    => builder.put(t.key, t.value)
-    }
-
-    builder.build()
-  }
 }

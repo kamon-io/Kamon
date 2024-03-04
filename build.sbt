@@ -963,8 +963,10 @@ lazy val `kamon-opentelemetry` = (project in file("reporters/kamon-opentelemetry
   .disablePlugins(AssemblyPlugin)
   .settings(
     libraryDependencies ++= Seq(
-      "io.opentelemetry" % "opentelemetry-exporter-otlp-http-trace" % "1.13.0",
-      "io.opentelemetry" % "opentelemetry-exporter-otlp-trace" % "1.13.0",
+      "io.opentelemetry" % "opentelemetry-exporter-otlp-http-trace" % "1.14.0",
+      "io.opentelemetry" % "opentelemetry-exporter-otlp-trace" % "1.14.0",
+      "io.opentelemetry" % "opentelemetry-exporter-otlp-http-metrics" % "1.14.0",
+      "io.opentelemetry" % "opentelemetry-exporter-otlp-metrics" % "1.14.0",
       // Compile-time dependency required in scala 3
       "com.google.auto.value" % "auto-value-annotations" % "1.9" % "compile",
 
