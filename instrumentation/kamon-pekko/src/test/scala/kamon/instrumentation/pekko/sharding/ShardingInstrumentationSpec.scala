@@ -62,21 +62,27 @@ class ShardingInstrumentationSpec
 
   val StaticAllocationStrategy = new ShardAllocationStrategy {
     override def allocateShard(
-        requester: ActorRef,
-        shardId: ShardId,
-        currentShardAllocations: Map[ActorRef, immutable.IndexedSeq[ShardId]])
-      : Future[ActorRef] = {
+      requester: ActorRef,
+      shardId: ShardId,
+      currentShardAllocations: Map[ActorRef, immutable.IndexedSeq[ShardId]]
+    ): Future[ActorRef] = {
       Future.successful(requester)
     }
 
     override def rebalance(
-        currentShardAllocations: Map[ActorRef, immutable.IndexedSeq[ShardId]],
-        rebalanceInProgress: Set[ShardId]): Future[Set[ShardId]] = {
+      currentShardAllocations: Map[ActorRef, immutable.IndexedSeq[ShardId]],
+      rebalanceInProgress: Set[ShardId]
+    ): Future[Set[ShardId]] = {
       Future.successful(Set.empty)
     }
   }
 
-  def registerTypes(shardedType: String, props: Props, system: ActorSystem, allocationStrategy: ShardAllocationStrategy): ActorRef =
+  def registerTypes(
+    shardedType: String,
+    props: Props,
+    system: ActorSystem,
+    allocationStrategy: ShardAllocationStrategy
+  ): ActorRef =
     ClusterSharding(system).start(
       typeName = shardedType,
       entityProps = props,
@@ -87,7 +93,7 @@ class ShardingInstrumentationSpec
       handOffStopMessage = PoisonPill
     )
 
-  class ShardedTypeContext  {
+  class ShardedTypeContext {
     val shardType = s"TestType-${Random.nextLong()}"
     val region = registerTypes(shardType, TestActor.props(testActor), system, StaticAllocationStrategy)
     val shardTags = TagSet.builder()
@@ -149,9 +155,9 @@ class ShardingInstrumentationSpec
       region ! GracefulShutdown
       expectTerminated(region)
 
-      RegionHostedShards.tagValues("type") should not contain(shardType)
-      RegionHostedEntities.tagValues("type") should not contain(shardType)
-      RegionProcessedMessages.tagValues("type") should not contain(shardType)
+      RegionHostedShards.tagValues("type") should not contain (shardType)
+      RegionHostedEntities.tagValues("type") should not contain (shardType)
+      RegionProcessedMessages.tagValues("type") should not contain (shardType)
     }
   }
 

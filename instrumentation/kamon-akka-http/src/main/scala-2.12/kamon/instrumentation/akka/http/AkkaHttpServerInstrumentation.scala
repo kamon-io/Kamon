@@ -45,7 +45,6 @@ import kanela.agent.libs.net.bytebuddy.matcher.ElementMatchers.isPublic
 
 import scala.collection.immutable
 
-
 class AkkaHttpServerInstrumentation extends InstrumentationBuilder {
 
   /**
@@ -87,7 +86,10 @@ class AkkaHttpServerInstrumentation extends InstrumentationBuilder {
   onType("akka.http.scaladsl.server.directives.FutureDirectives")
     .intercept(method("onComplete"), classOf[ResolveOperationNameOnRouteInterceptor])
 
-  onTypes("akka.http.scaladsl.server.directives.OnSuccessMagnet$", "akka.http.scaladsl.server.directives.CompleteOrRecoverWithMagnet$")
+  onTypes(
+    "akka.http.scaladsl.server.directives.OnSuccessMagnet$",
+    "akka.http.scaladsl.server.directives.CompleteOrRecoverWithMagnet$"
+  )
     .intercept(method("apply"), classOf[ResolveOperationNameOnRouteInterceptor])
 
   onType("akka.http.scaladsl.server.directives.RouteDirectives")
@@ -101,7 +103,6 @@ class AkkaHttpServerInstrumentation extends InstrumentationBuilder {
 
   onType("akka.http.scaladsl.Http2Ext")
     .advise(method("bindAndHandleAsync") and isPublic(), classOf[Http2ExtBindAndHandleAdvice])
-
 
   /**
     * Support for HTTP/1 and HTTP/2 at the same time.
@@ -123,12 +124,13 @@ trait HasMatchingContext {
 
 object HasMatchingContext {
 
-  case class PathMatchingContext (
+  case class PathMatchingContext(
     fullPath: String,
     matched: Matched[_]
   )
 
-  class Mixin(var matchingContext: Seq[PathMatchingContext], var defaultOperationName: String) extends HasMatchingContext {
+  class Mixin(var matchingContext: Seq[PathMatchingContext], var defaultOperationName: String)
+      extends HasMatchingContext {
 
     override def setMatchingContext(matchingContext: Seq[PathMatchingContext]): Unit =
       this.matchingContext = matchingContext
@@ -162,7 +164,9 @@ object ResolveOperationNameOnRouteInterceptor {
   def complete[T](status: StatusCode, v: => T)(implicit m: ToEntityMarshaller[T]): StandardRoute =
     StandardRoute(resolveOperationName(_).complete((status, v)))
 
-  def complete[T](status: StatusCode, headers: immutable.Seq[HttpHeader], v: => T)(implicit m: ToEntityMarshaller[T]): StandardRoute =
+  def complete[T](status: StatusCode, headers: immutable.Seq[HttpHeader], v: => T)(implicit
+    m: ToEntityMarshaller[T]
+  ): StandardRoute =
     complete((status, headers, v))
 
   def redirect(uri: Uri, redirectionType: Redirection): StandardRoute =
@@ -211,18 +215,18 @@ object ResolveOperationNameOnRouteInterceptor {
     Kamon.currentContext().get(LastAutomaticOperationNameEdit.Key).foreach(lastEdit => {
       val currentSpan = Kamon.currentSpan()
 
-      if(lastEdit.allowAutomaticChanges) {
-        if(currentSpan.operationName() == lastEdit.operationName) {
-        val allMatches = requestContext.asInstanceOf[HasMatchingContext].matchingContext.reverse.map(singleMatch)
-        val operationName = allMatches.mkString("")
+      if (lastEdit.allowAutomaticChanges) {
+        if (currentSpan.operationName() == lastEdit.operationName) {
+          val allMatches = requestContext.asInstanceOf[HasMatchingContext].matchingContext.reverse.map(singleMatch)
+          val operationName = allMatches.mkString("")
 
-        if(operationName.nonEmpty) {
+          if (operationName.nonEmpty) {
             currentSpan
-            .name(operationName)
-            .takeSamplingDecision()
+              .name(operationName)
+              .takeSamplingDecision()
 
-          lastEdit.operationName = operationName
-        }
+            lastEdit.operationName = operationName
+          }
         } else {
           lastEdit.allowAutomaticChanges = false
         }
@@ -240,7 +244,7 @@ object ResolveOperationNameOnRouteInterceptor {
     val consumedSegment = matching.fullPath.substring(0, consumedCount)
 
     matching.matched.extractions match {
-      case () => //string segment matched
+      case () => // string segment matched
         consumedSegment
       case tuple: Product =>
         val values = tuple.productIterator.toList map {
@@ -286,7 +290,9 @@ object RequestContextCopyInterceptor {
   @RuntimeType
   def copy(@This context: RequestContext, @SuperCall copyCall: Callable[RequestContext]): RequestContext = {
     val copiedRequestContext = copyCall.call()
-    copiedRequestContext.asInstanceOf[HasMatchingContext].setMatchingContext(context.asInstanceOf[HasMatchingContext].matchingContext)
+    copiedRequestContext.asInstanceOf[HasMatchingContext].setMatchingContext(
+      context.asInstanceOf[HasMatchingContext].matchingContext
+    )
     copiedRequestContext
   }
 }
@@ -313,8 +319,7 @@ object PathDirectivesRawPathPrefixInterceptor {
     } flatMap {
       case (ctx, Matched(rest, values)) =>
         tprovide(values) & mapRequestContext(_ withUnmatchedPath rest) & mapRouteResult { routeResult =>
-
-          if(routeResult.isInstanceOf[Rejected])
+          if (routeResult.isInstanceOf[Rejected])
             ctx.asInstanceOf[HasMatchingContext].popOneMatchingContext()
 
           routeResult
@@ -325,7 +330,6 @@ object PathDirectivesRawPathPrefixInterceptor {
   }
 }
 
-
 object Http2BlueprintInterceptor {
 
   case class HandlerWithEndpoint(interface: String, port: Int, handler: HttpRequest => Future[HttpResponse])
@@ -335,8 +339,10 @@ object Http2BlueprintInterceptor {
   }
 
   @RuntimeType
-  def handleWithStreamIdHeader(@Argument(1) handler: HttpRequest => Future[HttpResponse],
-    @SuperCall zuper: Callable[Flow[HttpRequest, HttpResponse, NotUsed]]): Flow[HttpRequest, HttpResponse, NotUsed] = {
+  def handleWithStreamIdHeader(
+    @Argument(1) handler: HttpRequest => Future[HttpResponse],
+    @SuperCall zuper: Callable[Flow[HttpRequest, HttpResponse, NotUsed]]
+  ): Flow[HttpRequest, HttpResponse, NotUsed] = {
 
     handler match {
       case HandlerWithEndpoint(interface, port, _) =>

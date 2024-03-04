@@ -56,12 +56,11 @@ object PreparedStatementExecuteMethodAdvisor {
   }
 }
 
-
 /**
   * Advisor for java.sql.Statement::executeQuery
   */
 class StatementExecuteQueryMethodAdvisor
-object StatementExecuteQueryMethodAdvisor  {
+object StatementExecuteQueryMethodAdvisor {
   @Advice.OnMethodEnter(suppress = classOf[Throwable])
   @static def executeStart(@Advice.This statement: Any, @Advice.Argument(0) sql: String): Option[Invocation] = {
     StatementMonitor.start(statement, sql, StatementTypes.Query)
@@ -93,7 +92,7 @@ object PreparedStatementExecuteQueryMethodAdvisor {
   * Advisor for java.sql.Statement::executeUpdate
   */
 class StatementExecuteUpdateMethodAdvisor
-object StatementExecuteUpdateMethodAdvisor  {
+object StatementExecuteUpdateMethodAdvisor {
   @Advice.OnMethodEnter(suppress = classOf[Throwable])
   @static def executeStart(@Advice.This statement: Any, @Advice.Argument(0) sql: String): Option[Invocation] = {
     StatementMonitor.start(statement, sql, StatementTypes.Update)
@@ -126,13 +125,13 @@ object PreparedStatementExecuteUpdateMethodAdvisor {
   * Advisor for java.sql.Statement+::executeLargeBatch
   */
 class StatementExecuteBatchMethodAdvisor
-object StatementExecuteBatchMethodAdvisor  {
+object StatementExecuteBatchMethodAdvisor {
   // inline
   @Advice.OnMethodEnter(suppress = classOf[Throwable])
   @static def executeStart(@Advice.This statement: Any): Option[Invocation] = {
     val statementSQL = statement match {
       case hSQL: HasStatementSQL => hSQL.capturedStatementSQL()
-      case _ => statement.toString
+      case _                     => statement.toString
     }
 
     StatementMonitor.start(statement, statementSQL, StatementTypes.Batch)

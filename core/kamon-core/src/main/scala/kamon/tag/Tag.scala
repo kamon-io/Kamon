@@ -41,7 +41,6 @@ object Tag {
     def value: JString
   }
 
-
   /**
     * Represents a String key pointing to a Boolean value.
     */
@@ -49,14 +48,12 @@ object Tag {
     def value: JBoolean
   }
 
-
   /**
     * Represents a String key pointing to a Long value.
     */
   trait Long extends Tag {
     def value: JLong
   }
-
 
   /**
     * Returns the value held inside of a Tag instance. This utility function is specially useful when iterating over
@@ -68,4 +65,3 @@ object Tag {
     case t: Tag.Long    => t.value
   }
 }
-

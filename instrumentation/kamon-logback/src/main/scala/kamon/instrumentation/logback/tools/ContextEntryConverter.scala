@@ -29,15 +29,15 @@ class ContextEntryConverter extends ClassicConverter {
     super.start()
     val firstOption = getFirstOption()
 
-    if(firstOption != null && firstOption.nonEmpty) {
+    if (firstOption != null && firstOption.nonEmpty) {
       val optionParts = firstOption.split(':')
-      _default = if(optionParts.length > 1) optionParts(1) else ""
+      _default = if (optionParts.length > 1) optionParts(1) else ""
       _entryKey = Context.key(optionParts(0), _default)
     }
   }
 
   override def convert(event: ILoggingEvent): String = {
-    if(_entryKey != null) {
+    if (_entryKey != null) {
       val context = Kamon.currentContext()
       context.get(_entryKey).toString
     } else _default

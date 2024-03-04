@@ -1,6 +1,5 @@
 package kamon.instrumentation.zio2
 
-
 import kamon.Kamon
 import kamon.context.Context
 import kamon.tag.Lookups.plain
@@ -18,7 +17,7 @@ import zio._
 import scala.concurrent.duration.FiniteDuration
 
 class ZIO2InstrumentationSpec extends AnyWordSpec with Matchers with ScalaFutures with PatienceConfiguration
-  with OptionValues with Eventually with BeforeAndAfterEach {
+    with OptionValues with Eventually with BeforeAndAfterEach {
 
   protected implicit val zioRuntime: Runtime[Any] =
     Runtime.default
@@ -65,7 +64,8 @@ class ZIO2InstrumentationSpec extends AnyWordSpec with Matchers with ScalaFuture
       }
 
       "must allow the context to be cleaned" in {
-        val anotherExecutor = Executor.fromExecutionContext(ExecutionContext.fromExecutorService(Executors.newFixedThreadPool(10)))
+        val anotherExecutor =
+          Executor.fromExecutionContext(ExecutionContext.fromExecutorService(Executors.newFixedThreadPool(10)))
         val context = Context.of("key", "value")
 
         val test =
@@ -85,7 +85,8 @@ class ZIO2InstrumentationSpec extends AnyWordSpec with Matchers with ScalaFuture
       }
 
       "must be available across asynchronous boundaries" in {
-        val anotherExecutor: Executor = Executor.fromExecutionContext(ExecutionContext.fromExecutorService(Executors.newFixedThreadPool(1))) //pool 7
+        val anotherExecutor: Executor =
+          Executor.fromExecutionContext(ExecutionContext.fromExecutorService(Executors.newFixedThreadPool(1))) // pool 7
         val context = Context.of("key", "value")
         val test =
           for {
@@ -93,14 +94,14 @@ class ZIO2InstrumentationSpec extends AnyWordSpec with Matchers with ScalaFuture
             len <- ZIO.succeed("Hello Kamon!").map(_.length)
             _ <- ZIO.succeed(len.toString)
             beforeChanging <- getKey
-            evalOnGlobalRes <-ZIO.sleep(Duration.Zero) *> getKey
+            evalOnGlobalRes <- ZIO.sleep(Duration.Zero) *> getKey
             outerSpanIdBeginning <- ZIO.succeed(Kamon.currentSpan().id.string)
             innerSpan <- ZIO.succeed(Kamon.clientSpanBuilder("Foo", "attempt").context(context).start())
             innerSpanId1 <- ZIO.onExecutor(anotherExecutor)(ZIO.succeed(Kamon.currentSpan()))
             innerSpanId2 <- ZIO.succeed(Kamon.currentSpan())
             _ <- ZIO.succeed(innerSpan.finish())
             outerSpanIdEnd <- ZIO.succeed(Kamon.currentSpan().id.string)
-            evalOnAnotherEx <-ZIO.onExecutor(anotherExecutor)(ZIO.sleep(Duration.Zero).flatMap(_ => getKey))
+            evalOnAnotherEx <- ZIO.onExecutor(anotherExecutor)(ZIO.sleep(Duration.Zero).flatMap(_ => getKey))
           } yield {
             scope.close()
             withClue("before changing")(beforeChanging shouldBe "value")
@@ -112,7 +113,7 @@ class ZIO2InstrumentationSpec extends AnyWordSpec with Matchers with ScalaFuture
             withClue("inner and outer should be different")(outerSpanIdBeginning should not equal innerSpan)
           }
 
-          unsafeRunZIO(test)
+        unsafeRunZIO(test)
 
       }
 
@@ -124,6 +125,7 @@ class ZIO2InstrumentationSpec extends AnyWordSpec with Matchers with ScalaFuture
         )
         val context = Context.of(Span.Key, parentSpan)
         implicit val ec = ExecutionContext.global
+
         /**
          * test
          *   - nestedLevel0
@@ -134,8 +136,10 @@ class ZIO2InstrumentationSpec extends AnyWordSpec with Matchers with ScalaFuture
         val test = for {
           span <- ZIO.succeed(Kamon.currentSpan())
           nestedLevel0 <- meteredWithSpanCapture("level1-A")(ZIO.sleep(100.millis))
-          nestedUpToLevel2 <- meteredWithSpanCapture("level1-B")(meteredWithSpanCapture("level2-B")(ZIO.sleep(100.millis)))
-          fiftyInParallel <- ZIO.foreachPar((0 to 49).toList)(i => meteredWithSpanCapture(s"operation$i")(ZIO.sleep(100.millis)))
+          nestedUpToLevel2 <-
+            meteredWithSpanCapture("level1-B")(meteredWithSpanCapture("level2-B")(ZIO.sleep(100.millis)))
+          fiftyInParallel <-
+            ZIO.foreachPar((0 to 49).toList)(i => meteredWithSpanCapture(s"operation$i")(ZIO.sleep(100.millis)))
           afterCede <- meteredWithSpanCapture("yieldNow")(ZIO.yieldNow.as(Kamon.currentSpan()))
           afterEverything <- ZIO.succeed(Kamon.currentSpan())
         } yield {
@@ -145,11 +149,9 @@ class ZIO2InstrumentationSpec extends AnyWordSpec with Matchers with ScalaFuture
           nestedUpToLevel2._1.id.string shouldBe nestedUpToLevel2._2._1.parentId.string
           fiftyInParallel.map(_._1.parentId.string).toSet shouldBe Set(span.id.string)
           fiftyInParallel.map(_._1.id.string).toSet should have size 50
-          afterCede._1.id.string shouldBe afterCede._2.id.string //A cede should not cause the span to be lost
+          afterCede._1.id.string shouldBe afterCede._2.id.string // A cede should not cause the span to be lost
           afterEverything.id.string shouldBe span.id.string
         }
-
-
 
         val result = scala.concurrent.Future.sequence(
           (1 to 100).toList.map { _ =>
@@ -172,19 +174,19 @@ class ZIO2InstrumentationSpec extends AnyWordSpec with Matchers with ScalaFuture
   private def meteredWithSpanCapture[A](operation: String)(io: UIO[A]): UIO[(Span, A)] = {
     ZIO.scoped {
       ZIO.acquireRelease {
+        for {
+          initialCtx <- ZIO.succeed(Kamon.currentContext())
+          parentSpan <- ZIO.succeed(Kamon.currentSpan())
+          newSpan <- ZIO.succeed(Kamon.spanBuilder(operation).context(initialCtx).asChildOf(parentSpan).start())
+          _ <- ZIO.succeed(Kamon.storeContext(initialCtx.withEntry(Span.Key, newSpan)))
+        } yield (initialCtx, newSpan)
+      } {
+        case (initialCtx, span) =>
           for {
-            initialCtx <- ZIO.succeed(Kamon.currentContext())
-            parentSpan <- ZIO.succeed(Kamon.currentSpan())
-            newSpan    <- ZIO.succeed(Kamon.spanBuilder(operation).context(initialCtx).asChildOf(parentSpan).start())
-            _          <- ZIO.succeed(Kamon.storeContext(initialCtx.withEntry(Span.Key, newSpan)))
-          } yield (initialCtx, newSpan)
-        }{
-          case (initialCtx, span) =>
-            for {
-              _ <- ZIO.succeed(span.finish())
-              _ <- ZIO.succeed(Kamon.storeContext(initialCtx))
-            } yield ()
-        } *> ZIO.succeed(Kamon.currentSpan()).zipPar(io)
-      }
+            _ <- ZIO.succeed(span.finish())
+            _ <- ZIO.succeed(Kamon.storeContext(initialCtx))
+          } yield ()
+      } *> ZIO.succeed(Kamon.currentSpan()).zipPar(io)
+    }
   }
 }

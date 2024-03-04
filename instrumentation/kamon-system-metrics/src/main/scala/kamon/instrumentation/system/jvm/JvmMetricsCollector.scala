@@ -24,7 +24,12 @@ import com.typesafe.config.Config
 
 import javax.management.openmbean.CompositeData
 import javax.management.{Notification, NotificationEmitter, NotificationListener}
-import kamon.instrumentation.system.jvm.JvmMetrics.{ClassLoadingInstruments, GarbageCollectionInstruments, MemoryUsageInstruments, ThreadsInstruments}
+import kamon.instrumentation.system.jvm.JvmMetrics.{
+  ClassLoadingInstruments,
+  GarbageCollectionInstruments,
+  MemoryUsageInstruments,
+  ThreadsInstruments
+}
 import kamon.instrumentation.system.jvm.JvmMetricsCollector.{Collector, MemoryPool, ThreadState}
 import kamon.module.{Module, ModuleFactory, ScheduledAction}
 import kamon.tag.TagSet
@@ -40,7 +45,8 @@ class JvmMetricsCollector(ec: ExecutionContext) extends ScheduledAction {
   private val _memoryUsageInstruments = new MemoryUsageInstruments(_defaultTags)
   private val _threadsUsageInstruments = new ThreadsInstruments()
   private val _classLoadingInstruments = new ClassLoadingInstruments(_defaultTags)
-  private val _jmxCollectorTask = new JmxMetricsCollectorTask(_memoryUsageInstruments, _threadsUsageInstruments, _classLoadingInstruments)
+  private val _jmxCollectorTask =
+    new JmxMetricsCollectorTask(_memoryUsageInstruments, _threadsUsageInstruments, _classLoadingInstruments)
 
   override def run(): Unit = {
     _jmxCollectorTask.run()
@@ -57,7 +63,7 @@ class JvmMetricsCollector(ec: ExecutionContext) extends ScheduledAction {
     val gcListener = new GcNotificationListener(gcInstruments)
 
     ManagementFactory.getGarbageCollectorMXBeans().asScala.foreach(gcBean => {
-      if(gcBean.isInstanceOf[NotificationEmitter])
+      if (gcBean.isInstanceOf[NotificationEmitter])
         gcBean.asInstanceOf[NotificationEmitter].addNotificationListener(gcListener, null, null)
     })
 
@@ -66,7 +72,7 @@ class JvmMetricsCollector(ec: ExecutionContext) extends ScheduledAction {
 
   private def deregisterGcListener(): Unit = {
     ManagementFactory.getGarbageCollectorMXBeans().asScala.foreach(gcBean => {
-      if(gcBean.isInstanceOf[NotificationEmitter]) {
+      if (gcBean.isInstanceOf[NotificationEmitter]) {
         gcBean.asInstanceOf[NotificationEmitter].removeNotificationListener(_gcListener)
       }
     })
@@ -74,13 +80,13 @@ class JvmMetricsCollector(ec: ExecutionContext) extends ScheduledAction {
 
   class GcNotificationListener(val gcInstruments: GarbageCollectionInstruments) extends NotificationListener {
     override def handleNotification(notification: Notification, handback: Any): Unit = {
-      if(notification.getType() == GARBAGE_COLLECTION_NOTIFICATION) {
+      if (notification.getType() == GARBAGE_COLLECTION_NOTIFICATION) {
         val compositeData = notification.getUserData.asInstanceOf[CompositeData]
         val info = GarbageCollectionNotificationInfo.from(compositeData)
         val collector = Collector.find(info.getGcName)
 
         // This prevents recording the ZGC/Shenandoah cycles
-        if(collector.pausesTheJVM) {
+        if (collector.pausesTheJVM) {
           gcInstruments.garbageCollectionTime(collector).record(info.getGcInfo.getDuration)
         }
 
@@ -93,11 +99,11 @@ class JvmMetricsCollector(ec: ExecutionContext) extends ScheduledAction {
 
             // We assume that if the old generation grew during this GC event then some data was promoted to it and will
             // record it as promotion to the old generation.
-            if(region.usage == MemoryPool.Usage.OldGeneration) {
+            if (region.usage == MemoryPool.Usage.OldGeneration) {
               val regionUsageAfterGc = usageAfterGc(regionName)
               val diff = regionUsageAfterGc.getUsed - regionUsageBeforeGc.getUsed
 
-              if(diff > 0)
+              if (diff > 0)
                 gcInstruments.promotionToOld.record(diff)
 
             }
@@ -109,22 +115,27 @@ class JvmMetricsCollector(ec: ExecutionContext) extends ScheduledAction {
           case (regionName, regionUsageAfterGC) =>
             val region = MemoryPool.find(regionName)
 
-            if(regionUsageAfterGC.getMax != -1 && (region.usage == MemoryPool.Usage.OldGeneration || region.usage == MemoryPool.Usage.SingleGeneration)) {
+            if (
+              regionUsageAfterGC.getMax != -1 && (region.usage == MemoryPool.Usage.OldGeneration || region.usage == MemoryPool.Usage.SingleGeneration)
+            ) {
               totalMemory += regionUsageAfterGC.getMax
               usedMemory += regionUsageAfterGC.getUsed
             }
         }
 
-        if(totalMemory > 0L) {
-          val utilizationPercentage = Math.min(100D, (usedMemory.toDouble * 100D) / totalMemory.toDouble).toLong
+        if (totalMemory > 0L) {
+          val utilizationPercentage = Math.min(100d, (usedMemory.toDouble * 100d) / totalMemory.toDouble).toLong
           gcInstruments.memoryUtilization.record(utilizationPercentage)
         }
       }
     }
   }
 
-  class JmxMetricsCollectorTask(memoryUsageInstruments: MemoryUsageInstruments, threadsInstruments: ThreadsInstruments, classLoadingInstruments: ClassLoadingInstruments)
-      extends Runnable {
+  class JmxMetricsCollectorTask(
+    memoryUsageInstruments: MemoryUsageInstruments,
+    threadsInstruments: ThreadsInstruments,
+    classLoadingInstruments: ClassLoadingInstruments
+  ) extends Runnable {
 
     private val _heapUsage = memoryUsageInstruments.regionInstruments("heap")
     private val _nonHeapUsage = memoryUsageInstruments.regionInstruments("non-heap")
@@ -141,28 +152,27 @@ class JvmMetricsCollector(ec: ExecutionContext) extends ScheduledAction {
       allThreadIds.map(threadsMxBean.getThreadInfo(_, 0))
         .groupBy(_.getThreadState)
         .mapValues(_.length)
-        .foreach { 
-          case (state, count) =>  
+        .foreach {
+          case (state, count) =>
             val threadState = ThreadState.find(state.toString)
-            threadsInstruments.threadState(threadState).update(count) 
+            threadsInstruments.threadState(threadState).update(count)
         }
 
       val totalAllocatedBytes = threadsMxBean.getThreadAllocatedBytes(allThreadIds).sum
       val bytesAllocatedSinceLastCheck = totalAllocatedBytes - _lastSeenAllocatedBytes
-      if(bytesAllocatedSinceLastCheck > 0)
+      if (bytesAllocatedSinceLastCheck > 0)
         memoryUsageInstruments.allocation.increment(bytesAllocatedSinceLastCheck)
       _lastSeenAllocatedBytes = totalAllocatedBytes
 
-
       val currentHeapUsage = ManagementFactory.getMemoryMXBean.getHeapMemoryUsage
-      val freeHeap = Math.max(0L, currentHeapUsage.getMax -  currentHeapUsage.getUsed)
+      val freeHeap = Math.max(0L, currentHeapUsage.getMax - currentHeapUsage.getUsed)
       _heapUsage.free.record(freeHeap)
       _heapUsage.used.record(currentHeapUsage.getUsed)
       _heapUsage.max.update(currentHeapUsage.getMax)
       _heapUsage.committed.update(currentHeapUsage.getCommitted)
 
       val currentNonHeapUsage = ManagementFactory.getMemoryMXBean.getNonHeapMemoryUsage
-      val freeNonHeap = Math.max(0L, currentNonHeapUsage.getMax -  currentNonHeapUsage.getUsed)
+      val freeNonHeap = Math.max(0L, currentNonHeapUsage.getMax - currentNonHeapUsage.getUsed)
       _nonHeapUsage.free.record(freeNonHeap)
       _nonHeapUsage.used.record(currentNonHeapUsage.getUsed)
       _nonHeapUsage.max.update(currentNonHeapUsage.getMax)
@@ -176,7 +186,7 @@ class JvmMetricsCollector(ec: ExecutionContext) extends ScheduledAction {
       ManagementFactory.getMemoryPoolMXBeans.asScala.foreach(memoryBean => {
         val poolInstruments = memoryUsageInstruments.poolInstruments(MemoryPool.find(memoryBean.getName))
         val memoryUsage = memoryBean.getUsage
-        val freeMemory = Math.max(0L, memoryUsage.getMax -  memoryUsage.getUsed)
+        val freeMemory = Math.max(0L, memoryUsage.getMax - memoryUsage.getUsed)
 
         poolInstruments.free.record(freeMemory)
         poolInstruments.used.record(memoryUsage.getUsed)
@@ -186,7 +196,8 @@ class JvmMetricsCollector(ec: ExecutionContext) extends ScheduledAction {
 
       ManagementFactory.getPlatformMXBeans(classOf[BufferPoolMXBean]).asScala.toList.map { bean =>
         val bufferPoolInstruments = memoryUsageInstruments.bufferPoolInstruments(
-          MemoryPool.sanitize(bean.getName))
+          MemoryPool.sanitize(bean.getName)
+        )
 
         bufferPoolInstruments.count.update(bean.getCount)
         bufferPoolInstruments.used.update(bean.getMemoryUsed)
@@ -203,7 +214,7 @@ object JvmMetricsCollector {
       new JvmMetricsCollector(settings.executionContext)
   }
 
-  case class Collector (
+  case class Collector(
     name: String,
     alias: String,
     generation: Collector.Generation,
@@ -221,30 +232,30 @@ object JvmMetricsCollector {
     }
 
     def find(collectorName: String): Collector =
-      _collectorMappings.get(collectorName).getOrElse (
+      _collectorMappings.get(collectorName).getOrElse(
         Collector(collectorName, sanitizeCollectorName(collectorName), Collector.Generation.Unknown)
       )
 
-    private val _collectorMappings: Map[String, Collector] = Map (
-      "Copy"                -> Collector("Copy",                "copy", Generation.Young),
-      "ParNew"              -> Collector("ParNew",              "par-new", Generation.Young),
-      "MarkSweepCompact"    -> Collector("MarkSweepCompact",    "mark-sweep-compact", Generation.Old),
+    private val _collectorMappings: Map[String, Collector] = Map(
+      "Copy" -> Collector("Copy", "copy", Generation.Young),
+      "ParNew" -> Collector("ParNew", "par-new", Generation.Young),
+      "MarkSweepCompact" -> Collector("MarkSweepCompact", "mark-sweep-compact", Generation.Old),
       "ConcurrentMarkSweep" -> Collector("ConcurrentMarkSweep", "concurrent-mark-sweep", Generation.Old),
-      "PS Scavenge"         -> Collector("PS Scavenge",         "ps-scavenge", Generation.Young),
-      "PS MarkSweep"        -> Collector("PS MarkSweep",        "ps-mark-sweep", Generation.Old),
+      "PS Scavenge" -> Collector("PS Scavenge", "ps-scavenge", Generation.Young),
+      "PS MarkSweep" -> Collector("PS MarkSweep", "ps-mark-sweep", Generation.Old),
       "G1 Young Generation" -> Collector("G1 Young Generation", "g1-young", Generation.Young),
-      "G1 Old Generation"   -> Collector("G1 Old Generation",   "g1-old", Generation.Old),
-      "ZGC Pauses"          -> Collector("ZGC Pauses",          "zgc-pauses", Generation.Single),
-      "ZGC Cycles"          -> Collector("ZGC Cycles",          "zgc-cycles", Generation.Single, false),
-      "Shenandoah Pauses"   -> Collector("Shenandoah Pauses",   "shenandoah-pauses", Generation.Single),
-      "Shenandoah Cycles"   -> Collector("Shenandoah Cycles",   "shenandoah-cycles", Generation.Single, false)
+      "G1 Old Generation" -> Collector("G1 Old Generation", "g1-old", Generation.Old),
+      "ZGC Pauses" -> Collector("ZGC Pauses", "zgc-pauses", Generation.Single),
+      "ZGC Cycles" -> Collector("ZGC Cycles", "zgc-cycles", Generation.Single, false),
+      "Shenandoah Pauses" -> Collector("Shenandoah Pauses", "shenandoah-pauses", Generation.Single),
+      "Shenandoah Cycles" -> Collector("Shenandoah Cycles", "shenandoah-cycles", Generation.Single, false)
     )
 
     private def sanitizeCollectorName(name: String): String =
       name.replaceAll("""[^\w]""", "-").toLowerCase
   }
 
-  case class MemoryPool (
+  case class MemoryPool(
     name: String,
     alias: String,
     usage: MemoryPool.Usage
@@ -280,20 +291,24 @@ object JvmMetricsCollector {
     }
 
     private val _memoryRegionMappings: TrieMap[String, MemoryPool] = TrieMap(
-      "Metaspace"                         -> MemoryPool("Metaspace", "metaspace", Usage.Metaspace),
-      "Code Cache"                        -> MemoryPool("Code Cache", "code-cache", Usage.CodeCache),
-      "CodeHeap 'profiled nmethods'"      -> MemoryPool("Code Heap", "code-heap-profiled-nmethods", Usage.CodeCache),
-      "CodeHeap 'non-profiled nmethods'"  -> MemoryPool("Code Cache", "code-heap-non-profiled-nmethods", Usage.CodeCache),
-      "CodeHeap 'non-nmethods'"           -> MemoryPool("Code Cache", "code-heap-non-nmethods", Usage.CodeCache),
-      "Compressed Class Space"            -> MemoryPool("Compressed Class Space", "compressed-class-space", Usage.CodeCache),
-      "Eden Space"                        -> MemoryPool("Eden Space", "eden", Usage.Eden),
-      "PS Eden Space"                     -> MemoryPool("PS Eden Space", "eden", Usage.Eden),
-      "PS Survivor Space"                 -> MemoryPool("PS Survivor Space", "survivor", Usage.YoungGeneration),
-      "PS Old Gen"                        -> MemoryPool("PS Old Gen", "old", Usage.OldGeneration),
-      "Survivor Space"                    -> MemoryPool("Survivor Space", "survivor-space", Usage.YoungGeneration),
-      "Tenured Gen"                       -> MemoryPool("Tenured Gen", "tenured-gen", Usage.OldGeneration),
-      "ZHeap"                             -> MemoryPool("ZGZ Heap", "zheap", Usage.SingleGeneration),
-      "Shenandoah"                        -> MemoryPool("ZGZ Heap", "shenandoah", Usage.SingleGeneration)
+      "Metaspace" -> MemoryPool("Metaspace", "metaspace", Usage.Metaspace),
+      "Code Cache" -> MemoryPool("Code Cache", "code-cache", Usage.CodeCache),
+      "CodeHeap 'profiled nmethods'" -> MemoryPool("Code Heap", "code-heap-profiled-nmethods", Usage.CodeCache),
+      "CodeHeap 'non-profiled nmethods'" -> MemoryPool(
+        "Code Cache",
+        "code-heap-non-profiled-nmethods",
+        Usage.CodeCache
+      ),
+      "CodeHeap 'non-nmethods'" -> MemoryPool("Code Cache", "code-heap-non-nmethods", Usage.CodeCache),
+      "Compressed Class Space" -> MemoryPool("Compressed Class Space", "compressed-class-space", Usage.CodeCache),
+      "Eden Space" -> MemoryPool("Eden Space", "eden", Usage.Eden),
+      "PS Eden Space" -> MemoryPool("PS Eden Space", "eden", Usage.Eden),
+      "PS Survivor Space" -> MemoryPool("PS Survivor Space", "survivor", Usage.YoungGeneration),
+      "PS Old Gen" -> MemoryPool("PS Old Gen", "old", Usage.OldGeneration),
+      "Survivor Space" -> MemoryPool("Survivor Space", "survivor-space", Usage.YoungGeneration),
+      "Tenured Gen" -> MemoryPool("Tenured Gen", "tenured-gen", Usage.OldGeneration),
+      "ZHeap" -> MemoryPool("ZGZ Heap", "zheap", Usage.SingleGeneration),
+      "Shenandoah" -> MemoryPool("ZGZ Heap", "shenandoah", Usage.SingleGeneration)
     )
 
     private val _invalidChars: Regex = """[^a-z0-9]""".r
@@ -301,27 +316,27 @@ object JvmMetricsCollector {
     def sanitize(name: String): String =
       _invalidChars.replaceAllIn(name.toLowerCase, "-")
   }
-  
+
   sealed trait ThreadState
   object ThreadState {
-    case object New extends ThreadState { override def toString: String = "new"}
+    case object New extends ThreadState { override def toString: String = "new" }
     case object Runnable extends ThreadState { override def toString: String = "runnable" }
     case object Blocked extends ThreadState { override def toString: String = "blocked" }
     case object Waiting extends ThreadState { override def toString: String = "waiting" }
     case object TimedWaiting extends ThreadState { override def toString: String = "timed-waiting" }
     case object Terminated extends ThreadState { override def toString: String = "terminated" }
     case object Unknown extends ThreadState { override def toString: String = "unknown" }
-    
+
     def find(state: String): ThreadState =
       _threadStateMapping.getOrElse(state, Unknown)
-    
+
     private val _threadStateMapping: Map[String, ThreadState] = Map(
-      "NEW"           -> New,
-      "RUNNABLE"      -> Runnable,
-      "BLOCKED"       -> Blocked,
-      "WAITING"       -> Waiting,
+      "NEW" -> New,
+      "RUNNABLE" -> Runnable,
+      "BLOCKED" -> Blocked,
+      "WAITING" -> Waiting,
       "TIMED_WAITING" -> TimedWaiting,
-      "TERMINATED"    -> Terminated
+      "TERMINATED" -> Terminated
     )
   }
 }

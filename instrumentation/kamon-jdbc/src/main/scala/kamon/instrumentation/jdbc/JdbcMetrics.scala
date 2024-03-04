@@ -22,7 +22,7 @@ import kamon.tag.TagSet
 
 object JdbcMetrics {
 
-  val OpenConnections = Kamon.rangeSampler (
+  val OpenConnections = Kamon.rangeSampler(
     name = "jdbc.pool.connections.open",
     description = "Tracks the number of open connections in a pool"
   )
@@ -32,7 +32,7 @@ object JdbcMetrics {
     description = "Tracks the number of borrowed connections in a pool"
   )
 
-  val BorrowTime = Kamon.timer (
+  val BorrowTime = Kamon.timer(
     name = "jdbc.pool.borrow-time",
     description = "Tracks the time it takes for the connection pool to lease a connection"
   )

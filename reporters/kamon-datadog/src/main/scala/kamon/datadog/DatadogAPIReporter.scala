@@ -18,21 +18,21 @@ package kamon.datadog
 
 import java.lang.StringBuilder
 import java.nio.charset.StandardCharsets
-import java.text.{ DecimalFormat, DecimalFormatSymbols }
+import java.text.{DecimalFormat, DecimalFormatSymbols}
 import java.time.Duration
 import java.util.Locale
 
 import com.typesafe.config.Config
-import kamon.metric.MeasurementUnit.Dimension.{ Information, Time }
-import kamon.metric.{ MeasurementUnit, MetricSnapshot, PeriodSnapshot }
-import kamon.tag.{ Tag, TagSet }
-import kamon.util.{ EnvironmentTags, Filter }
-import kamon.{ module, Kamon }
+import kamon.metric.MeasurementUnit.Dimension.{Information, Time}
+import kamon.metric.{MeasurementUnit, MetricSnapshot, PeriodSnapshot}
+import kamon.tag.{Tag, TagSet}
+import kamon.util.{EnvironmentTags, Filter}
+import kamon.{module, Kamon}
 import kamon.datadog.DatadogAPIReporter.Configuration
-import kamon.module.{ MetricReporter, ModuleFactory }
+import kamon.module.{MetricReporter, ModuleFactory}
 import org.slf4j.LoggerFactory
 
-import scala.util.{ Failure, Success }
+import scala.util.{Failure, Success}
 
 class DatadogAPIReporterFactory extends ModuleFactory {
   override def create(settings: ModuleFactory.Settings): DatadogAPIReporter = {
@@ -41,7 +41,10 @@ class DatadogAPIReporterFactory extends ModuleFactory {
   }
 }
 
-class DatadogAPIReporter(@volatile private var configuration: Configuration, @volatile private var httpClient: HttpClient) extends MetricReporter {
+class DatadogAPIReporter(
+  @volatile private var configuration: Configuration,
+  @volatile private var httpClient: HttpClient
+) extends MetricReporter {
   import DatadogAPIReporter._
 
   private val logger = LoggerFactory.getLogger(classOf[DatadogAPIReporter])
@@ -75,7 +78,7 @@ class DatadogAPIReporter(@volatile private var configuration: Configuration, @vo
     val timestamp = snapshot.from.getEpochSecond.toString
 
     val host = Kamon.environment.host
-    val interval = Math.round(Duration.between(snapshot.from, snapshot.to).toMillis() / 1000D)
+    val interval = Math.round(Duration.between(snapshot.from, snapshot.to).toMillis() / 1000d)
     val seriesBuilder = new StringBuilder()
 
     def addDistribution(metric: MetricSnapshot.Distributions): Unit = {
@@ -86,21 +89,30 @@ class DatadogAPIReporter(@volatile private var configuration: Configuration, @vo
         val average = if (dist.count > 0L) (dist.sum / dist.count) else 0L
         addMetric(metric.name + ".avg", valueFormat.format(scale(average, unit)), gauge, d.tags)
         addMetric(metric.name + ".count", valueFormat.format(dist.count), count, d.tags)
-        addMetric(metric.name + ".median", valueFormat.format(scale(dist.percentile(50D).value, unit)), gauge, d.tags)
-        addMetric(metric.name + ".95percentile", valueFormat.format(scale(dist.percentile(95D).value, unit)), gauge, d.tags)
+        addMetric(metric.name + ".median", valueFormat.format(scale(dist.percentile(50d).value, unit)), gauge, d.tags)
+        addMetric(
+          metric.name + ".95percentile",
+          valueFormat.format(scale(dist.percentile(95d).value, unit)),
+          gauge,
+          d.tags
+        )
         addMetric(metric.name + ".max", valueFormat.format(scale(dist.max, unit)), gauge, d.tags)
         addMetric(metric.name + ".min", valueFormat.format(scale(dist.min, unit)), gauge, d.tags)
       }
     }
 
     def addMetric(metricName: String, value: String, metricType: String, tags: TagSet): Unit = {
-      val customTags = (configuration.extraTags ++ tags.iterator(_.toString).map(p => p.key -> p.value).filter(t => configuration.tagFilter.accept(t._1))).map { case (k, v) ⇒ quote"$k:$v" }
+      val customTags = (configuration.extraTags ++ tags.iterator(_.toString).map(p => p.key -> p.value).filter(t =>
+        configuration.tagFilter.accept(t._1)
+      )).map { case (k, v) ⇒ quote"$k:$v" }
       val allTagsString = customTags.mkString("[", ",", "]")
 
       if (seriesBuilder.length() > 0) seriesBuilder.append(",")
 
       seriesBuilder
-        .append(s"""{"metric":"$metricName","interval":$interval,"points":[[$timestamp,$value]],"type":"$metricType","host":"$host","tags":$allTagsString}""")
+        .append(
+          s"""{"metric":"$metricName","interval":$interval,"points":[[$timestamp,$value]],"type":"$metricType","host":"$host","tags":$allTagsString}"""
+        )
     }
 
     snapshot.counters.foreach { snap =>
@@ -149,7 +161,13 @@ private object DatadogAPIReporter {
   val count = "count"
   val gauge = "gauge"
 
-  case class Configuration(httpConfig: Config, timeUnit: MeasurementUnit, informationUnit: MeasurementUnit, extraTags: Seq[(String, String)], tagFilter: Filter)
+  case class Configuration(
+    httpConfig: Config,
+    timeUnit: MeasurementUnit,
+    informationUnit: MeasurementUnit,
+    extraTags: Seq[(String, String)],
+    tagFilter: Filter
+  )
 
   implicit class QuoteInterp(val sc: StringContext) extends AnyVal {
     def quote(args: Any*): String = "\"" + sc.s(args: _*) + "\""
@@ -162,7 +180,9 @@ private object DatadogAPIReporter {
       timeUnit = readTimeUnit(datadogConfig.getString("time-unit")),
       informationUnit = readInformationUnit(datadogConfig.getString("information-unit")),
       // Remove the "host" tag since it gets added to the datadog payload separately
-      EnvironmentTags.from(Kamon.environment, datadogConfig.getConfig("environment-tags")).without("host").all().map(p => p.key -> Tag.unwrapValue(p).toString),
+      EnvironmentTags.from(Kamon.environment, datadogConfig.getConfig("environment-tags")).without("host").all().map(
+        p => p.key -> Tag.unwrapValue(p).toString
+      ),
       Kamon.filter("kamon.datadog.environment-tags.filter")
     )
   }

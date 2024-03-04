@@ -16,7 +16,6 @@
 
 package kamon.module
 
-
 /**
   * Modules implementing this will have a receive a scheduled call to their `run` method in a fixed interval. The
   * call interval is controlled by the `kamon.modules.{module-name}.interval` setting, or passed in programmatically

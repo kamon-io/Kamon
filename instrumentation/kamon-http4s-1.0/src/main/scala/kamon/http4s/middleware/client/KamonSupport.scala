@@ -31,7 +31,7 @@ object KamonSupport {
   private var _instrumentation = instrumentation(Kamon.config())
 
   private def instrumentation(
-      kamonConfig: Config
+    kamonConfig: Config
   ): HttpClientInstrumentation = {
     val httpClientConfig =
       kamonConfig.getConfig("kamon.instrumentation.http4s.client")
@@ -50,9 +50,9 @@ object KamonSupport {
     }
 
   private def kamonClient[F[_]](
-      underlying: Client[F]
+    underlying: Client[F]
   )(request: Request[F])(ctx: Context)(
-      instrumentation: HttpClientInstrumentation
+    instrumentation: HttpClientInstrumentation
   )(implicit F: Sync[F]): Resource[F, Response[F]] =
     for {
       requestHandler <- Resource.eval(
@@ -63,8 +63,8 @@ object KamonSupport {
     } yield trackedResponse
 
   def handleResponse[F[_]](
-      response: Either[Throwable, Response[F]],
-      requestHandler: HttpClientInstrumentation.RequestHandler[Request[F]]
+    response: Either[Throwable, Response[F]],
+    requestHandler: HttpClientInstrumentation.RequestHandler[Request[F]]
   )(implicit F: Sync[F]): F[Response[F]] =
     response match {
       case Right(res) =>

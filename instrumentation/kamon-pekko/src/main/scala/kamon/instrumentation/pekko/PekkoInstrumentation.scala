@@ -45,7 +45,7 @@ object PekkoInstrumentation {
     * Returns true if the definition was successful and false if a group with the defined name is already available.
     */
   def defineActorGroup(groupName: String, filter: Filter): Boolean = synchronized {
-    if(_codeProvidedActorGroups.get(groupName).isEmpty) {
+    if (_codeProvidedActorGroups.get(groupName).isEmpty) {
       _codeProvidedActorGroups = _codeProvidedActorGroups + (groupName -> filter)
       _actorGroups = _codeProvidedActorGroups ++ _configProvidedActorGroups
       true
@@ -79,7 +79,7 @@ object PekkoInstrumentation {
   /**
     * pekko Instrumentation settings
     */
-  case class Settings (
+  case class Settings(
     askPatternWarning: AskPatternTimeoutWarningSetting,
     autoGrouping: Boolean,
     allowDoomsdayWildcards: Boolean,
@@ -96,9 +96,9 @@ object PekkoInstrumentation {
       val exposeClusterMetrics = pekkoConfig.getBoolean("cluster.track-cluster-metrics")
 
       val askPatternWarning = pekkoConfig.getString("ask-pattern-timeout-warning") match {
-        case "off"          => Off
-        case "lightweight"  => Lightweight
-        case "heavyweight"  => Heavyweight
+        case "off"         => Off
+        case "lightweight" => Lightweight
+        case "heavyweight" => Heavyweight
         case other => sys.error(s"Unrecognized option [$other] for the kamon.pekko.ask-pattern-timeout-warning config.")
       }
 
@@ -114,7 +114,7 @@ object PekkoInstrumentation {
 
     private def safeFilter(config: Config, allowDoomsday: Boolean): Filter = {
       val includes = config.getStringList("includes").asScala
-      if(!allowDoomsday && includes.contains("**")) {
+      if (!allowDoomsday && includes.contains("**")) {
         val newIncludes = "includes = " + includes.filter(_ == "**").map(s => s""""$s"""").mkString("[ ", ", ", " ]")
         val safeFilterConfig = ConfigFactory.parseString(newIncludes).withFallback(config)
 

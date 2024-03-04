@@ -20,7 +20,11 @@ package context
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream, OutputStream}
 import com.typesafe.config.Config
 import kamon.context.generated.binary.context.{Context => ColferContext, Entry => ColferEntry, Tags => ColferTags}
-import kamon.context.generated.binary.context.{BooleanTag => ColferBooleanTag, LongTag => ColferLongTag, StringTag => ColferStringTag}
+import kamon.context.generated.binary.context.{
+  BooleanTag => ColferBooleanTag,
+  LongTag => ColferLongTag,
+  StringTag => ColferStringTag
+}
 import kamon.tag.{Tag, TagSet}
 import kamon.trace.Span.TagKeys
 import org.slf4j.LoggerFactory
@@ -29,7 +33,6 @@ import java.nio.ByteBuffer
 import scala.reflect.ClassTag
 import scala.util.control.NonFatal
 import scala.util.Try
-
 
 /**
   * Context propagation that uses byte stream abstractions as the transport medium. The Binary propagation uses
@@ -46,6 +49,7 @@ object BinaryPropagation {
     * that wouldn't have a clearly defined behavior in the context of Context propagation.
     */
   trait ByteStreamReader {
+
     /**
       * Number of available bytes on the ByteStream.
       */
@@ -69,7 +73,6 @@ object BinaryPropagation {
     def readAll(): Array[Byte]
   }
 
-
   object ByteStreamReader {
 
     /**
@@ -83,7 +86,6 @@ object BinaryPropagation {
       }
     }
   }
-
 
   /**
     * Represents a writable stream of bytes. This interface closely resembles OutputStream, minus the functionality
@@ -139,8 +141,6 @@ object BinaryPropagation {
     }
   }
 
-
-
   /**
     * Create a new Binary Propagation instance from the provided configuration.
     */
@@ -164,15 +164,14 @@ object BinaryPropagation {
     }
 
     override def read(reader: ByteStreamReader): Context = {
-      if(reader.available() > 0) {
+      if (reader.available() > 0) {
         try {
           val colferContext = new ColferContext()
           colferContext.unmarshal(reader.readAll(), 0)
 
-
           // Context tags
           val tagsBuilder = Map.newBuilder[String, Any]
-          if(colferContext.tags != null) {
+          if (colferContext.tags != null) {
             colferContext.tags.strings.foreach(t => tagsBuilder += (t.key -> t.value))
             colferContext.tags.longs.foreach(t => tagsBuilder += (t.key -> t.value))
             colferContext.tags.booleans.foreach(t => tagsBuilder += (t.key -> t.value))
@@ -209,11 +208,11 @@ object BinaryPropagation {
         val output = _streamPool.get()
         val contextOutgoingBuffer = _contextBufferPool.get()
 
-        if(context.tags.nonEmpty() || settings.includeUpstreamName) {
+        if (context.tags.nonEmpty() || settings.includeUpstreamName) {
           val tagsData = new ColferTags()
           val strings = Array.newBuilder[ColferStringTag]
 
-          if(context.tags.nonEmpty()) {
+          if (context.tags.nonEmpty()) {
             val longs = Array.newBuilder[ColferLongTag]
             val booleans = Array.newBuilder[ColferBooleanTag]
 
@@ -241,7 +240,7 @@ object BinaryPropagation {
             tagsData.setBooleans(booleans.result())
           }
 
-          if(settings.includeUpstreamName) {
+          if (settings.includeUpstreamName) {
             val st = new ColferStringTag()
             st.setKey(TagKeys.UpstreamName)
             st.setValue(Kamon.environment.service)
@@ -251,7 +250,6 @@ object BinaryPropagation {
           tagsData.setStrings(strings.result())
           contextData.setTags(tagsData)
         }
-
 
         val entriesBuilder = Array.newBuilder[ColferEntry]
         context.entries().foreach { entry =>
@@ -300,16 +298,21 @@ object BinaryPropagation {
     private val log = LoggerFactory.getLogger(classOf[BinaryPropagation.Settings])
 
     def from(config: Config): BinaryPropagation.Settings = {
-      def buildInstances[ExpectedType : ClassTag](mappings: Map[String, String]): Map[String, ExpectedType] = {
+      def buildInstances[ExpectedType: ClassTag](mappings: Map[String, String]): Map[String, ExpectedType] = {
         val instanceMap = Map.newBuilder[String, ExpectedType]
 
         mappings.foreach {
           case (contextKey, componentClass) =>
             try {
               instanceMap += (contextKey -> ClassLoading.createInstance[ExpectedType](componentClass, Nil))
-            } catch { case exception: Exception => log.warn("Failed to instantiate {} [{}] due to []",
-              implicitly[ClassTag[ExpectedType]].runtimeClass.getName, componentClass, exception)
-          }
+            } catch {
+              case exception: Exception => log.warn(
+                  "Failed to instantiate {} [{}] due to []",
+                  implicitly[ClassTag[ExpectedType]].runtimeClass.getName,
+                  componentClass,
+                  exception
+                )
+            }
         }
 
         instanceMap.result()

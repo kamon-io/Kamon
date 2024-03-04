@@ -29,7 +29,8 @@ import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConverters._
 
-class NewRelicMetricsReporter(senderBuilder: () => MetricBatchSender = () => NewRelicMetricsReporter.buildSender()) extends MetricReporter {
+class NewRelicMetricsReporter(senderBuilder: () => MetricBatchSender = () => NewRelicMetricsReporter.buildSender())
+    extends MetricReporter {
 
   private val logger = LoggerFactory.getLogger(classOf[NewRelicMetricsReporter])
   @volatile private var commonAttributes = buildCommonAttributes(Kamon.environment)
@@ -68,7 +69,7 @@ class NewRelicMetricsReporter(senderBuilder: () => MetricBatchSender = () => New
     reconfigure(Kamon.environment)
   }
 
-  //exposed for testing
+  // exposed for testing
   def reconfigure(environment: Environment): Unit = {
     commonAttributes = buildCommonAttributes(environment)
     sender = senderBuilder()

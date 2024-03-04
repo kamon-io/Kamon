@@ -37,7 +37,8 @@ class InfluxDBReporterSpec extends AnyWordSpec with Matchers with BeforeAndAfter
       ).withFallback(Kamon.config()))
 
       reporter.reportPeriodSnapshot(periodSnapshot)
-      val reportedLines = influxDB.takeRequest(10, TimeUnit.SECONDS).getBody.readString(Charset.forName("UTF-8")).split("\n")
+      val reportedLines =
+        influxDB.takeRequest(10, TimeUnit.SECONDS).getBody.readString(Charset.forName("UTF-8")).split("\n")
 
       val expectedLines = List(
         "custom.user.counter count=42i 1517000993",
@@ -53,7 +54,7 @@ class InfluxDBReporterSpec extends AnyWordSpec with Matchers with BeforeAndAfter
 
     }
     "include the additional env tags if enabled" in {
-      //enable env tags
+      // enable env tags
       reporter.reconfigure(ConfigFactory.parseString(
         s"""
            |kamon.influxdb {
@@ -69,7 +70,8 @@ class InfluxDBReporterSpec extends AnyWordSpec with Matchers with BeforeAndAfter
       ).withFallback(Kamon.config()))
 
       reporter.reportPeriodSnapshot(periodSnapshot)
-      val reportedLines = influxDB.takeRequest(10, TimeUnit.SECONDS).getBody.readString(Charset.forName("UTF-8")).split("\n")
+      val reportedLines =
+        influxDB.takeRequest(10, TimeUnit.SECONDS).getBody.readString(Charset.forName("UTF-8")).split("\n")
 
       val expectedLines = List(
         "custom.user.counter,service=test-service,host=test.host,instance=test-instance,env=staging,context=test-context count=42i 1517000993",
@@ -104,7 +106,6 @@ class InfluxDBReporterSpec extends AnyWordSpec with Matchers with BeforeAndAfter
     rangeSamplers = MetricSnapshotBuilder.histogram("queue.monitor", TagSet.of("one", "tag"))(1, 2, 4, 6) :: Nil
   )
 
-
   override protected def beforeAll(): Unit = {
     influxDB.enqueue(new MockResponse().setResponseCode(204))
     influxDB.enqueue(new MockResponse().setResponseCode(204))
@@ -131,7 +132,6 @@ class InfluxDBReporterSpec extends AnyWordSpec with Matchers with BeforeAndAfter
       """.stripMargin
     ).withFallback(Kamon.config()))
   }
-
 
   override protected def afterAll(): Unit = {
     influxDB.shutdown()

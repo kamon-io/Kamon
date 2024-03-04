@@ -27,7 +27,8 @@ import org.scalatest.OptionValues
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 
-class TracerSpec extends AnyWordSpec with Matchers with SpanInspection.Syntax with OptionValues with InitAndStopKamonAfterAll {
+class TracerSpec extends AnyWordSpec with Matchers with SpanInspection.Syntax with OptionValues
+    with InitAndStopKamonAfterAll {
 
   "the Kamon tracer" should {
     "construct a minimal Span that only has a operation name and default metric tags" in {
@@ -103,10 +104,10 @@ class TracerSpec extends AnyWordSpec with Matchers with SpanInspection.Syntax wi
       val notSampledRemoteParent = remoteSpan(SamplingDecision.DoNotSample)
 
       Kamon.spanBuilder("childOfSampled").asChildOf(sampledRemoteParent).start().trace
-        .samplingDecision shouldBe(SamplingDecision.Sample)
+        .samplingDecision shouldBe (SamplingDecision.Sample)
 
       Kamon.spanBuilder("childOfNotSampled").asChildOf(notSampledRemoteParent).start().trace
-        .samplingDecision shouldBe(SamplingDecision.DoNotSample)
+        .samplingDecision shouldBe (SamplingDecision.DoNotSample)
     }
 
     "take a sampling decision if the parent's decision is unknown" in {
@@ -114,7 +115,7 @@ class TracerSpec extends AnyWordSpec with Matchers with SpanInspection.Syntax wi
 
       val unknownSamplingRemoteParent = remoteSpan(SamplingDecision.Unknown)
       Kamon.spanBuilder("childOfSampled").asChildOf(unknownSamplingRemoteParent).start().trace
-        .samplingDecision shouldBe(SamplingDecision.Sample)
+        .samplingDecision shouldBe (SamplingDecision.Sample)
 
       Reconfigure.reset()
     }
@@ -122,9 +123,9 @@ class TracerSpec extends AnyWordSpec with Matchers with SpanInspection.Syntax wi
     "never sample ignored operations" in {
       Reconfigure.sampleAlways()
 
-      Kamon.spanBuilder("/ready").start().trace.samplingDecision shouldBe(SamplingDecision.DoNotSample)
-      Kamon.spanBuilder("/status").start().trace.samplingDecision shouldBe(SamplingDecision.DoNotSample)
-      Kamon.spanBuilder("/other").start().trace.samplingDecision shouldBe(SamplingDecision.Sample)
+      Kamon.spanBuilder("/ready").start().trace.samplingDecision shouldBe (SamplingDecision.DoNotSample)
+      Kamon.spanBuilder("/status").start().trace.samplingDecision shouldBe (SamplingDecision.DoNotSample)
+      Kamon.spanBuilder("/other").start().trace.samplingDecision shouldBe (SamplingDecision.Sample)
 
       Reconfigure.reset()
     }
@@ -192,7 +193,7 @@ class TracerSpec extends AnyWordSpec with Matchers with SpanInspection.Syntax wi
       Kamon.spanBuilder("suggestions")
         .asChildOf(remoteSpan(SamplingDecision.Unknown))
         .start()
-        .trace.samplingDecision should not be(SamplingDecision.Unknown)
+        .trace.samplingDecision should not be (SamplingDecision.Unknown)
     }
 
     "not change a Spans sampling decision if they were created with Sample or DoNotSample decisions sampling decision" in {
@@ -315,6 +316,10 @@ class TracerSpec extends AnyWordSpec with Matchers with SpanInspection.Syntax wi
   }
 
   private def remoteSpan(samplingDecision: SamplingDecision = SamplingDecision.Sample): Span.Remote =
-    Span.Remote(EightBytesIdentifier.generate(), EightBytesIdentifier.generate(), Trace(EightBytesIdentifier.generate(), samplingDecision))
+    Span.Remote(
+      EightBytesIdentifier.generate(),
+      EightBytesIdentifier.generate(),
+      Trace(EightBytesIdentifier.generate(), samplingDecision)
+    )
 
 }

@@ -56,55 +56,55 @@ trait TestWebServer extends TracingDirectives {
         } ~
         pathPrefix("extraction") {
           authenticateBasic("realm", credentials => Option("Okay")) { srt =>
-          (post | get) {
-            pathPrefix("nested") {
-              pathPrefix(IntNumber / "fixed") { num =>
-                pathPrefix("anchor" / IntNumber.? / JavaUUID / "fixed") { (number, uuid) =>
-                  pathPrefix(LongNumber / HexIntNumber) { (longNum, hex) =>
-                    complete("OK")
+            (post | get) {
+              pathPrefix("nested") {
+                pathPrefix(IntNumber / "fixed") { num =>
+                  pathPrefix("anchor" / IntNumber.? / JavaUUID / "fixed") { (number, uuid) =>
+                    pathPrefix(LongNumber / HexIntNumber) { (longNum, hex) =>
+                      complete("OK")
+                    }
                   }
                 }
-              }
-            } ~
-            pathPrefix("concat") {
-              path("fixed" ~ JavaUUID ~ HexIntNumber) { (uuid, num) =>
-                complete("OK")
-              }
-            } ~
-            pathPrefix("on-complete" / IntNumber) { _ =>
-              onComplete(Future("hello")) { _ =>
-                extract(samplingDecision) { decision =>
-                  path("more-path") {
-                    complete(decision.toString)
+              } ~
+              pathPrefix("concat") {
+                path("fixed" ~ JavaUUID ~ HexIntNumber) { (uuid, num) =>
+                  complete("OK")
+                }
+              } ~
+              pathPrefix("on-complete" / IntNumber) { _ =>
+                onComplete(Future("hello")) { _ =>
+                  extract(samplingDecision) { decision =>
+                    path("more-path") {
+                      complete(decision.toString)
+                    }
                   }
                 }
-              }
-            } ~
-            pathPrefix("on-success" / IntNumber) { _ =>
-              onSuccess(Future("hello")) { text =>
-                pathPrefix("after") {
-                  complete(text)
+              } ~
+              pathPrefix("on-success" / IntNumber) { _ =>
+                onSuccess(Future("hello")) { text =>
+                  pathPrefix("after") {
+                    complete(text)
+                  }
                 }
-              }
-            } ~
-            pathPrefix("complete-or-recover-with" / IntNumber) { _ =>
-              completeOrRecoverWith(Future("bad".charAt(10).toString)) { failure =>
-                pathPrefix("after") {
-                  failWith(failure)
+              } ~
+              pathPrefix("complete-or-recover-with" / IntNumber) { _ =>
+                completeOrRecoverWith(Future("bad".charAt(10).toString)) { failure =>
+                  pathPrefix("after") {
+                    failWith(failure)
+                  }
                 }
-              }
-            } ~
-            pathPrefix("complete-or-recover-with-success" / IntNumber) { _ =>
-              completeOrRecoverWith(Future("good")) { failure =>
-                pathPrefix("after") {
-                  failWith(failure)
+              } ~
+              pathPrefix("complete-or-recover-with-success" / IntNumber) { _ =>
+                completeOrRecoverWith(Future("good")) { failure =>
+                  pathPrefix("after") {
+                    failWith(failure)
+                  }
                 }
+              } ~
+              path("segment" / Segment) { segment =>
+                complete(HttpResponse(entity = HttpEntity(ContentTypes.`text/plain(UTF-8)`, segment)))
               }
-            } ~
-            path("segment" / Segment){ segment =>
-              complete(HttpResponse(entity = HttpEntity(ContentTypes.`text/plain(UTF-8)`, segment)))
             }
-          }
           }
         } ~
         path(rootOk) {
@@ -179,8 +179,13 @@ trait TestWebServer extends TracingDirectives {
       }
     }
 
-    if(https)
-      new WebServer(interface, port, "https", Http().newServerAt(interface, port).enableHttps(httpContext()).bind(Route.toFunction(routes)))
+    if (https)
+      new WebServer(
+        interface,
+        port,
+        "https",
+        Http().newServerAt(interface, port).enableHttps(httpContext()).bind(Route.toFunction(routes))
+      )
     else
       new WebServer(interface, port, "http", Http().newServerAt(interface, port).bindFlow(routes))
   }
@@ -215,7 +220,9 @@ trait TestWebServer extends TracingDirectives {
   }
 
   def loadX509Certificate(resourceName: String): Certificate =
-    CertificateFactory.getInstance("X.509").generateCertificate(getClass.getClassLoader.getResourceAsStream(resourceName))
+    CertificateFactory.getInstance("X.509").generateCertificate(
+      getClass.getClassLoader.getResourceAsStream(resourceName)
+    )
 
   def samplingDecision(ctx: RequestContext): Trace.SamplingDecision =
     Kamon.currentSpan().trace.samplingDecision
@@ -238,7 +245,12 @@ trait TestWebServer extends TracingDirectives {
     }
   }
 
-  class WebServer(val interface: String, val port: Int, val protocol: String, bindingFuture: Future[Http.ServerBinding])(implicit ec: ExecutionContext) {
+  class WebServer(
+    val interface: String,
+    val port: Int,
+    val protocol: String,
+    bindingFuture: Future[Http.ServerBinding]
+  )(implicit ec: ExecutionContext) {
     def shutdown(): Future[_] = {
       bindingFuture.flatMap(binding => binding.unbind())
     }

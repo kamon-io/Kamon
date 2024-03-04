@@ -62,7 +62,6 @@ package object kamon {
       }
     }
 
-
   /**
     *  Atomic variant of [scala.collection.concurrent.TrieMap#getOrElseUpdate()] method with cleanup and init functions.
     */

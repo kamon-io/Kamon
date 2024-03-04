@@ -26,8 +26,9 @@ import org.scalatest.wordspec.AnyWordSpecLike
 
 import scala.concurrent.duration._
 
-class AutoGroupingSpec extends TestKit(ActorSystem("AutoGroupingSpec")) with AnyWordSpecLike with MetricInspection.Syntax
-  with InstrumentInspection.Syntax with Matchers with InitAndStopKamonAfterAll with ImplicitSender with Eventually {
+class AutoGroupingSpec extends TestKit(ActorSystem("AutoGroupingSpec")) with AnyWordSpecLike
+    with MetricInspection.Syntax
+    with InstrumentInspection.Syntax with Matchers with InitAndStopKamonAfterAll with ImplicitSender with Eventually {
 
   import AutoGroupingSpec._
 
@@ -116,7 +117,7 @@ object AutoGroupingSpec {
     override def preStart(): Unit = {
       super.preStart()
 
-      if(pendingDepth >= 0) {
+      if (pendingDepth >= 0) {
         childCount.times {
           context.actorOf(reproducer(pendingDepth - 1, childCount * 2)) ! "ping"
         }
@@ -136,4 +137,3 @@ object AutoGroupingSpec {
   def dummy(): Props =
     Props[Dummy]
 }
-

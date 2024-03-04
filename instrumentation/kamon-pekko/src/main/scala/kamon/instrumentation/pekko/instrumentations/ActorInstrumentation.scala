@@ -89,7 +89,11 @@ object ActorCellSwapMailboxAdvice {
   }
 
   @Advice.OnMethodExit
-  @static def exit(@Advice.This cell: Any, @Advice.Return oldMailbox: Any, @Advice.Enter isShuttingDown: Boolean): Unit = {
+  @static def exit(
+    @Advice.This cell: Any,
+    @Advice.Return oldMailbox: Any,
+    @Advice.Enter isShuttingDown: Boolean
+  ): Unit = {
     if (oldMailbox != null && isShuttingDown) {
       actorMonitor(cell).onDroppedMessages(PekkoPrivateAccess.mailboxMessageCount(oldMailbox))
     }
@@ -104,7 +108,7 @@ object InvokeAllMethodInterceptor {
   @static def enter(@Advice.Argument(0) message: Any): Option[Scope] =
     message match {
       case m: HasContext => Some(Kamon.storeContext(m.context))
-      case _ => None
+      case _             => None
     }
 
   @Advice.OnMethodExit
@@ -130,7 +134,12 @@ class RepointableActorCellConstructorAdvice
 object RepointableActorCellConstructorAdvice {
 
   @Advice.OnMethodExit(suppress = classOf[Throwable])
-  @static def onExit(@This cell: Any, @Argument(0) system: ActorSystem, @Argument(1) ref: ActorRef, @Argument(3) parent: ActorRef): Unit =
+  @static def onExit(
+    @This cell: Any,
+    @Argument(0) system: ActorSystem,
+    @Argument(1) ref: ActorRef,
+    @Argument(3) parent: ActorRef
+  ): Unit =
     cell.asInstanceOf[HasActorMonitor].setActorMonitor(ActorMonitor.from(cell, ref, parent, system))
 }
 
@@ -139,7 +148,12 @@ class ActorCellConstructorAdvice
 object ActorCellConstructorAdvice {
 
   @OnMethodExit(suppress = classOf[Throwable])
-  @static def onExit(@This cell: Any, @Argument(0) system: ActorSystem, @Argument(1) ref: ActorRef, @Argument(4) parent: ActorRef): Unit =
+  @static def onExit(
+    @This cell: Any,
+    @Argument(0) system: ActorSystem,
+    @Argument(1) ref: ActorRef,
+    @Argument(4) parent: ActorRef
+  ): Unit =
     cell.asInstanceOf[HasActorMonitor].setActorMonitor(ActorMonitor.from(cell, ref, parent, system))
 }
 

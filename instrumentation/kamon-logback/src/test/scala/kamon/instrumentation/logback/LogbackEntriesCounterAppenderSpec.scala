@@ -12,7 +12,8 @@ import org.scalatest.concurrent.Eventually
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 
-class LogbackEntriesCounterAppenderSpec extends AnyWordSpec with Matchers with InstrumentInspection.Syntax with Eventually {
+class LogbackEntriesCounterAppenderSpec extends AnyWordSpec with Matchers with InstrumentInspection.Syntax
+    with Eventually {
 
   "LogbackEntriesCounterAppender" when {
     "a event is logged" should {

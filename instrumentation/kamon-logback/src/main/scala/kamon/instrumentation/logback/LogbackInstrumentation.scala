@@ -32,7 +32,6 @@ import java.util.concurrent.Callable
 import scala.annotation.static
 import scala.collection.JavaConverters._
 
-
 class LogbackInstrumentation extends InstrumentationBuilder {
 
   onSubTypesOf("ch.qos.logback.core.spi.DeferredProcessingAware")
@@ -116,13 +115,14 @@ object GetPropertyMapMethodInterceptor {
 
       settings.mdcCopyKeys.foreach { key =>
         currentContext.get(Context.key[Any](key, "")) match {
-          case Some(value) if value.toString.nonEmpty => MDC.put(key, value.toString)
+          case Some(value) if value.toString.nonEmpty                     => MDC.put(key, value.toString)
           case keyValue if keyValue != null && keyValue.toString.nonEmpty => MDC.put(key, keyValue.toString)
-          case _ => // Just ignore the nulls and empty strings
+          case _                                                          => // Just ignore the nulls and empty strings
         }
       }
 
-      try callable.call() finally {
+      try callable.call()
+      finally {
         if (mdcContextMapBeforePropagation != null) {
           MDC.setContextMap(mdcContextMapBeforePropagation)
         } else { // a null contextMap is possible and means 'empty'

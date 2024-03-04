@@ -58,11 +58,12 @@ object Attacher {
     */
   private def isKanelaLoaded(): Boolean = {
     val isLoadedProperty = java.lang.Boolean.parseBoolean(System.getProperty("kanela.loaded"))
-    val hasKanelaClasses = try {
-      Class.forName("kanela.agent.Kanela", false, ClassLoader.getSystemClassLoader) != null
-    } catch {
-      case _: Throwable => false
-    }
+    val hasKanelaClasses =
+      try {
+        Class.forName("kanela.agent.Kanela", false, ClassLoader.getSystemClassLoader) != null
+      } catch {
+        case _: Throwable => false
+      }
 
     hasKanelaClasses && isLoadedProperty
   }
@@ -77,7 +78,6 @@ object Attacher {
     Option(Thread.currentThread().getContextClassLoader())
       .filter(cl => cl.getClass.getName == "org.springframework.boot.loader.LaunchedURLClassLoader")
   }
-
 
   /**
     * Reloads the Kanela agent. This will cause all instrumentation definitions to be dropped and re-initialized.

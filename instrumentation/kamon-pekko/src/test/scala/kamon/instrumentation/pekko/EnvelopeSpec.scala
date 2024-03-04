@@ -16,7 +16,6 @@
 
 package kamon.instrumentation.pekko
 
-
 import org.apache.pekko.actor.{ActorSystem, ExtendedActorSystem, Props}
 import org.apache.pekko.dispatch.Envelope
 import org.apache.pekko.testkit.{ImplicitSender, TestKit}
@@ -47,7 +46,9 @@ class EnvelopeSpec extends TestKit(ActorSystem("EnvelopeSpec")) with AnyWordSpec
           val oos = new ObjectOutputStream(bos)
           oos.writeObject(env)
           oos.close()
-          org.apache.pekko.serialization.JavaSerializer.currentSystem.withValue(system.asInstanceOf[ExtendedActorSystem])  {
+          org.apache.pekko.serialization.JavaSerializer.currentSystem.withValue(
+            system.asInstanceOf[ExtendedActorSystem]
+          ) {
             val ois = new ObjectInputStream(new ByteArrayInputStream(bos.toByteArray()))
             val obj = ois.readObject()
             ois.close()

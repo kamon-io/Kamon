@@ -86,7 +86,6 @@ trait ContextStorage {
   def runWithContextTag[T](key: String, value: String)(f: => T): T =
     runWithContext(currentContext().withTag(key, value))(f)
 
-
   /**
     * Temporarily stores the provided Context tag on Kamon's Context Storage. The provided Context tag will be added to
     * the current Context and stored before executing the provided function, then removed right after execution
@@ -94,7 +93,6 @@ trait ContextStorage {
     */
   def runWithContextTag[T](key: String, value: Boolean)(f: => T): T =
     runWithContext(currentContext().withTag(key, value))(f)
-
 
   /**
     * Temporarily stores the provided Context tag on Kamon's Context Storage. The provided Context tag will be added to
@@ -125,7 +123,7 @@ trait ContextStorage {
         throw t
 
     } finally {
-      if(finishSpan)
+      if (finishSpan)
         span.finish()
     }
   }
@@ -147,10 +145,10 @@ object ContextStorage {
       Storage.Debug()
     else {
       storageTypeStr match {
-        case None => Storage.CrossThreadLocal()
-        case Some("debug") => Storage.Debug()
+        case None                    => Storage.CrossThreadLocal()
+        case Some("debug")           => Storage.Debug()
         case Some("sameThreadScope") => Storage.ThreadLocal()
-        case Some("default") => Storage.CrossThreadLocal()
+        case Some("default")         => Storage.CrossThreadLocal()
         case Some(other) => throw new IllegalArgumentException(s"Unrecognized kamon.context.storageType value: $other")
       }
     }

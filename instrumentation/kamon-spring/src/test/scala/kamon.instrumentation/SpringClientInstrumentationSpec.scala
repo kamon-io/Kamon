@@ -12,7 +12,7 @@ import testapp.TestApp
 import scala.concurrent.duration.DurationInt
 
 class SpringClientInstrumentationSpec
-  extends AnyWordSpec
+    extends AnyWordSpec
     with Matchers
     with InitAndStopKamonAfterAll
     with TestSpanReporter {
@@ -24,7 +24,6 @@ class SpringClientInstrumentationSpec
     super.beforeAll()
     TestApp.main(Array(port))
   }
-
 
   "WebClient instrumentation" should {
     "add a traceID to outgoing request" in {

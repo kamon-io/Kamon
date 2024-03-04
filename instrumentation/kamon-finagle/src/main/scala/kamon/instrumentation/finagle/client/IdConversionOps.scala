@@ -32,7 +32,7 @@ private[finagle] object IdConversionOps {
     def toTraceId: TraceId = toTraceId(None)
     def toTraceId(parent: Span): TraceId = parent match {
       case Span.Empty => toTraceId
-      case _ => toTraceId(Some(parent))
+      case _          => toTraceId(Some(parent))
     }
     private def toTraceId(parent: Option[Span]): TraceId = {
       if (span.id.isEmpty || span.trace.id.isEmpty) Trace.nextId
@@ -42,9 +42,9 @@ private[finagle] object IdConversionOps {
           parentId = parent.map(p => SpanId(p.id.toLongId)),
           spanId = SpanId(span.id.toLongId),
           sampled = span.trace.samplingDecision match {
-            case SamplingDecision.Sample => Some(true)
+            case SamplingDecision.Sample      => Some(true)
             case SamplingDecision.DoNotSample => Some(false)
-            case _ => None
+            case _                            => None
           }
         )
       }

@@ -50,35 +50,39 @@ class ScrapeDataBuilder(prometheusConfig: PrometheusSettings.Generic, environmen
   }
 
   def appendDistributionMetricsAsGauges(distributions: Seq[MetricSnapshot.Distributions]): ScrapeDataBuilder = {
-    def gaugeFilter(metric:MetricSnapshot.Distributions):Boolean = prometheusConfig.gaugeSettings.metricMatchers.exists(_.accept(metric.name))
-    def avg(snap:Instrument.Snapshot[Distribution]):Double = if(snap.value.count == 0) 0 else snap.value.sum/snap.value.count
+    def gaugeFilter(metric: MetricSnapshot.Distributions): Boolean =
+      prometheusConfig.gaugeSettings.metricMatchers.exists(_.accept(metric.name))
+    def avg(snap: Instrument.Snapshot[Distribution]): Double =
+      if (snap.value.count == 0) 0 else snap.value.sum / snap.value.count
 
     distributions
       .filter(gaugeFilter)
-      .map{ metric =>
+      .map { metric =>
         val settings = Metric.Settings.ForValueInstrument(metric.settings.unit, metric.settings.autoUpdateInterval)
         Seq(
           MetricSnapshot.ofValues(
-            name = metric.name+".min",
+            name = metric.name + ".min",
             description = metric.description,
             settings = settings,
-            instruments = metric.instruments.map(snap => Instrument.Snapshot[Double](snap.tags, snap.value.min.toDouble))
+            instruments =
+              metric.instruments.map(snap => Instrument.Snapshot[Double](snap.tags, snap.value.min.toDouble))
           ),
           MetricSnapshot.ofValues(
-            name = metric.name+".max",
+            name = metric.name + ".max",
             description = metric.description,
             settings = settings,
-            instruments = metric.instruments.map(snap => Instrument.Snapshot[Double](snap.tags, snap.value.max.toDouble))
+            instruments =
+              metric.instruments.map(snap => Instrument.Snapshot[Double](snap.tags, snap.value.max.toDouble))
           ),
           MetricSnapshot.ofValues(
-            name = metric.name+".avg",
+            name = metric.name + ".avg",
             description = metric.description,
             settings = settings,
             instruments = metric.instruments.map(snap => Instrument.Snapshot[Double](snap.tags, avg(snap)))
           )
         )
-    }.flatten
-     .foreach(appendGaugeMetric)
+      }.flatten
+      .foreach(appendGaugeMetric)
     this
   }
 
@@ -86,7 +90,7 @@ class ScrapeDataBuilder(prometheusConfig: PrometheusSettings.Generic, environmen
     val unit = metric.settings.unit
     val normalizedMetricName = normalizeCounterMetricName(metric.name, unit)
 
-    if(metric.description.nonEmpty)
+    if (metric.description.nonEmpty)
       append("# HELP ").append(normalizedMetricName).append(" ").append(metric.description).append("\n")
 
     append("# TYPE ").append(normalizedMetricName).append(" counter\n")
@@ -104,7 +108,7 @@ class ScrapeDataBuilder(prometheusConfig: PrometheusSettings.Generic, environmen
     val unit = metric.settings.unit
     val normalizedMetricName = normalizeMetricName(metric.name, unit)
 
-    if(metric.description.nonEmpty)
+    if (metric.description.nonEmpty)
       append("# HELP ").append(normalizedMetricName).append(" ").append(metric.description).append("\n")
 
     append("# TYPE ").append(normalizedMetricName).append(" gauge\n")
@@ -121,9 +125,9 @@ class ScrapeDataBuilder(prometheusConfig: PrometheusSettings.Generic, environmen
   private def appendDistributionMetric(metric: MetricSnapshot.Distributions): Unit = {
     val reportAsSummary = prometheusConfig.summarySettings.metricMatchers.exists(_.accept(metric.name))
     if (reportAsSummary) {
-        appendDistributionMetricAsSummary(metric)
+      appendDistributionMetricAsSummary(metric)
     } else {
-        appendDistributionMetricAsHistogram(metric)
+      appendDistributionMetricAsHistogram(metric)
     }
   }
 
@@ -131,15 +135,20 @@ class ScrapeDataBuilder(prometheusConfig: PrometheusSettings.Generic, environmen
     val unit = metric.settings.unit
     val normalizedMetricName = normalizeMetricName(metric.name, unit)
 
-    if(metric.description.nonEmpty)
+    if (metric.description.nonEmpty)
       append("# HELP ").append(normalizedMetricName).append(" ").append(metric.description).append("\n")
 
     append("# TYPE ").append(normalizedMetricName).append(" histogram").append("\n")
 
     metric.instruments.foreach(instrument => {
-      if(instrument.value.count > 0) {
-        appendHistogramBuckets(normalizedMetricName, instrument.tags, instrument.value, unit,
-          resolveBucketConfiguration(metric.name, unit))
+      if (instrument.value.count > 0) {
+        appendHistogramBuckets(
+          normalizedMetricName,
+          instrument.tags,
+          instrument.value,
+          unit,
+          resolveBucketConfiguration(metric.name, unit)
+        )
 
         val count = format(instrument.value.count)
         val sum = format(convert(instrument.value.sum, unit))
@@ -153,13 +162,13 @@ class ScrapeDataBuilder(prometheusConfig: PrometheusSettings.Generic, environmen
     val unit = metric.settings.unit
     val normalizedMetricName = normalizeMetricName(metric.name, unit)
 
-    if(metric.description.nonEmpty)
+    if (metric.description.nonEmpty)
       append("# HELP ").append(normalizedMetricName).append(" ").append(metric.description).append("\n")
 
     append("# TYPE ").append(normalizedMetricName).append(" summary").append("\n")
 
     metric.instruments.foreach(instrument => {
-      if(instrument.value.count > 0) {
+      if (instrument.value.count > 0) {
         appendSummaryQuantiles(
           normalizedMetricName,
           instrument.tags,
@@ -187,21 +196,23 @@ class ScrapeDataBuilder(prometheusConfig: PrometheusSettings.Generic, environmen
     prometheusConfig.customBuckets.getOrElse(
       metricName,
       unit.dimension match {
-        case Time         => prometheusConfig.timeBuckets
-        case Information  => prometheusConfig.informationBuckets
-        case Percentage   => prometheusConfig.percentageBuckets
-        case _            => prometheusConfig.defaultBuckets
+        case Time        => prometheusConfig.timeBuckets
+        case Information => prometheusConfig.informationBuckets
+        case Percentage  => prometheusConfig.percentageBuckets
+        case _           => prometheusConfig.defaultBuckets
       }
     )
 
-  private def appendSummaryQuantiles(name: String,
-                                     tags: TagSet,
-                                     distribution: Distribution,
-                                     unit: MeasurementUnit,
-                                     quantiles: Seq[java.lang.Double]): Unit = {
+  private def appendSummaryQuantiles(
+    name: String,
+    tags: TagSet,
+    distribution: Distribution,
+    unit: MeasurementUnit,
+    quantiles: Seq[java.lang.Double]
+  ): Unit = {
     val percentileIter = distribution.percentilesIterator
     val percentiles = quantiles.sorted.map { quant =>
-      //find first percentile in iterator that is grater or equal to wanted quantile and extract value right away since the percentile is mutable
+      // find first percentile in iterator that is grater or equal to wanted quantile and extract value right away since the percentile is mutable
       quant -> percentileIter.find {
         _.rank >= (quant * 100)
       }.map(_.value).getOrElse(0L)
@@ -213,8 +224,13 @@ class ScrapeDataBuilder(prometheusConfig: PrometheusSettings.Generic, environmen
     }
   }
 
-  private def appendHistogramBuckets(name: String, tags: TagSet, distribution: Distribution, unit: MeasurementUnit,
-      buckets: Seq[java.lang.Double]): Unit = {
+  private def appendHistogramBuckets(
+    name: String,
+    tags: TagSet,
+    distribution: Distribution,
+    unit: MeasurementUnit,
+    buckets: Seq[java.lang.Double]
+  ): Unit = {
 
     val distributionBuckets = distribution.bucketsIterator
     var currentDistributionBucket = distributionBuckets.next()
@@ -225,18 +241,17 @@ class ScrapeDataBuilder(prometheusConfig: PrometheusSettings.Generic, environmen
     buckets.foreach { configuredBucket =>
       val bucketTags = tags.withTag("le", String.valueOf(configuredBucket))
 
-      if(currentDistributionBucketValue <= configuredBucket) {
+      if (currentDistributionBucketValue <= configuredBucket) {
         inBucketCount += leftOver
         leftOver = 0
 
-        while (distributionBuckets.hasNext && currentDistributionBucketValue <= configuredBucket ) {
+        while (distributionBuckets.hasNext && currentDistributionBucketValue <= configuredBucket) {
           currentDistributionBucket = distributionBuckets.next()
           currentDistributionBucketValue = convert(currentDistributionBucket.value, unit)
 
           if (currentDistributionBucketValue <= configuredBucket) {
             inBucketCount += currentDistributionBucket.frequency
-          }
-          else
+          } else
             leftOver = currentDistributionBucket.frequency
         }
       }
@@ -244,7 +259,7 @@ class ScrapeDataBuilder(prometheusConfig: PrometheusSettings.Generic, environmen
       appendTimeSerieValue(name, bucketTags, format(inBucketCount), "_bucket")
     }
 
-    while(distributionBuckets.hasNext) {
+    while (distributionBuckets.hasNext) {
       leftOver += distributionBuckets.next().frequency
     }
 
@@ -262,14 +277,14 @@ class ScrapeDataBuilder(prometheusConfig: PrometheusSettings.Generic, environmen
 
   private def appendTagsTo(tags: TagSet, buffer: StringBuilder): Unit = {
     val allTags = tags.withTags(environmentTags)
-    if(allTags.nonEmpty) buffer.append("{")
+    if (allTags.nonEmpty) buffer.append("{")
 
-    val tagIterator = allTags.iterator(v => if(v == null) "" else v.toString)
+    val tagIterator = allTags.iterator(v => if (v == null) "" else v.toString)
     var tagCount = 0
 
-    while(tagIterator.hasNext) {
+    while (tagIterator.hasNext) {
       val pair = tagIterator.next()
-      if(tagCount > 0)
+      if (tagCount > 0)
         buffer.append(",")
 
       buffer
@@ -281,25 +296,25 @@ class ScrapeDataBuilder(prometheusConfig: PrometheusSettings.Generic, environmen
       tagCount += 1
     }
 
-    if(allTags.nonEmpty) buffer.append("}")
+    if (allTags.nonEmpty) buffer.append("}")
   }
 
   private def normalizeCounterMetricName(metricName: String, unit: MeasurementUnit): String = {
     val normalizedMetricName = metricName.map(validNameChar(_))
 
-    unit.dimension match  {
-      case Time         => addPostfixOnlyIfMissing(normalizedMetricName, "_seconds_total")
-      case Information  => addPostfixOnlyIfMissing(normalizedMetricName, "_bytes_total")
-      case _            => addPostfixOnlyIfMissing(normalizedMetricName, "_total")
+    unit.dimension match {
+      case Time        => addPostfixOnlyIfMissing(normalizedMetricName, "_seconds_total")
+      case Information => addPostfixOnlyIfMissing(normalizedMetricName, "_bytes_total")
+      case _           => addPostfixOnlyIfMissing(normalizedMetricName, "_total")
     }
   }
   private def normalizeMetricName(metricName: String, unit: MeasurementUnit): String = {
     val normalizedMetricName = metricName.map(validNameChar(_))
 
-    unit.dimension match  {
-      case Time         => addPostfixOnlyIfMissing(normalizedMetricName, "_seconds")
-      case Information  => addPostfixOnlyIfMissing(normalizedMetricName, "_bytes")
-      case _            => normalizedMetricName
+    unit.dimension match {
+      case Time        => addPostfixOnlyIfMissing(normalizedMetricName, "_seconds")
+      case Information => addPostfixOnlyIfMissing(normalizedMetricName, "_bytes")
+      case _           => normalizedMetricName
     }
   }
   private def addPostfixOnlyIfMissing(metricName: String, postfix: String) =
@@ -310,23 +325,23 @@ class ScrapeDataBuilder(prometheusConfig: PrometheusSettings.Generic, environmen
     label.map(validLabelChar)
 
   private def validLabelChar(char: Char): Char =
-    if(char.isLetterOrDigit || char == '_') char else '_'
+    if (char.isLetterOrDigit || char == '_') char else '_'
 
   private def validNameChar(char: Char): Char =
-    if(char.isLetterOrDigit || char == '_' || char == ':') char else '_'
+    if (char.isLetterOrDigit || char == '_' || char == ':') char else '_'
 
   private def normalizeLabelValue(value: String): String = {
-    if(value.contains("\\")) value.replace("\\", "\\\\") else value
+    if (value.contains("\\")) value.replace("\\", "\\\\") else value
   }
 
   private def format(value: Double): String =
     _numberFormat.format(value)
 
   private def convert(value: Double, unit: MeasurementUnit): Double = unit.dimension match {
-    case Time         if unit.magnitude != time.seconds.magnitude       => MeasurementUnit.convert(value, unit, time.seconds)
-    case Information  if unit.magnitude != information.bytes.magnitude  => MeasurementUnit.convert(value, unit, information.bytes)
+    case Time if unit.magnitude != time.seconds.magnitude => MeasurementUnit.convert(value, unit, time.seconds)
+    case Information if unit.magnitude != information.bytes.magnitude =>
+      MeasurementUnit.convert(value, unit, information.bytes)
     case _ => value
   }
-
 
 }

@@ -41,15 +41,15 @@ class PeriodSnapshotAccumulatorSpec extends AnyWordSpec with Matchers with Recon
 
     "bypass accumulation if the configured duration is equal to the metric tick-interval, regardless of the snapshot" in {
       val accumulator = newAccumulator(10, 1)
-      accumulator.add(tenSeconds).value should be theSameInstanceAs(tenSeconds)
-      accumulator.add(fiveSecondsOne).value should be theSameInstanceAs(fiveSecondsOne)
+      accumulator.add(tenSeconds).value should be theSameInstanceAs (tenSeconds)
+      accumulator.add(fiveSecondsOne).value should be theSameInstanceAs (fiveSecondsOne)
     }
 
     "bypass accumulation if snapshots are beyond the expected next tick" in {
       val accumulator = newAccumulator(4, 1)
       accumulator.add(almostThreeSeconds) shouldBe empty
       accumulator.add(fourSeconds) shouldBe defined
-      accumulator.add(nineSeconds).value should be theSameInstanceAs(nineSeconds)
+      accumulator.add(nineSeconds).value should be theSameInstanceAs (nineSeconds)
     }
 
     "remove snapshots once they have been flushed" in {
@@ -81,35 +81,35 @@ class PeriodSnapshotAccumulatorSpec extends AnyWordSpec with Matchers with Recon
       // The first snapshot will almost always be shorter than 15 seconds as it gets adjusted to the nearest initial period.
 
       val accumulator = newAccumulator(15, 0)
-      accumulator.add(fiveSecondsTwo) shouldBe empty      // second 0:10
-      val s15 = accumulator.add(fiveSecondsThree).value   // second 0:15
-      s15.from shouldBe(fiveSecondsTwo.from)
-      s15.to shouldBe(fiveSecondsThree.to)
+      accumulator.add(fiveSecondsTwo) shouldBe empty // second 0:10
+      val s15 = accumulator.add(fiveSecondsThree).value // second 0:15
+      s15.from shouldBe (fiveSecondsTwo.from)
+      s15.to shouldBe (fiveSecondsThree.to)
 
-      accumulator.add(fiveSecondsFour) shouldBe empty     // second 0:20
-      accumulator.add(fiveSecondsFive) shouldBe empty     // second 0:25
-      val s30 = accumulator.add(fiveSecondsSix).value     // second 0:30
-      s30.from shouldBe(fiveSecondsFour.from)
-      s30.to shouldBe(fiveSecondsSix.to)
+      accumulator.add(fiveSecondsFour) shouldBe empty // second 0:20
+      accumulator.add(fiveSecondsFive) shouldBe empty // second 0:25
+      val s30 = accumulator.add(fiveSecondsSix).value // second 0:30
+      s30.from shouldBe (fiveSecondsFour.from)
+      s30.to shouldBe (fiveSecondsSix.to)
 
-      accumulator.add(fiveSecondsSeven) shouldBe empty    // second 0:35
+      accumulator.add(fiveSecondsSeven) shouldBe empty // second 0:35
     }
 
     "do best effort to align when snapshots themselves are not aligned" in {
       val accumulator = newAccumulator(30, 0)
-      accumulator.add(tenSecondsOne) shouldBe empty       // second 0:13
-      accumulator.add(tenSecondsTwo) shouldBe empty       // second 0:23
-      val s23 = accumulator.add(tenSecondsThree).value    // second 0:33
-      s23.from shouldBe(tenSecondsOne.from)
-      s23.to shouldBe(tenSecondsThree.to)
+      accumulator.add(tenSecondsOne) shouldBe empty // second 0:13
+      accumulator.add(tenSecondsTwo) shouldBe empty // second 0:23
+      val s23 = accumulator.add(tenSecondsThree).value // second 0:33
+      s23.from shouldBe (tenSecondsOne.from)
+      s23.to shouldBe (tenSecondsThree.to)
 
-      accumulator.add(tenSecondsFour) shouldBe empty      // second 0:43
-      accumulator.add(tenSecondsFive) shouldBe empty      // second 0:53
-      val s103 = accumulator.add(tenSecondsSix).value     // second 1:03
-      s103.from shouldBe(tenSecondsFour.from)
-      s103.to shouldBe(tenSecondsSix.to)
+      accumulator.add(tenSecondsFour) shouldBe empty // second 0:43
+      accumulator.add(tenSecondsFive) shouldBe empty // second 0:53
+      val s103 = accumulator.add(tenSecondsSix).value // second 1:03
+      s103.from shouldBe (tenSecondsFour.from)
+      s103.to shouldBe (tenSecondsSix.to)
 
-      accumulator.add(fiveSecondsSeven) shouldBe empty    // second 1:13
+      accumulator.add(fiveSecondsSeven) shouldBe empty // second 1:13
     }
 
     "allow to peek into the data that has been accumulated" in {
@@ -117,26 +117,26 @@ class PeriodSnapshotAccumulatorSpec extends AnyWordSpec with Matchers with Recon
       accumulator.add(fiveSecondsOne) shouldBe empty
       accumulator.add(fiveSecondsTwo) shouldBe empty
 
-      for(_ <- 1 to 10) {
+      for (_ <- 1 to 10) {
         val peekSnapshot = accumulator.peek()
         val mergedHistogram = peekSnapshot.histograms.find(_.name == "histogram").get.instruments.head.value
         val mergedRangeSampler = peekSnapshot.rangeSamplers.find(_.name == "rangeSampler").get.instruments.head.value
         peekSnapshot.counters.find(_.name == "counter").get.instruments.head.value shouldBe (55)
         peekSnapshot.gauges.find(_.name == "gauge").get.instruments.head.value shouldBe (33)
-        mergedHistogram.buckets.map(_.value) should contain allOf(22L, 33L)
-        mergedRangeSampler.buckets.map(_.value) should contain allOf(22L, 33L)
+        mergedHistogram.buckets.map(_.value) should contain allOf (22L, 33L)
+        mergedRangeSampler.buckets.map(_.value) should contain allOf (22L, 33L)
       }
 
       accumulator.add(fiveSecondsThree) shouldBe empty
 
-      for(_ <- 1 to 10) {
+      for (_ <- 1 to 10) {
         val peekSnapshot = accumulator.peek()
         val mergedHistogram = peekSnapshot.histograms.find(_.name == "histogram").get.instruments.head.value
         val mergedRangeSampler = peekSnapshot.rangeSamplers.find(_.name == "rangeSampler").get.instruments.head.value
         peekSnapshot.counters.find(_.name == "counter").get.instruments.head.value shouldBe (67)
         peekSnapshot.gauges.find(_.name == "gauge").get.instruments.head.value shouldBe (12)
-        mergedHistogram.buckets.map(_.value) should contain allOf(22L, 33L, 12L)
-        mergedRangeSampler.buckets.map(_.value) should contain allOf(22L, 33L, 12L)
+        mergedHistogram.buckets.map(_.value) should contain allOf (22L, 33L, 12L)
+        mergedRangeSampler.buckets.map(_.value) should contain allOf (22L, 33L, 12L)
       }
     }
 
@@ -151,10 +151,10 @@ class PeriodSnapshotAccumulatorSpec extends AnyWordSpec with Matchers with Recon
 
       val mergedHistogram = snapshotOne.histograms.find(_.name == "histogram").get.instruments.head.value
       val mergedRangeSampler = snapshotOne.rangeSamplers.find(_.name == "rangeSampler").get.instruments.head.value
-      snapshotOne.counters.find(_.name == "counter").get.instruments.head.value shouldBe(67)
-      snapshotOne.gauges.find(_.name == "gauge").get.instruments.head.value shouldBe(12)
-      mergedHistogram.buckets.map(_.value) should contain allOf(22L, 33L, 12L)
-      mergedRangeSampler.buckets.map(_.value) should contain allOf(22L, 33L, 12L)
+      snapshotOne.counters.find(_.name == "counter").get.instruments.head.value shouldBe (67)
+      snapshotOne.gauges.find(_.name == "gauge").get.instruments.head.value shouldBe (12)
+      mergedHistogram.buckets.map(_.value) should contain allOf (22L, 33L, 12L)
+      mergedRangeSampler.buckets.map(_.value) should contain allOf (22L, 33L, 12L)
 
       val emptySnapshot = accumulator.peek()
       emptySnapshot.histograms shouldBe empty
@@ -192,7 +192,6 @@ class PeriodSnapshotAccumulatorSpec extends AnyWordSpec with Matchers with Recon
   val nineSeconds = createPeriodSnapshot(alignedZeroTime, alignedZeroTime.plusSeconds(9), 22)
   val tenSeconds = createPeriodSnapshot(alignedZeroTime, alignedZeroTime.plusSeconds(10), 36)
 
-
   def newAccumulator(duration: Long, margin: Long) =
     PeriodSnapshot.accumulator(Duration.ofSeconds(duration), Duration.ofSeconds(margin))
 
@@ -201,15 +200,43 @@ class PeriodSnapshotAccumulatorSpec extends AnyWordSpec with Matchers with Recon
     */
   def createPeriodSnapshot(from: Instant, to: Instant, value: Long): PeriodSnapshot = {
     val valueSettings = Metric.Settings.ForValueInstrument(MeasurementUnit.none, Duration.ofSeconds(10))
-    val distributionSettings = Metric.Settings.ForDistributionInstrument(MeasurementUnit.none, Duration.ofSeconds(10), DynamicRange.Default)
+    val distributionSettings =
+      Metric.Settings.ForDistributionInstrument(MeasurementUnit.none, Duration.ofSeconds(10), DynamicRange.Default)
     val distribution = Kamon.histogram("temp").withoutTags().record(value).distribution()
 
-    PeriodSnapshot(from, to,
-      counters = Seq(MetricSnapshot.ofValues("counter", "", valueSettings, Seq(Instrument.Snapshot(TagSet.of("metric", "counter"), value)))),
-      gauges = Seq(MetricSnapshot.ofValues("gauge", "", valueSettings, Seq(Instrument.Snapshot(TagSet.of("metric", "gauge"), value)))),
-      histograms = Seq(MetricSnapshot.ofDistributions("histogram", "", distributionSettings, Seq(Instrument.Snapshot(TagSet.of("metric", "histogram"), distribution)))),
-      timers = Seq(MetricSnapshot.ofDistributions("timer", "", distributionSettings, Seq(Instrument.Snapshot(TagSet.of("metric", "timer"), distribution)))),
-      rangeSamplers = Seq(MetricSnapshot.ofDistributions("rangeSampler", "", distributionSettings, Seq(Instrument.Snapshot(TagSet.of("metric", "rangeSampler"), distribution))))
+    PeriodSnapshot(
+      from,
+      to,
+      counters = Seq(MetricSnapshot.ofValues(
+        "counter",
+        "",
+        valueSettings,
+        Seq(Instrument.Snapshot(TagSet.of("metric", "counter"), value))
+      )),
+      gauges = Seq(MetricSnapshot.ofValues(
+        "gauge",
+        "",
+        valueSettings,
+        Seq(Instrument.Snapshot(TagSet.of("metric", "gauge"), value))
+      )),
+      histograms = Seq(MetricSnapshot.ofDistributions(
+        "histogram",
+        "",
+        distributionSettings,
+        Seq(Instrument.Snapshot(TagSet.of("metric", "histogram"), distribution))
+      )),
+      timers = Seq(MetricSnapshot.ofDistributions(
+        "timer",
+        "",
+        distributionSettings,
+        Seq(Instrument.Snapshot(TagSet.of("metric", "timer"), distribution))
+      )),
+      rangeSamplers = Seq(MetricSnapshot.ofDistributions(
+        "rangeSampler",
+        "",
+        distributionSettings,
+        Seq(Instrument.Snapshot(TagSet.of("metric", "rangeSampler"), distribution))
+      ))
     )
   }
 

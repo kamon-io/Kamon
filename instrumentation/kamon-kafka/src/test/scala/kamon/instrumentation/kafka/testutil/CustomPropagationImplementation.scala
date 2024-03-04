@@ -16,12 +16,13 @@ class CustomPropagationImplementation extends KafkaPropagator {
       traceIdStr = new String(traceId, "utf-8")
       spanId <- Option(medium.lastHeader("x-span-id")).map(_.value())
       spanIdStr = new String(spanId, "utf-8")
-      sampled <- Option(medium.lastHeader("x-trace-sampled")).map(_.value()).map{
-        case Array(1) =>  SamplingDecision.Sample
-        case Array(0) =>  SamplingDecision.DoNotSample
-        case _ =>  SamplingDecision.Unknown
+      sampled <- Option(medium.lastHeader("x-trace-sampled")).map(_.value()).map {
+        case Array(1) => SamplingDecision.Sample
+        case Array(0) => SamplingDecision.DoNotSample
+        case _        => SamplingDecision.Unknown
       }
-      span = Span.Remote(Identifier(spanIdStr, spanId),  Identifier.Empty, Trace(Identifier(traceIdStr, traceId), sampled))
+      span =
+        Span.Remote(Identifier(spanIdStr, spanId), Identifier.Empty, Trace(Identifier(traceIdStr, traceId), sampled))
     } yield context.withEntry(Span.Key, span)
 
     contextWithParent.getOrElse(context)

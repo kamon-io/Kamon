@@ -33,14 +33,14 @@ import org.scalatest.wordspec.AnyWordSpec
 import org.scalatest.{BeforeAndAfterEach, OptionValues}
 
 class OkHttpTracingInstrumentationSpec extends AnyWordSpec
-  with Matchers
-  with Eventually
-  with SpanSugar
-  with BeforeAndAfterEach
-  with TestSpanReporter
-  with JettySupport
-  with Reconfigure
-  with OptionValues {
+    with Matchers
+    with Eventually
+    with SpanSugar
+    with BeforeAndAfterEach
+    with TestSpanReporter
+    with JettySupport
+    with Reconfigure
+    with OptionValues {
 
   val customTag = "requestId"
   val customHeaderName = "X-Request-Id"
@@ -274,7 +274,7 @@ class OkHttpTracingInstrumentationSpec extends AnyWordSpec
 
       req.getRequestURI match {
         case path if path == uriError => resp.setStatus(500)
-        case _ => resp.setStatus(200)
+        case _                        => resp.setStatus(200)
       }
     }
   }
@@ -292,7 +292,8 @@ class OkHttpTracingInstrumentationSpec extends AnyWordSpec
          |    $customTag = span
          |  }
          |}
-         |""".stripMargin)
+         |""".stripMargin
+    )
 
     startServer()
   }

@@ -10,8 +10,11 @@ import scala.annotation.static
 
 class LettuceInstrumentation extends InstrumentationBuilder {
   onType("io.lettuce.core.AbstractRedisAsyncCommands")
-    .advise(method("dispatch")
-      .and(takesOneArgumentOf("io.lettuce.core.protocol.RedisCommand")), classOf[AsyncCommandAdvice])
+    .advise(
+      method("dispatch")
+        .and(takesOneArgumentOf("io.lettuce.core.protocol.RedisCommand")),
+      classOf[AsyncCommandAdvice]
+    )
 }
 
 class AsyncCommandAdvice
@@ -23,10 +26,12 @@ object AsyncCommandAdvice {
       .start();
   }
 
-  @Advice.OnMethodExit(onThrowable = classOf[Throwable],suppress = classOf[Throwable])
-  @static def exit(@Advice.Enter span: Span,
-           @Advice.Thrown t: Throwable,
-           @Advice.Return asyncCommand: AsyncCommand[_, _, _]) = {
+  @Advice.OnMethodExit(onThrowable = classOf[Throwable], suppress = classOf[Throwable])
+  @static def exit(
+    @Advice.Enter span: Span,
+    @Advice.Thrown t: Throwable,
+    @Advice.Return asyncCommand: AsyncCommand[_, _, _]
+  ) = {
     if (t != null) {
       span.fail(t);
     }

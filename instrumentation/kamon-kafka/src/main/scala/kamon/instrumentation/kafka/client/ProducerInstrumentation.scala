@@ -43,15 +43,14 @@ final class ProducerCallback(callback: Callback, sendingSpan: Span, context: Con
   override def onCompletion(metadata: RecordMetadata, exception: Exception): Unit = {
 
     try {
-      if(exception != null)
+      if (exception != null)
         sendingSpan.fail(exception)
       else
         sendingSpan.tag("kafka.partition", metadata.partition())
 
-      if(callback != null)
+      if (callback != null)
         Kamon.runWithContext(context)(callback.onCompletion(metadata, exception))
-    }
-    finally {
+    } finally {
       sendingSpan.finish()
     }
   }

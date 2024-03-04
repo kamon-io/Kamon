@@ -30,7 +30,6 @@ import scala.concurrent.duration._
 class SchedulerInstrumentationSpec extends TestKit(ActorSystem("SchedulerInstrumentationSpec")) with AnyWordSpecLike
     with Matchers with InitAndStopKamonAfterAll with ImplicitSender with Eventually {
 
-
   "the Pekko Scheduler instrumentation" should {
     "propagate the current context in calls to scheduler.scheduleOnce" in {
       val contextTagPromise = Promise[String]()
@@ -39,7 +38,7 @@ class SchedulerInstrumentationSpec extends TestKit(ActorSystem("SchedulerInstrum
       Kamon.runWithContextTag("key", "one") {
         system.scheduler.scheduleOnce(100 millis) {
           contextTagPromise.success(Kamon.currentContext().getTag(plain("key")))
-        } (system.dispatcher)
+        }(system.dispatcher)
       }
 
       eventually(timeout(5 seconds)) {

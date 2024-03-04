@@ -54,7 +54,7 @@ class ApiClient(settings: Settings) {
     val clock = Kamon.clock()
 
     val timeSinceLastPost = Duration.between(_lastAttempt, clock.instant())
-    if(timeSinceLastPost.compareTo(settings.clientBackoff) < 0) backoff
+    if (timeSinceLastPost.compareTo(settings.clientBackoff) < 0) backoff
 
     val request: () => Response = () => {
       val reqBody = RequestBody.create(MediaType.parse("application/octet-stream"), body)
@@ -83,25 +83,33 @@ class ApiClient(settings: Settings) {
           case 401 =>
             _logger.trace("Request to the Kamon APM [{}] endpoint failed due to Invalid API Key", endpointName)
           case status if retries > 0 =>
-            _logger.warn(s"Failed to process request to the Kamon APM [${endpointName}] endpoint with status code [${status}]. " +
-              s"Retrying shortly ($retries left)...")
+            _logger.warn(
+              s"Failed to process request to the Kamon APM [${endpointName}] endpoint with status code [${status}]. " +
+              s"Retrying shortly ($retries left)..."
+            )
 
             backoff
             postWithRetry(body, endpointName, apiUrl, retries - 1)
           case status =>
-            _logger.warn(s"Failed to process request to the Kamon APM [${endpointName}] endpoint with status code [${status}] " +
-              "and no retries left. Dropping the request.")
+            _logger.warn(
+              s"Failed to process request to the Kamon APM [${endpointName}] endpoint with status code [${status}] " +
+              "and no retries left. Dropping the request."
+            )
         }
 
       case Failure(connectionException) if retries > 0 =>
-        _logger.warn(s"Failed to reach the Kamon APM [${endpointName}] endpoint. Retrying shortly ($retries left)...",
-          connectionException)
+        _logger.warn(
+          s"Failed to reach the Kamon APM [${endpointName}] endpoint. Retrying shortly ($retries left)...",
+          connectionException
+        )
         backoff
         postWithRetry(body, endpointName, apiUrl, retries - 1)
 
       case Failure(connectionException) =>
-        _logger.error(s"Failed to reach the Kamon APM [${endpointName}] endpoint with no retries left. Dropping the request.",
-          connectionException)
+        _logger.error(
+          s"Failed to reach the Kamon APM [${endpointName}] endpoint with no retries left. Dropping the request.",
+          connectionException
+        )
     }
 
   }

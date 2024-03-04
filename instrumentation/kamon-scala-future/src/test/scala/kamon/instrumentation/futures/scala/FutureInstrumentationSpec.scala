@@ -62,4 +62,3 @@ class FutureInstrumentationSpec extends AnyWordSpec with Matchers with ScalaFutu
     }
   }
 }
-

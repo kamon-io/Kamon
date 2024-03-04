@@ -41,7 +41,12 @@ trait ActorMonitor {
   /**
     * Callback executed when message processing has ended.
     */
-  def onMessageProcessingEnd(context: Context, envelopeTimestamp: Long, processingStartTimestamp: Long, stateFromStart: Any): Unit
+  def onMessageProcessingEnd(
+    context: Context,
+    envelopeTimestamp: Long,
+    processingStartTimestamp: Long,
+    stateFromStart: Any
+  ): Unit
 
   /**
     * Callback executed when an exception is thrown by the monitored Actor.
@@ -79,7 +84,7 @@ object ActorMonitor {
     val autoGroupingPath = resolveAutoGroupingPath(cell.actorOrRouterClass, ref, parent, system.name)
 
     def traceWrap(monitor: ActorMonitor): ActorMonitor =
-      if(participatesInTracing) new TracedMonitor(cell, startsTrace, monitor) else monitor
+      if (participatesInTracing) new TracedMonitor(cell, startsTrace, monitor) else monitor
 
     val monitor = {
 
@@ -91,14 +96,18 @@ object ActorMonitor {
 
       } else {
 
-        val trackedFilter = if (cell.isRouter || cell.isRoutee) Kamon.filter(TrackRouterFilterName) else settings.safeActorTrackFilter
+        val trackedFilter =
+          if (cell.isRouter || cell.isRoutee) Kamon.filter(TrackRouterFilterName) else settings.safeActorTrackFilter
         val isTracked = !cell.isRootSupervisor && trackedFilter.accept(cell.path)
-        val trackingGroups: Seq[ActorGroupInstruments] = if (cell.isRootSupervisor) List() else {
+        val trackingGroups: Seq[ActorGroupInstruments] = if (cell.isRootSupervisor) List()
+        else {
           val configuredMatchingGroups = PekkoInstrumentation.matchingActorGroups(cell.path)
 
-          if (configuredMatchingGroups.isEmpty && !isTracked
+          if (
+            configuredMatchingGroups.isEmpty && !isTracked
             && settings.autoGrouping && !cell.isRouter
-            && !cell.isRoutee && !ActorCellInfo.isTyped(cell.actorOrRouterClass)) {
+            && !cell.isRoutee && !ActorCellInfo.isTyped(cell.actorOrRouterClass)
+          ) {
             if (!trackedFilter.excludes(cell.path) && Kamon.filter(TrackAutoGroupFilterName).accept(autoGroupingPath))
               List(PekkoMetrics.forGroup(autoGroupingPath, system.name))
             else
@@ -122,12 +131,16 @@ object ActorMonitor {
     traceWrap(monitor)
   }
 
-
-  private def createRegularActorMonitor(cellInfo: ActorCellInfo, isTracked: Boolean, participatesInTracing: Boolean,
-      groupMetrics: Seq[ActorGroupInstruments]): ActorMonitor = {
+  private def createRegularActorMonitor(
+    cellInfo: ActorCellInfo,
+    isTracked: Boolean,
+    participatesInTracing: Boolean,
+    groupMetrics: Seq[ActorGroupInstruments]
+  ): ActorMonitor = {
 
     if (isTracked || !groupMetrics.isEmpty) {
-      val actorMetrics: Option[PekkoMetrics.ActorInstruments] = if (!isTracked) None else {
+      val actorMetrics: Option[PekkoMetrics.ActorInstruments] = if (!isTracked) None
+      else {
         Some(PekkoMetrics.forActor(
           cellInfo.path,
           cellInfo.systemName,
@@ -158,19 +171,24 @@ object ActorMonitor {
     new TrackedRoutee(routerMetrics, groupMetrics, cellInfo)
   }
 
-  private def resolveAutoGroupingPath(actorClass: Class[_], ref: ActorRef, parent: ActorRef, systemName: String): String = {
+  private def resolveAutoGroupingPath(
+    actorClass: Class[_],
+    ref: ActorRef,
+    parent: ActorRef,
+    systemName: String
+  ): String = {
     val name = ref.path.name
     val elementCount = ref.path.elements.size
 
-    val parentPath = if(parent.isInstanceOf[HasGroupPath]) parent.asInstanceOf[HasGroupPath].groupPath else ""
+    val parentPath = if (parent.isInstanceOf[HasGroupPath]) parent.asInstanceOf[HasGroupPath].groupPath else ""
     val refGroupName = {
-      if(elementCount == 1)
-        if(name == "/") "" else systemName + "/" + name
+      if (elementCount == 1)
+        if (name == "/") "" else systemName + "/" + name
       else
         ActorCellInfo.simpleClassName(actorClass)
     }
 
-    val refGroupPath = if(parentPath.isEmpty) refGroupName else parentPath + "/" + refGroupName
+    val refGroupPath = if (parentPath.isEmpty) refGroupName else parentPath + "/" + refGroupName
     ref.asInstanceOf[HasGroupPath].setGroupPath(refGroupPath)
     refGroupPath
   }
@@ -191,20 +209,33 @@ object ActorMonitor {
 
     override def onMessageProcessingStart(context: Context, envelopeTimestamp: Long, envelope: Envelope): Any = {
       val incomingContext = context
-      if(incomingContext.get(Span.Key).isEmpty && !startsTrace) {
+      if (incomingContext.get(Span.Key).isEmpty && !startsTrace) {
         // We will not generate a Span unless message processing is happening inside of a trace.
         new SpanAndMonitorState(null, monitor.onMessageProcessingStart(context, envelopeTimestamp, envelope))
 
       } else {
         val messageSpan = buildSpan(cellInfo, context, envelopeTimestamp, envelope).start()
         val contextWithMessageSpan = incomingContext.withEntry(Span.Key, messageSpan)
-        new SpanAndMonitorState(messageSpan, monitor.onMessageProcessingStart(contextWithMessageSpan, envelopeTimestamp, envelope))
+        new SpanAndMonitorState(
+          messageSpan,
+          monitor.onMessageProcessingStart(contextWithMessageSpan, envelopeTimestamp, envelope)
+        )
       }
     }
 
-    override def onMessageProcessingEnd(context: Context, envelopeTimestamp: Long, processingStartTimestamp: Long, stateFromStart: Any): Unit = {
+    override def onMessageProcessingEnd(
+      context: Context,
+      envelopeTimestamp: Long,
+      processingStartTimestamp: Long,
+      stateFromStart: Any
+    ): Unit = {
       val spanAndMonitor = stateFromStart.asInstanceOf[SpanAndMonitorState]
-      monitor.onMessageProcessingEnd(context, envelopeTimestamp, processingStartTimestamp, spanAndMonitor.wrappedMonitorState)
+      monitor.onMessageProcessingEnd(
+        context,
+        envelopeTimestamp,
+        processingStartTimestamp,
+        spanAndMonitor.wrappedMonitorState
+      )
       if (spanAndMonitor.span != null)
         spanAndMonitor.span.asInstanceOf[Span].finish()
     }
@@ -225,7 +256,12 @@ object ActorMonitor {
       ActorCellInfo.simpleClassName(envelope.message.getClass)
     }
 
-    private def buildSpan(cellInfo: ActorCellInfo, context: Context, envelopeTimestamp: Long, envelope: Envelope): Span.Delayed = {
+    private def buildSpan(
+      cellInfo: ActorCellInfo,
+      context: Context,
+      envelopeTimestamp: Long,
+      envelope: Envelope
+    ): Span.Delayed = {
       val messageClass = extractMessageClass(envelope)
       val parentSpan = context.get(Span.Key)
 
@@ -242,7 +278,7 @@ object ActorMonitor {
     }
 
     private def operationName(messageClass: String, sender: ActorRef): String = {
-      val operationType = if(PekkoPrivateAccess.isPromiseActorRef(sender)) "ask" else "tell"
+      val operationType = if (PekkoPrivateAccess.isPromiseActorRef(sender)) "ask" else "tell"
 
       StringBuilder.newBuilder
         .append(operationType)
@@ -258,28 +294,34 @@ object ActorMonitor {
   /**
     * Basic implementation that only provides Context propagation across Actors.
     */
-  class ContextPropagationOnly(cellInfo: ActorCellInfo, participatesInTracing: Boolean, trackActiveActors: Boolean) extends ActorMonitor {
+  class ContextPropagationOnly(cellInfo: ActorCellInfo, participatesInTracing: Boolean, trackActiveActors: Boolean)
+      extends ActorMonitor {
     private val _systemMetrics = PekkoMetrics.forSystem(cellInfo.systemName)
 
-    if(trackActiveActors && !cellInfo.isTemporary) {
+    if (trackActiveActors && !cellInfo.isTemporary) {
       _systemMetrics.activeActors.increment()
     }
 
     override def captureEnvelopeTimestamp(): Long =
-      if(participatesInTracing) Kamon.clock().nanos() else 0L
+      if (participatesInTracing) Kamon.clock().nanos() else 0L
 
     override def captureEnvelopeContext(): Context =
       Kamon.currentContext()
 
     override def captureProcessingStartTimestamp(): Long =
-      if(participatesInTracing) Kamon.clock().nanos() else 0L
+      if (participatesInTracing) Kamon.clock().nanos() else 0L
 
     override def onMessageProcessingStart(context: Context, envelopeTimestamp: Long, envelope: Envelope): Any = {
       _systemMetrics.processedMessagesByNonTracked.increment()
       Kamon.storeContext(context)
     }
 
-    override def onMessageProcessingEnd(context: Context, envelopeTimestamp: Long, processingStartTimestamp: Long, stateFromStart: Any): Unit =
+    override def onMessageProcessingEnd(
+      context: Context,
+      envelopeTimestamp: Long,
+      processingStartTimestamp: Long,
+      stateFromStart: Any
+    ): Unit =
       stateFromStart.asInstanceOf[Scope].close()
 
     override def onFailure(failure: Throwable): Unit = {}
@@ -289,7 +331,7 @@ object ActorMonitor {
     override def onTerminationStart(): Unit = {}
 
     def cleanup(): Unit = {
-      if(trackActiveActors && !cellInfo.isTemporary)
+      if (trackActiveActors && !cellInfo.isTemporary)
         _systemMetrics.activeActors.decrement()
     }
   }
@@ -297,8 +339,11 @@ object ActorMonitor {
   /**
     * ActorMonitor that tracks Actor and/or Group metrics and performs Context propagation.
     */
-  class TrackedActor(actorMetrics: Option[ActorInstruments], groupMetrics: Seq[ActorGroupInstruments], cellInfo: ActorCellInfo)
-    extends GroupMetricsTrackingActor(groupMetrics, cellInfo) {
+  class TrackedActor(
+    actorMetrics: Option[ActorInstruments],
+    groupMetrics: Seq[ActorGroupInstruments],
+    cellInfo: ActorCellInfo
+  ) extends GroupMetricsTrackingActor(groupMetrics, cellInfo) {
 
     private val _processedMessagesCounter = PekkoMetrics.forSystem(cellInfo.systemName).processedMessagesByTracked
 
@@ -315,8 +360,14 @@ object ActorMonitor {
       Kamon.storeContext(context)
     }
 
-    override def onMessageProcessingEnd(context: Context, envelopeTimestamp: Long, processingStartTimestamp: Long, stateFromStart: Any): Unit = {
-      try stateFromStart.asInstanceOf[Scope].close() finally {
+    override def onMessageProcessingEnd(
+      context: Context,
+      envelopeTimestamp: Long,
+      processingStartTimestamp: Long,
+      stateFromStart: Any
+    ): Unit = {
+      try stateFromStart.asInstanceOf[Scope].close()
+      finally {
         val timestampAfterProcessing = clock.nanos()
         val timeInMailbox = processingStartTimestamp - envelopeTimestamp
         val processingTime = timestampAfterProcessing - processingStartTimestamp
@@ -344,8 +395,11 @@ object ActorMonitor {
   /**
     * ActorMonitor that tracks the activity of a Routee and possibly Actor Group metrics.
     */
-  class TrackedRoutee(routerMetrics: RouterInstruments, groupMetrics: Seq[ActorGroupInstruments], cellInfo: ActorCellInfo)
-    extends GroupMetricsTrackingActor(groupMetrics, cellInfo) {
+  class TrackedRoutee(
+    routerMetrics: RouterInstruments,
+    groupMetrics: Seq[ActorGroupInstruments],
+    cellInfo: ActorCellInfo
+  ) extends GroupMetricsTrackingActor(groupMetrics, cellInfo) {
 
     routerMetrics.members.increment()
     private val processedMessagesCounter = PekkoMetrics.forSystem(cellInfo.systemName).processedMessagesByTracked
@@ -360,8 +414,14 @@ object ActorMonitor {
       Kamon.storeContext(context)
     }
 
-    override def onMessageProcessingEnd(context: Context, envelopeTimestamp: Long, processingStartTimestamp: Long, stateFromStart: Any): Unit = {
-      try stateFromStart.asInstanceOf[Scope].close() finally {
+    override def onMessageProcessingEnd(
+      context: Context,
+      envelopeTimestamp: Long,
+      processingStartTimestamp: Long,
+      stateFromStart: Any
+    ): Unit = {
+      try stateFromStart.asInstanceOf[Scope].close()
+      finally {
         val timestampAfterProcessing = Kamon.clock().nanos()
         val timeInMailbox = processingStartTimestamp - envelopeTimestamp
         val processingTime = timestampAfterProcessing - processingStartTimestamp
@@ -392,7 +452,8 @@ object ActorMonitor {
   /**
     * Base actor tracking class that brings support for Actor Group metrics.
     */
-  abstract class GroupMetricsTrackingActor(groupMetrics: Seq[ActorGroupInstruments], cellInfo: ActorCellInfo) extends ActorMonitor {
+  abstract class GroupMetricsTrackingActor(groupMetrics: Seq[ActorGroupInstruments], cellInfo: ActorCellInfo)
+      extends ActorMonitor {
     @volatile private var _isAlive = true
     private val _shouldTrackActiveActors = !cellInfo.isTemporary
     protected val clock = Kamon.clock()
@@ -412,7 +473,7 @@ object ActorMonitor {
       clock.nanos()
 
     override def captureEnvelopeContext(): Context = {
-      if(_isAlive && !cellInfo.isTemporary) {
+      if (_isAlive && !cellInfo.isTemporary) {
         groupMetrics.foreach { gm =>
           gm.pendingMessages.increment()
         }

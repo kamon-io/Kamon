@@ -92,12 +92,14 @@ class SpanConverterSpec extends AnyWordSpec with Matchers with Utils {
 
   "constructing a valid SpanContext" should {
     "work with an 8 byte traceid" in {
-      val spanContext = SpanConverter.mkSpanContext(true, Factory.EightBytesIdentifier.generate(), spanIDFactory.generate())
+      val spanContext =
+        SpanConverter.mkSpanContext(true, Factory.EightBytesIdentifier.generate(), spanIDFactory.generate())
       SpanId.isValid(spanContext.getSpanId) shouldEqual true
       TraceId.isValid(spanContext.getTraceId) shouldEqual true
     }
     "work with a 16 byte traceid" in {
-      val spanContext = SpanConverter.mkSpanContext(true, Factory.SixteenBytesIdentifier.generate(), spanIDFactory.generate())
+      val spanContext =
+        SpanConverter.mkSpanContext(true, Factory.SixteenBytesIdentifier.generate(), spanIDFactory.generate())
       SpanId.isValid(spanContext.getSpanId) shouldEqual true
       TraceId.isValid(spanContext.getTraceId) shouldEqual true
     }
@@ -105,7 +107,10 @@ class SpanConverterSpec extends AnyWordSpec with Matchers with Utils {
 
   "should convert an Instant into nanos since EPOC" in {
     val now = System.currentTimeMillis()
-    SpanConverter.toEpocNano(Instant.ofEpochMilli(now)) shouldBe TimeUnit.NANOSECONDS.convert(now, TimeUnit.MILLISECONDS)
+    SpanConverter.toEpocNano(Instant.ofEpochMilli(now)) shouldBe TimeUnit.NANOSECONDS.convert(
+      now,
+      TimeUnit.MILLISECONDS
+    )
     SpanConverter.toEpocNano(Instant.ofEpochMilli(100)) shouldBe 100 * 1000000
   }
 
@@ -139,16 +144,28 @@ class SpanConverterSpec extends AnyWordSpec with Matchers with Utils {
     "result in a valid ResourceSpans" in {
       val kamonSpan = finishedSpan(TagSet.of(Span.TagKeys.Component, "some-instrumentation-library"))
       val resourceSpans = SpanConverter.convert(false, resource, kamonVersion)(Seq(kamonSpan)).asScala
-      //there should be a single span reported
+      // there should be a single span reported
       resourceSpans.size shouldEqual 1
-      //assert resource labels
-      resourceSpans.head.getResource.getAttributes.asMap().asScala should contain(AttributeKey.stringKey("service.name"), "TestService")
-      resourceSpans.head.getResource.getAttributes.asMap().asScala should contain(AttributeKey.stringKey("telemetry.sdk.name"), "kamon")
-      resourceSpans.head.getResource.getAttributes.asMap().asScala should contain(AttributeKey.stringKey("telemetry.sdk.language"), "scala")
-      resourceSpans.head.getResource.getAttributes.asMap().asScala should contain(AttributeKey.stringKey("telemetry.sdk.version"), "0.0.0")
+      // assert resource labels
+      resourceSpans.head.getResource.getAttributes.asMap().asScala should contain(
+        AttributeKey.stringKey("service.name"),
+        "TestService"
+      )
+      resourceSpans.head.getResource.getAttributes.asMap().asScala should contain(
+        AttributeKey.stringKey("telemetry.sdk.name"),
+        "kamon"
+      )
+      resourceSpans.head.getResource.getAttributes.asMap().asScala should contain(
+        AttributeKey.stringKey("telemetry.sdk.language"),
+        "scala"
+      )
+      resourceSpans.head.getResource.getAttributes.asMap().asScala should contain(
+        AttributeKey.stringKey("telemetry.sdk.version"),
+        "0.0.0"
+      )
 
       val scopeInfo = resourceSpans.head.getInstrumentationScopeInfo
-      //assert instrumentation labels
+      // assert instrumentation labels
       scopeInfo.getName should be("some-instrumentation-library")
       scopeInfo.getVersion should be("0.0.0")
       scopeInfo.getSchemaUrl should be(null)
@@ -157,7 +174,7 @@ class SpanConverterSpec extends AnyWordSpec with Matchers with Utils {
       instInfo.getName should be("some-instrumentation-library")
       instInfo.getVersion should be("0.0.0")
 
-      //assert span contents
+      // assert span contents
       compareSpans(kamonSpan, resourceSpans.head)
     }
   }
@@ -168,9 +185,9 @@ class SpanConverterSpec extends AnyWordSpec with Matchers with Utils {
 
     val keyValues = actual.getAttributes
     expected.tags.all().foreach {
-      case t: Tag.String => keyValues.asMap().asScala should contain(AttributeKey.stringKey(t.key) -> t.value)
+      case t: Tag.String  => keyValues.asMap().asScala should contain(AttributeKey.stringKey(t.key) -> t.value)
       case t: Tag.Boolean => keyValues.asMap().asScala should contain(AttributeKey.booleanKey(t.key) -> t.value)
-      case t: Tag.Long => keyValues.asMap().asScala should contain(AttributeKey.longKey(t.key) -> t.value)
+      case t: Tag.Long    => keyValues.asMap().asScala should contain(AttributeKey.longKey(t.key) -> t.value)
     }
   }
 }

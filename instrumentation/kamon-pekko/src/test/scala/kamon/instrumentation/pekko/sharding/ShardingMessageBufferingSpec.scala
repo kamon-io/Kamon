@@ -18,8 +18,10 @@ class ShardingMessageBufferingSpec extends TestKitBase with AnyWordSpecLike with
     with MetricInspection.Syntax with InitAndStopKamonAfterAll {
 
   implicit lazy val system: ActorSystem = {
-    ActorSystem("cluster-sharding-spec-system", ConfigFactory.parseString(
-      """
+    ActorSystem(
+      "cluster-sharding-spec-system",
+      ConfigFactory.parseString(
+        """
         |pekko {
         |  loglevel = INFO
         |  loggers = [ "org.apache.pekko.event.slf4j.Slf4jLogger" ]
@@ -35,11 +37,15 @@ class ShardingMessageBufferingSpec extends TestKitBase with AnyWordSpecLike with
         |    }
         |  }
         |}
-      """.stripMargin))
+      """.stripMargin
+      )
+    )
   }
 
-  val remoteSystem: ActorSystem = ActorSystem("cluster-sharding-spec-remote-system", ConfigFactory.parseString(
-    """
+  val remoteSystem: ActorSystem = ActorSystem(
+    "cluster-sharding-spec-remote-system",
+    ConfigFactory.parseString(
+      """
       |pekko {
       |  loglevel = INFO
       |  loggers = [ "org.apache.pekko.event.slf4j.Slf4jLogger" ]
@@ -55,18 +61,21 @@ class ShardingMessageBufferingSpec extends TestKitBase with AnyWordSpecLike with
       |    }
       |  }
       |}
-    """.stripMargin))
+    """.stripMargin
+    )
+  )
 
   def contextWithBroadcast(name: String): Context =
     Context.Empty.withTag(
-      ContextEchoActor.EchoTag, name
+      ContextEchoActor.EchoTag,
+      name
     )
 
   val extractEntityId: ShardRegion.ExtractEntityId = {
-    case entityId:String => (entityId, "reply-trace-token")
+    case entityId: String => (entityId, "reply-trace-token")
   }
   val extractShardId: ShardRegion.ExtractShardId = {
-    case entityId:String => (entityId.toInt % 10).toString
+    case entityId: String => (entityId.toInt % 10).toString
   }
 
   "The MessageBuffer instrumentation" should {
@@ -79,7 +88,8 @@ class ShardingMessageBufferingSpec extends TestKitBase with AnyWordSpecLike with
         entityProps = ContextEchoActor.props(None),
         settings = ClusterShardingSettings(system),
         extractEntityId = extractEntityId,
-        extractShardId = extractShardId)
+        extractShardId = extractShardId
+      )
 
       Kamon.runWithContext(contextWithBroadcast("cluster-sharding-actor-123")) {
         replierRegion ! "123"

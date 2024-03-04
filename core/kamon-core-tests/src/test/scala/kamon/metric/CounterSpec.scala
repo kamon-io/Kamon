@@ -24,7 +24,8 @@ import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import kamon.metric.Counter.delta
 
-class CounterSpec extends AnyWordSpec with Matchers with InstrumentInspection.Syntax with Eventually with InitAndStopKamonAfterAll {
+class CounterSpec extends AnyWordSpec with Matchers with InstrumentInspection.Syntax with Eventually
+    with InitAndStopKamonAfterAll {
 
   "a Counter" should {
     "allow unit and bundled increments" in {
@@ -88,7 +89,8 @@ class CounterSpec extends AnyWordSpec with Matchers with InstrumentInspection.Sy
     var last = numbers.head
 
     override def get(): Long = synchronized {
-      if(remaining.isEmpty) last else {
+      if (remaining.isEmpty) last
+      else {
         val head = remaining.head
         remaining = remaining.tail
         last = head

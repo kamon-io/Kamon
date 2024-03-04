@@ -17,24 +17,28 @@ class IOFiberInstrumentation extends InstrumentationBuilder {
     .advise(method("resume"), RestoreContextOnSuccessfulResume)
     .advise(method("run"), RunLoopWithContext)
 
-
   // We must save the context on calls to `schedule*`/`reschedule*` because the Fiber
   // might start executing on another thread before the call to `run` on the current
   // thread terminates.
   onTypes("cats.effect.IOFiber")
-    .advise(anyMethods(
-      "rescheduleFiber",
-      "scheduleFiber",
-      "scheduleOnForeignEC",
-    ), SetContextOnNewFiber)
+    .advise(
+      anyMethods(
+        "rescheduleFiber",
+        "scheduleFiber",
+        "scheduleOnForeignEC"
+      ),
+      SetContextOnNewFiber
+    )
 
   onTypes("cats.effect.unsafe.WorkStealingThreadPool")
-    .advise(anyMethods(
-      "scheduleFiber",
-      "rescheduleFiber",
-      "scheduleExternal"
-    ), SetContextOnNewFiberForWSTP)
-
+    .advise(
+      anyMethods(
+        "scheduleFiber",
+        "rescheduleFiber",
+        "scheduleExternal"
+      ),
+      SetContextOnNewFiberForWSTP
+    )
 
   // Scheduled actions like `IO.sleep` end up calling `resume` from the scheduler thread,
   // which always leaves a dirty thread. This wrapper ensures that scheduled actions are
@@ -48,7 +52,7 @@ class AfterFiberInit
 object AfterFiberInit {
 
   @Advice.OnMethodExit
-  @static def exit(@Advice.This fiber: Any): Unit ={
+  @static def exit(@Advice.This fiber: Any): Unit = {
     fiber.asInstanceOf[HasContext].setContext(Kamon.currentContext())
   }
 }
@@ -76,7 +80,7 @@ object RestoreContextOnSuccessfulResume {
 
   @Advice.OnMethodExit()
   @static def exit(@Advice.This fiber: Any, @Advice.Return wasSuspended: Boolean): Unit = {
-    if(wasSuspended) {
+    if (wasSuspended) {
       val ctxFiber = fiber.asInstanceOf[HasContext].context
       Kamon.storeContext(ctxFiber)
     }

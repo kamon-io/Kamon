@@ -18,7 +18,13 @@ package kamon.instrumentation.aws.sdk
 
 import kamon.Kamon
 import kamon.trace.Span
-import software.amazon.awssdk.core.interceptor.{Context, ExecutionAttribute, ExecutionAttributes, ExecutionInterceptor, SdkExecutionAttribute}
+import software.amazon.awssdk.core.interceptor.{
+  Context,
+  ExecutionAttribute,
+  ExecutionAttributes,
+  ExecutionInterceptor,
+  SdkExecutionAttribute
+}
 
 /**
   * Execution Interceptor for the AWS Java SDK Version 2.x
@@ -31,7 +37,7 @@ class AwsSdkClientExecutionInterceptor extends ExecutionInterceptor {
   import AwsSdkClientExecutionInterceptor.ClientSpanAttribute
 
   override def afterMarshalling(context: Context.AfterMarshalling, executionAttributes: ExecutionAttributes): Unit = {
-    if(Kamon.enabled()) {
+    if (Kamon.enabled()) {
       val operationName = executionAttributes.getAttribute(SdkExecutionAttribute.OPERATION_NAME)
       val serviceName = executionAttributes.getAttribute(SdkExecutionAttribute.SERVICE_NAME)
       val clientType = executionAttributes.getAttribute(SdkExecutionAttribute.CLIENT_TYPE)
@@ -45,16 +51,16 @@ class AwsSdkClientExecutionInterceptor extends ExecutionInterceptor {
   }
 
   override def afterExecution(context: Context.AfterExecution, executionAttributes: ExecutionAttributes): Unit = {
-    if(Kamon.enabled()) {
+    if (Kamon.enabled()) {
       val kamonSpan = executionAttributes.getAttribute(ClientSpanAttribute)
-      if(kamonSpan != null) {
+      if (kamonSpan != null) {
         kamonSpan.finish()
       }
     }
   }
 
   override def onExecutionFailure(context: Context.FailedExecution, executionAttributes: ExecutionAttributes): Unit = {
-    if(Kamon.enabled()) {
+    if (Kamon.enabled()) {
       val kamonSpan = executionAttributes.getAttribute(ClientSpanAttribute)
       if (kamonSpan != null) {
         kamonSpan.fail(context.exception()).finish()

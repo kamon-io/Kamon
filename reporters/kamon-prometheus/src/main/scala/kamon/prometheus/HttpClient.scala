@@ -52,12 +52,14 @@ class HttpClient(val apiUrl: String, connectTimeout: Duration, readTimeout: Dura
         if (response.isSuccessful) {
           Success(responseBody)
         } else {
-          Failure(new Exception(s"Failed to $method metrics to Prometheus Pushgateway with status code [${response.code()}], "
-            + s"Body: [$responseBody]"))
+          Failure(
+            new Exception(s"Failed to $method metrics to Prometheus Pushgateway with status code [${response.code()}], "
+              + s"Body: [$responseBody]")
+          )
         }
       case Failure(f) if f.getCause != null =>
         Failure(f.getCause)
-      case f@Failure(_) =>
+      case f @ Failure(_) =>
         f.asInstanceOf[Try[String]]
     }
   }

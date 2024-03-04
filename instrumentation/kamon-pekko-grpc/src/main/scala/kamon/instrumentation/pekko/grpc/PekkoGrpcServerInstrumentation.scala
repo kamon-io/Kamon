@@ -38,7 +38,6 @@ class PekkoGrpcServerInstrumentation extends InstrumentationBuilder {
   onType("org.apache.pekko.grpc.internal.TelemetrySpi")
     .advise(method("onRequest"), classOf[PekkoGRPCServerRequestHandler])
 
-
   onType("org.apache.pekko.grpc.scaladsl.GrpcMarshalling")
     .advise(method("unmarshal"), classOf[PekkoGRPCUnmarshallingContextPropagation])
 }

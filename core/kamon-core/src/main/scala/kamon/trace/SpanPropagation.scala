@@ -28,7 +28,6 @@ import java.lang.{Long => JLong}
 
 import scala.util.Try
 
-
 /**
   * Propagation mechanisms for Kamon's Span data to and from HTTP and Binary mediums.
   */
@@ -70,47 +69,48 @@ object SpanPropagation {
     }
   }
 
-object W3CTraceContext {
-  val Version: String = "00"
-  val TraceStateKey: Context.Key[String] = Context.key("tracestate", "")
+  object W3CTraceContext {
+    val Version: String = "00"
+    val TraceStateKey: Context.Key[String] = Context.key("tracestate", "")
 
-  object Headers {
-    val TraceParent = "traceparent"
-    val TraceState = "tracestate"
-  }
-
-  def apply(): W3CTraceContext =
-    new W3CTraceContext()
-
-  def decodeTraceParent(traceParent: String): Option[Span] = {
-    val identityProvider = Identifier.Scheme.Double
-
-    def unpackSamplingDecision(decision: String): SamplingDecision =
-      if ("01" == decision) SamplingDecision.Sample else SamplingDecision.Unknown
-
-    val traceParentComponents = traceParent.split("-")
-
-    if (traceParentComponents.length != 4) None else {
-      val spanID = identityProvider.spanIdFactory.from(traceParentComponents(2))
-      val traceID = identityProvider.traceIdFactory.from(traceParentComponents(1))
-      val parentSpanID = Identifier.Empty
-      val samplingDecision = unpackSamplingDecision(traceParentComponents(3))
-
-      Some(Span.Remote(spanID, parentSpanID, Trace(traceID, samplingDecision)))
-    }
-  }
-
-  def encodeTraceParent(parent: Span): String = {
-    def idToHex(identifier: Identifier, length: Int): String = {
-      val leftPad = (string: String) => "0" * (length - string.length) + string
-      leftPad(identifier.bytes.map("%02x" format _).mkString)
+    object Headers {
+      val TraceParent = "traceparent"
+      val TraceState = "tracestate"
     }
 
-    val samplingDecision = if (parent.trace.samplingDecision == SamplingDecision.Sample) "01" else "00"
+    def apply(): W3CTraceContext =
+      new W3CTraceContext()
 
-    s"$Version-${idToHex(parent.trace.id, 32)}-${idToHex(parent.id, 16)}-${samplingDecision}"
+    def decodeTraceParent(traceParent: String): Option[Span] = {
+      val identityProvider = Identifier.Scheme.Double
+
+      def unpackSamplingDecision(decision: String): SamplingDecision =
+        if ("01" == decision) SamplingDecision.Sample else SamplingDecision.Unknown
+
+      val traceParentComponents = traceParent.split("-")
+
+      if (traceParentComponents.length != 4) None
+      else {
+        val spanID = identityProvider.spanIdFactory.from(traceParentComponents(2))
+        val traceID = identityProvider.traceIdFactory.from(traceParentComponents(1))
+        val parentSpanID = Identifier.Empty
+        val samplingDecision = unpackSamplingDecision(traceParentComponents(3))
+
+        Some(Span.Remote(spanID, parentSpanID, Trace(traceID, samplingDecision)))
+      }
+    }
+
+    def encodeTraceParent(parent: Span): String = {
+      def idToHex(identifier: Identifier, length: Int): String = {
+        val leftPad = (string: String) => "0" * (length - string.length) + string
+        leftPad(identifier.bytes.map("%02x" format _).mkString)
+      }
+
+      val samplingDecision = if (parent.trace.samplingDecision == SamplingDecision.Sample) "01" else "00"
+
+      s"$Version-${idToHex(parent.trace.id, 32)}-${idToHex(parent.id, 16)}-${samplingDecision}"
+    }
   }
-}
 
   /**
     * Reads and Writes a Span instance using the B3 propagation format. The specification and semantics of the B3
@@ -129,7 +129,7 @@ object W3CTraceContext {
         .map(id => identifierScheme.spanIdFactory.from(urlDecode(id)))
         .getOrElse(Identifier.Empty)
 
-      if(traceID != Identifier.Empty && spanID != Identifier.Empty) {
+      if (traceID != Identifier.Empty && spanID != Identifier.Empty) {
         val parentID = reader.read(Headers.ParentSpanIdentifier)
           .map(id => identifierScheme.spanIdFactory.from(urlDecode(id)))
           .getOrElse(Identifier.Empty)
@@ -142,7 +142,7 @@ object W3CTraceContext {
             reader.read(Headers.Sampled) match {
               case Some(sampled) if sampled == "1" => SamplingDecision.Sample
               case Some(sampled) if sampled == "0" => SamplingDecision.DoNotSample
-              case _ => SamplingDecision.Unknown
+              case _                               => SamplingDecision.Unknown
             }
         }
 
@@ -154,11 +154,11 @@ object W3CTraceContext {
     override def write(context: Context, writer: HttpPropagation.HeaderWriter): Unit = {
       val span = context.get(Span.Key)
 
-      if(span != Span.Empty) {
+      if (span != Span.Empty) {
         writer.write(Headers.TraceIdentifier, urlEncode(span.trace.id.string))
         writer.write(Headers.SpanIdentifier, urlEncode(span.id.string))
 
-        if(span.parentId != Identifier.Empty)
+        if (span.parentId != Identifier.Empty)
           writer.write(Headers.ParentSpanIdentifier, urlEncode(span.parentId.string))
 
         encodeSamplingDecision(span.trace.samplingDecision).foreach { samplingDecision =>
@@ -217,8 +217,8 @@ object W3CTraceContext {
 
           val sd = samplingDecision match {
             case Some(sampled) if sampled == "1" || sampled.equalsIgnoreCase("d") => SamplingDecision.Sample
-            case Some(sampled) if sampled == "0" => SamplingDecision.DoNotSample
-            case _ => SamplingDecision.Unknown
+            case Some(sampled) if sampled == "0"                                  => SamplingDecision.DoNotSample
+            case _                                                                => SamplingDecision.Unknown
           }
 
           context.withEntry(Span.Key, new Span.Remote(si, parentID, Trace(ti, sd)))
@@ -229,7 +229,7 @@ object W3CTraceContext {
     override def write(context: Context, writer: HttpPropagation.HeaderWriter): Unit = {
       val span = context.get(Span.Key)
 
-      if(span != Span.Empty) {
+      if (span != Span.Empty) {
         val buffer = new StringBuilder()
         val traceId = urlEncode(span.trace.id.string)
         val spanId = urlEncode(span.id.string)
@@ -239,13 +239,12 @@ object W3CTraceContext {
         encodeSamplingDecision(span.trace.samplingDecision)
           .foreach(samplingDecision => buffer.append("-").append(samplingDecision))
 
-        if(span.parentId != Identifier.Empty)
+        if (span.parentId != Identifier.Empty)
           buffer.append("-").append(urlEncode(span.parentId.string))
 
         writer.write(Header.B3, buffer.toString)
       }
     }
-
 
     private def encodeSamplingDecision(samplingDecision: SamplingDecision): Option[String] = samplingDecision match {
       case SamplingDecision.Sample      => Some("1")
@@ -264,8 +263,8 @@ object W3CTraceContext {
       def splitToTuple(regex: String): (Option[String], Option[String], Option[String], Option[String]) = {
         s.split(regex) match {
           case Array(str1, str2, str3, str4) => (Option(str1), Option(str2), Option(str3), Option(str4))
-          case Array(str1, str2, str3) => (Option(str1), Option(str2), Option(str3), None)
-          case Array(str1, str2) => (Option(str1), Option(str2), None, None)
+          case Array(str1, str2, str3)       => (Option(str1), Option(str2), Option(str3), None)
+          case Array(str1, str2)             => (Option(str1), Option(str2), None, None)
         }
       }
     }
@@ -273,7 +272,6 @@ object W3CTraceContext {
     def apply(): B3Single =
       new B3Single()
   }
-
 
   /**
    * Reads and Writes a Span instance using the jaeger single-header propagation format.
@@ -364,28 +362,31 @@ object W3CTraceContext {
   class Colfer extends Propagation.EntryReader[ByteStreamReader] with Propagation.EntryWriter[ByteStreamWriter] {
 
     override def read(medium: ByteStreamReader, context: Context): Context = {
-      if(medium.available() == 0)
+      if (medium.available() == 0)
         context
       else {
         val identityProvider = Kamon.identifierScheme
         val colferSpan = new ColferSpan()
         colferSpan.unmarshal(medium.readAll(), 0)
 
-        context.withEntry(Span.Key, new Span.Remote(
-          id = identityProvider.spanIdFactory.from(colferSpan.spanID),
-          parentId = identityProvider.spanIdFactory.from(colferSpan.parentID),
-          trace = Trace(
-            id = identityProvider.traceIdFactory.from(colferSpan.traceID),
-            samplingDecision = byteToSamplingDecision(colferSpan.samplingDecision)
+        context.withEntry(
+          Span.Key,
+          new Span.Remote(
+            id = identityProvider.spanIdFactory.from(colferSpan.spanID),
+            parentId = identityProvider.spanIdFactory.from(colferSpan.parentID),
+            trace = Trace(
+              id = identityProvider.traceIdFactory.from(colferSpan.traceID),
+              samplingDecision = byteToSamplingDecision(colferSpan.samplingDecision)
+            )
           )
-        ))
+        )
       }
     }
 
     override def write(context: Context, medium: ByteStreamWriter): Unit = {
       val span = context.get(Span.Key)
 
-      if(span != Span.Empty) {
+      if (span != Span.Empty) {
         val marshalBuffer = Colfer.codecBuffer.get()
         val colferSpan = new ColferSpan()
 
@@ -474,9 +475,9 @@ object W3CTraceContext {
 
         val samplingDecision =
           reader.read(Headers.SamplingPriority) match {
-            case Some(SamplingPriority.Sample) => SamplingDecision.Sample
+            case Some(SamplingPriority.Sample)      => SamplingDecision.Sample
             case Some(SamplingPriority.DoNotSample) => SamplingDecision.DoNotSample
-            case _ => SamplingDecision.Unknown
+            case _                                  => SamplingDecision.Unknown
           }
 
         context.withEntry(Span.Key, Span.Remote(spanId, parentId, Trace(traceId, samplingDecision)))
@@ -494,7 +495,7 @@ object W3CTraceContext {
             SamplingPriority.Sample
           else
             SamplingPriority.DoNotSample
-          writer.write(Headers.SamplingPriority,decision)
+          writer.write(Headers.SamplingPriority, decision)
         }
       }
     }

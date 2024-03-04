@@ -19,7 +19,6 @@ package metric
 
 import java.time.Duration
 
-
 /**
   * Exposes APIs for creating metrics, using a MetricRegistry as the underlying source of those metrics. Not all
   * possible combinations of parameters to build metrics are exposed through this interface, but it is expected to cover
@@ -47,7 +46,6 @@ trait MetricBuilding {
   def counter(name: String, description: String, settings: Metric.Settings.ForValueInstrument): Metric.Counter =
     registry.counter(name, Some(description), Some(settings.unit), Some(settings.autoUpdateInterval))
 
-
   /** Creates or retrieves a Gauge-backed metric */
   def gauge(name: String): Metric.Gauge =
     registry.gauge(name, None, None, None)
@@ -67,7 +65,6 @@ trait MetricBuilding {
   /** Creates or retrieves a Gauge-backed metric with the provided settings */
   def gauge(name: String, description: String, settings: Metric.Settings.ForValueInstrument): Metric.Gauge =
     registry.gauge(name, Some(description), Some(settings.unit), Some(settings.autoUpdateInterval))
-
 
   /** Creates or retrieves a Histogram-backed metric */
   def histogram(name: String): Metric.Histogram =
@@ -90,13 +87,27 @@ trait MetricBuilding {
     registry.histogram(name, None, Some(unit), Some(dynamicRange), None)
 
   /** Creates or retrieves a Histogram-backed metric with the provided unit and dynamic range */
-  def histogram(name: String, description: String, unit: MeasurementUnit, dynamicRange: DynamicRange): Metric.Histogram =
+  def histogram(
+    name: String,
+    description: String,
+    unit: MeasurementUnit,
+    dynamicRange: DynamicRange
+  ): Metric.Histogram =
     registry.histogram(name, Some(description), Some(unit), Some(dynamicRange), None)
 
   /** Creates or retrieves a Histogram-backed metric with the provided settings */
-  def histogram(name: String, description: String, settings: Metric.Settings.ForDistributionInstrument): Metric.Histogram =
-    registry.histogram(name, Some(description), Some(settings.unit), Some(settings.dynamicRange), Some(settings.autoUpdateInterval))
-
+  def histogram(
+    name: String,
+    description: String,
+    settings: Metric.Settings.ForDistributionInstrument
+  ): Metric.Histogram =
+    registry.histogram(
+      name,
+      Some(description),
+      Some(settings.unit),
+      Some(settings.dynamicRange),
+      Some(settings.autoUpdateInterval)
+    )
 
   /** Creates or retrieves a Timer-backed metric */
   def timer(name: String): Metric.Timer =
@@ -113,7 +124,6 @@ trait MetricBuilding {
   /** Creates or retrieves a Timer-backed metric with the provided unit and dynamic range */
   def timer(name: String, description: String, dynamicRange: DynamicRange): Metric.Timer =
     registry.timer(name, Some(description), Some(dynamicRange), None)
-
 
   /** Creates or retrieves a RangeSampler-backed metric */
   def rangeSampler(name: String): Metric.RangeSampler =
@@ -136,7 +146,12 @@ trait MetricBuilding {
     registry.rangeSampler(name, Some(description), Some(unit), None, None)
 
   /** Creates or retrieves a RangeSampler-backed metric with the provided unit and auto-update interval */
-  def rangeSampler(name: String, description: String, unit: MeasurementUnit, autoUpdateInterval: Duration): Metric.RangeSampler =
+  def rangeSampler(
+    name: String,
+    description: String,
+    unit: MeasurementUnit,
+    autoUpdateInterval: Duration
+  ): Metric.RangeSampler =
     registry.rangeSampler(name, Some(description), Some(unit), None, Some(autoUpdateInterval))
 
   /** Creates or retrieves a RangeSampler-backed metric with the provided unit and dynamic range */
@@ -144,12 +159,27 @@ trait MetricBuilding {
     registry.rangeSampler(name, None, Some(unit), Some(dynamicRange), None)
 
   /** Creates or retrieves a RangeSampler-backed metric with the provided unit and dynamic range */
-  def rangeSampler(name: String, description: String, unit: MeasurementUnit, dynamicRange: DynamicRange): Metric.RangeSampler =
+  def rangeSampler(
+    name: String,
+    description: String,
+    unit: MeasurementUnit,
+    dynamicRange: DynamicRange
+  ): Metric.RangeSampler =
     registry.rangeSampler(name, Some(description), Some(unit), Some(dynamicRange), None)
 
   /** Creates or retrieves a RangeSampler-backed metric with the provided settings */
-  def rangeSampler(name: String, description: String, settings: Metric.Settings.ForDistributionInstrument): Metric.RangeSampler =
-    registry.rangeSampler(name, Some(description), Some(settings.unit), Some(settings.dynamicRange), Some(settings.autoUpdateInterval))
+  def rangeSampler(
+    name: String,
+    description: String,
+    settings: Metric.Settings.ForDistributionInstrument
+  ): Metric.RangeSampler =
+    registry.rangeSampler(
+      name,
+      Some(description),
+      Some(settings.unit),
+      Some(settings.dynamicRange),
+      Some(settings.autoUpdateInterval)
+    )
 
   /**
     * Registry from which metrics are retrieved.

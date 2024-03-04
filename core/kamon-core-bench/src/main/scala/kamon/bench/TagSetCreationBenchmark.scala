@@ -34,11 +34,11 @@ class TagSetCreationBenchmark {
   def createTagSetFromIndividualKeys(): TagSet = {
     var tags = TagSet.Empty
     tags = tags.withTag("http.method", "POST")
-    if(tagCount > 1) tags = tags.withTag("http.url", "http://localhost:8080/test")
-    if(tagCount > 2) tags = tags.withTag("http.status_code", 200L)
-    if(tagCount > 3) tags = tags.withTag("error", false)
-    if(tagCount > 4) tags = tags.withTag("userID", "abcdef")
-    if(tagCount > 5) tags = tags.withTag("correlationID", "0123456")
+    if (tagCount > 1) tags = tags.withTag("http.url", "http://localhost:8080/test")
+    if (tagCount > 2) tags = tags.withTag("http.status_code", 200L)
+    if (tagCount > 3) tags = tags.withTag("error", false)
+    if (tagCount > 4) tags = tags.withTag("userID", "abcdef")
+    if (tagCount > 5) tags = tags.withTag("correlationID", "0123456")
 
     tags
   }
@@ -47,11 +47,11 @@ class TagSetCreationBenchmark {
   def createTagSetFromBuilder(): TagSet = {
     val tags = TagSet.builder()
     tags.add("http.method", "POST")
-    if(tagCount > 1) tags.add("http.url", "http://localhost:8080/test")
-    if(tagCount > 2) tags.add("http.status_code", 200L)
-    if(tagCount > 3) tags.add("error", false)
-    if(tagCount > 4) tags.add("userID", "abcdef")
-    if(tagCount > 5) tags.add("correlationID", "0123456")
+    if (tagCount > 1) tags.add("http.url", "http://localhost:8080/test")
+    if (tagCount > 2) tags.add("http.status_code", 200L)
+    if (tagCount > 3) tags.add("error", false)
+    if (tagCount > 4) tags.add("userID", "abcdef")
+    if (tagCount > 5) tags.add("correlationID", "0123456")
 
     tags.build()
   }

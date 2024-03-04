@@ -29,9 +29,9 @@ import org.http4s.{HttpRoutes, Request, Response}
 object KamonSupport {
 
   def apply[F[_]: Sync](
-      service: HttpRoutes[F],
-      interface: String,
-      port: Int
+    service: HttpRoutes[F],
+    interface: String,
+    port: Int
   ): HttpRoutes[F] = {
     val httpServerConfig =
       Kamon.config().getConfig("kamon.instrumentation.http4s.server")
@@ -46,8 +46,8 @@ object KamonSupport {
   }
 
   private def kamonService[F[_]](
-      service: HttpRoutes[F],
-      instrumentation: HttpServerInstrumentation
+    service: HttpRoutes[F],
+    instrumentation: HttpServerInstrumentation
   )(request: Request[F])(implicit F: Sync[F]): OptionT[F, Response[F]] =
     OptionT {
       getHandler(instrumentation)(request).use { handler =>
@@ -63,21 +63,21 @@ object KamonSupport {
     }
 
   private def processRequest[F[_]](
-      requestHandler: RequestHandler
+    requestHandler: RequestHandler
   )(implicit F: Sync[F]): Resource[F, RequestHandler] =
     Resource.make(F.delay(requestHandler.requestReceived()))(h =>
       F.delay(h.responseSent())
     )
 
   private def withContext[F[_]](
-      requestHandler: RequestHandler
+    requestHandler: RequestHandler
   )(implicit F: Sync[F]): Resource[F, Storage.Scope] =
     Resource.make(F.delay(Kamon.storeContext(requestHandler.context)))(scope =>
       F.delay(scope.close())
     )
 
   private def getHandler[F[_]](
-      instrumentation: HttpServerInstrumentation
+    instrumentation: HttpServerInstrumentation
   )(request: Request[F])(implicit F: Sync[F]): Resource[F, RequestHandler] =
     for {
       handler <- Resource.eval(
@@ -88,9 +88,9 @@ object KamonSupport {
     } yield handler
 
   private def kamonServiceHandler[F[_]](
-      requestHandler: RequestHandler,
-      e: Either[Throwable, Option[Response[F]]],
-      settings: HttpServerInstrumentation.Settings
+    requestHandler: RequestHandler,
+    e: Either[Throwable, Option[Response[F]]],
+    settings: HttpServerInstrumentation.Settings
   )(implicit F: Sync[F]): F[Option[Response[F]]] =
     e match {
       case Left(e) =>

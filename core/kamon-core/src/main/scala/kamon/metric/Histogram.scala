@@ -23,7 +23,6 @@ import kamon.tag.TagSet
 import org.HdrHistogram.{BaseAtomicHdrHistogram, BaseLocalHdrHistogram, HdrHistogramInternalState, ZigZag}
 import org.slf4j.LoggerFactory
 
-
 /**
   * Instrument that tracks the distribution of values within a configured range and precision.
   */
@@ -45,7 +44,6 @@ trait Histogram extends Instrument[Histogram, Metric.Settings.ForDistributionIns
 
 }
 
-
 object Histogram {
 
   private val _logger = LoggerFactory.getLogger(classOf[Histogram])
@@ -54,8 +52,11 @@ object Histogram {
     * Histogram implementation with thread safety guarantees. Instances of this class can be safely shared across
     * threads and updated concurrently.
     */
-  class Atomic(val metric: BaseMetric[Histogram, Metric.Settings.ForDistributionInstrument, Distribution],
-      val tags: TagSet, val dynamicRange: DynamicRange) extends BaseAtomicHdrHistogram(dynamicRange) with Histogram
+  class Atomic(
+    val metric: BaseMetric[Histogram, Metric.Settings.ForDistributionInstrument, Distribution],
+    val tags: TagSet,
+    val dynamicRange: DynamicRange
+  ) extends BaseAtomicHdrHistogram(dynamicRange) with Histogram
       with DistributionSnapshotBuilder
       with BaseMetricAutoUpdate[Histogram, Metric.Settings.ForDistributionInstrument, Distribution] {
 
@@ -67,10 +68,11 @@ object Histogram {
           val highestTrackableValue = getHighestTrackableValue()
           recordValue(highestTrackableValue)
 
-          _logger.warn (
+          _logger.warn(
             s"Failed to record value [$value] on [${metric.name},${tags}] because the value is outside of the " +
             s"configured range. The recorded value was adjusted to the highest trackable value [$highestTrackableValue]. " +
-            "You might need to change your dynamic range configuration for this metric", e
+            "You might need to change your dynamic range configuration for this metric",
+            e
           )
       }
 
@@ -85,10 +87,11 @@ object Histogram {
           val highestTrackableValue = getHighestTrackableValue()
           recordValueWithCount(highestTrackableValue, times)
 
-          _logger.warn (
+          _logger.warn(
             s"Failed to record value [$value] on [${metric.name},${tags}] because the value is outside of the " +
             s"configured range. The recorded value was adjusted to the highest trackable value [$highestTrackableValue]. " +
-            "You might need to change your dynamic range configuration for this metric", e
+            "You might need to change your dynamic range configuration for this metric",
+            e
           )
       }
 
@@ -117,25 +120,24 @@ object Histogram {
       var maxIndex = 0
       var totalCount = 0L
 
-      while(index < countsLimit) {
-        val countAtIndex = if(resetState) getAndSetFromCountsArray(index, 0L) else getFromCountsArray(index)
+      while (index < countsLimit) {
+        val countAtIndex = if (resetState) getAndSetFromCountsArray(index, 0L) else getFromCountsArray(index)
 
         var zerosCount = 0L
-        if(countAtIndex == 0L) {
+        if (countAtIndex == 0L) {
           index += 1
           zerosCount = 1
-          while(index < countsLimit && getFromCountsArray(index) == 0L) {
+          while (index < countsLimit && getFromCountsArray(index) == 0L) {
             index += 1
             zerosCount += 1
           }
         }
 
-        if(zerosCount > 0) {
-          if(index < countsLimit)
+        if (zerosCount > 0) {
+          if (index < countsLimit)
             ZigZag.putLong(buffer, -zerosCount)
-        }
-        else {
-          if(minIndex > index)
+        } else {
+          if (minIndex > index)
             minIndex = index
           maxIndex = index
 
@@ -150,8 +152,16 @@ object Histogram {
       buffer.get(zigZagCounts)
 
       val zigZagCountsBuffer = ByteBuffer.wrap(zigZagCounts).asReadOnlyBuffer()
-      val distribution = new Distribution.ZigZagCounts(totalCount, minIndex, maxIndex, zigZagCountsBuffer,
-        getUnitMagnitude(), getSubBucketHalfCount(), getSubBucketHalfCountMagnitude(), dynamicRange)
+      val distribution = new Distribution.ZigZagCounts(
+        totalCount,
+        minIndex,
+        maxIndex,
+        zigZagCountsBuffer,
+        getUnitMagnitude(),
+        getSubBucketHalfCount(),
+        getSubBucketHalfCountMagnitude(),
+        dynamicRange
+      )
 
       distribution
     }
@@ -170,7 +180,7 @@ object Histogram {
     * range.
     */
   private[kamon] class Local(val dynamicRange: DynamicRange) extends BaseLocalHdrHistogram(dynamicRange)
-    with Instrument.Snapshotting[Distribution] with DistributionSnapshotBuilder
+      with Instrument.Snapshotting[Distribution] with DistributionSnapshotBuilder
 
   private[kamon] object Local {
 

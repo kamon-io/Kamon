@@ -39,7 +39,6 @@ class ProcessMetricsCollector(ec: ExecutionContext) extends ScheduledAction {
   private val _collectionTask = new MetricsCollectionTask
   private val _hiccupMonitor = startHiccupMonitor()
 
-
   override def run(): Unit = {
     _collectionTask.run()
   }
@@ -81,18 +80,18 @@ class ProcessMetricsCollector(ec: ExecutionContext) extends ScheduledAction {
     private def recordProcessCpu(): Unit = {
       val process = _os.getProcess(_pid)
       val previous = _previousProcessCpuTime
-      val current = Array (
+      val current = Array(
         process.getKernelTime(),
         process.getUserTime(),
         process.getUpTime()
       )
 
-      if(previous.nonEmpty) {
+      if (previous.nonEmpty) {
         val kernelTime = math.max(0L, current(0) - previous(0))
         val userTime = math.max(0L, current(1) - previous(1))
         val totalTime = math.max(0L, current(2) - previous(2))
         def toPercent(value: Long): Long = {
-          if(totalTime > 0) ((100D * value.toDouble) / totalTime.toDouble / _processorCount).toLong else 0
+          if (totalTime > 0) ((100d * value.toDouble) / totalTime.toDouble / _processorCount).toLong else 0
         }
 
         _processCpuInstruments.user.record(toPercent(userTime))
@@ -156,7 +155,7 @@ class ProcessMetricsCollector(ec: ExecutionContext) extends ScheduledAction {
       }
     }
 
-    def terminate():Unit =
+    def terminate(): Unit =
       _doRun = false
 
     def updateInterval(duration: Duration): Unit =

@@ -13,7 +13,7 @@ import org.scalatest.wordspec.AnyWordSpec
 
 import scala.collection.JavaConverters._
 
-class AttributeBuddySpec extends AnyWordSpec with Matchers  {
+class AttributeBuddySpec extends AnyWordSpec with Matchers {
   "the tag set converter" should {
     "convert a tagset" in {
       val tags1 = TagSet.from(Map("foo" -> "bar", "boop" -> 1234L, "flower" -> false))
@@ -31,7 +31,8 @@ class AttributeBuddySpec extends AnyWordSpec with Matchers  {
         "stringTag" -> "testThing",
         "numberTag" -> 234,
         "booleanTag" -> true,
-        "complexType" -> Map("lemon" -> "danishes").asJava).asJava)
+        "complexType" -> Map("lemon" -> "danishes").asJava
+      ).asJava)
       val result = AttributeBuddy.addTagsFromConfig(tagDetails.toConfig)
 
       val expected = new Attributes()

@@ -52,12 +52,24 @@ class KamonRemoteInstrument(system: ExtendedActorSystem) extends RemoteInstrumen
     }
   }
 
-  override def remoteMessageSent(recipient: ActorRef, message: Object, sender: ActorRef, size: Int, time: Long): Unit = {
+  override def remoteMessageSent(
+    recipient: ActorRef,
+    message: Object,
+    sender: ActorRef,
+    size: Int,
+    time: Long
+  ): Unit = {
     serializationInstruments.outboundMessageSize.record(size)
     serializationInstruments.serializationTime.record(time)
   }
 
-  override def remoteMessageReceived(recipient: ActorRef, message: Object, sender: ActorRef, size: Int, time: Long): Unit = {
+  override def remoteMessageReceived(
+    recipient: ActorRef,
+    message: Object,
+    sender: ActorRef,
+    size: Int,
+    time: Long
+  ): Unit = {
     serializationInstruments.inboundMessageSize.record(size)
     serializationInstruments.deserializationTime.record(time)
   }
@@ -95,5 +107,3 @@ object CaptureCurrentInboundEnvelope {
     CurrentInboundEnvelope.remove()
   }
 }
-
-

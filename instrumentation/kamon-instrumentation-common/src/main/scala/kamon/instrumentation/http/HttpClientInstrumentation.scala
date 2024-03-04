@@ -52,7 +52,10 @@ trait HttpClientInstrumentation {
     * instance contained in the handler replaces the original HTTP request sent by the user, since the updated HTTP
     * request will have all the required additional headers to enable context propagation and distributed tracing.
     */
-  def createHandler[T](request: HttpMessage.RequestBuilder[T], context: Context): HttpClientInstrumentation.RequestHandler[T]
+  def createHandler[T](
+    request: HttpMessage.RequestBuilder[T],
+    context: Context
+  ): HttpClientInstrumentation.RequestHandler[T]
 
   /**
     * Returns the settings currently controlling the HTTP client instrumentation. The effective settings will be taken
@@ -110,11 +113,16 @@ object HttpClientInstrumentation {
   private class Default(val settings: Settings, component: String) extends HttpClientInstrumentation {
     private val _propagation = Kamon.httpPropagation(settings.propagationChannel)
       .getOrElse {
-        _log.warn(s"Could not find HTTP propagation [${settings.propagationChannel}], falling back to the default HTTP propagation")
+        _log.warn(
+          s"Could not find HTTP propagation [${settings.propagationChannel}], falling back to the default HTTP propagation"
+        )
         Kamon.defaultHttpPropagation()
       }
 
-    override def createHandler[T](requestBuilder: HttpMessage.RequestBuilder[T], context: Context): RequestHandler[T] = {
+    override def createHandler[T](
+      requestBuilder: HttpMessage.RequestBuilder[T],
+      context: Context
+    ): RequestHandler[T] = {
       val shouldCreateSpan = !Kamon.currentSpan().isEmpty || settings.startTrace
       val requestSpan: Span = {
         if (settings.enableContextPropagation && shouldCreateSpan) {
@@ -139,7 +147,7 @@ object HttpClientInstrumentation {
 
         override def processResponse(response: HttpMessage.Response): Unit = {
           val statusCode = response.statusCode
-          if(statusCode >= 500) {
+          if (statusCode >= 500) {
             span.fail("Request failed with HTTP Status Code " + statusCode)
           }
 
@@ -154,7 +162,7 @@ object HttpClientInstrumentation {
         .clientSpanBuilder(settings.operationNameSettings.operationName(requestMessage), component)
         .context(context)
 
-      if(!settings.enableSpanMetrics)
+      if (!settings.enableSpanMetrics)
         span.doNotTrackMetrics()
 
       SpanTagger.tag(span, TagKeys.HttpUrl, requestMessage.url, settings.urlTagMode)
@@ -171,7 +179,7 @@ object HttpClientInstrumentation {
     }
   }
 
-  final case class Settings (
+  final case class Settings(
     enableContextPropagation: Boolean,
     propagationChannel: String,
     enableTracing: Boolean,
@@ -196,7 +204,7 @@ object HttpClientInstrumentation {
       val enablePropagation = config.getBoolean("propagation.enabled")
       val propagationChannel = config.getString("propagation.channel")
 
-       // Tracing settings
+      // Tracing settings
       val enableTracing = config.getBoolean("tracing.enabled")
       val enableSpanMetrics = config.getBoolean("tracing.span-metrics")
       val urlTagMode = TagMode.from(config.getString("tracing.tags.url"))

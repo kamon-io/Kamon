@@ -30,8 +30,8 @@ trait Configuration {
   private var _currentConfig: Config = loadInitialConfiguration()
   private var _onReconfigureHooks = Seq.empty[Configuration.OnReconfigureHook]
   @volatile private var _enabled: Boolean = _currentConfig.getBoolean(EnabledConfigurationName)
-  @volatile private var _shouldAttachInstrumentation: Boolean = _currentConfig.getBoolean(InitAttachInstrumentationConfigurationName)
-
+  @volatile private var _shouldAttachInstrumentation: Boolean =
+    _currentConfig.getBoolean(InitAttachInstrumentationConfigurationName)
 
   /**
     * Retrieve Kamon's current configuration.
@@ -41,7 +41,6 @@ trait Configuration {
 
   def enabled(): Boolean =
     _enabled
-
 
   /**
     * Supply a new Config instance to rule Kamon's world.
@@ -92,12 +91,16 @@ trait Configuration {
 
         try {
           val referenceConfig = ConfigFactory.defaultReference(ClassLoading.classLoader())
-          err.println("Initializing Kamon with the reference configuration, none of the user settings will be in effect")
+          err.println(
+            "Initializing Kamon with the reference configuration, none of the user settings will be in effect"
+          )
           referenceConfig
         } catch {
           case NonFatal(t) =>
-            err.println("Kamon couldn't load the reference configuration settings from the reference.conf files due to: " +
-              t.getMessage + " at " + t.getStackTrace().mkString("", lineSeparator, lineSeparator))
+            err.println(
+              "Kamon couldn't load the reference configuration settings from the reference.conf files due to: " +
+              t.getMessage + " at " + t.getStackTrace().mkString("", lineSeparator, lineSeparator)
+            )
 
             ConfigFactory.empty()
         }

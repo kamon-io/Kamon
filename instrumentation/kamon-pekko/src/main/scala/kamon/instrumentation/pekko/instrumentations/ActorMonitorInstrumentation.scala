@@ -11,13 +11,13 @@ import scala.annotation.static
 import scala.util.control.NonFatal
 
 class ActorMonitorInstrumentation extends InstrumentationBuilder {
-   /*
-     * Changes implementation of extractMessageClass for our ActorMonitor.
-     * In Pekko, all typed messages are converted to AdaptMessage,
-     * so we're forced to extract the original message type.
-     */
-    onSubTypesOf("kamon.instrumentation.pekko.instrumentations.ActorMonitor")
-      .intercept(method("extractMessageClass"), classOf[MessageClassAdvice])
+  /*
+   * Changes implementation of extractMessageClass for our ActorMonitor.
+   * In Pekko, all typed messages are converted to AdaptMessage,
+   * so we're forced to extract the original message type.
+   */
+  onSubTypesOf("kamon.instrumentation.pekko.instrumentations.ActorMonitor")
+    .intercept(method("extractMessageClass"), classOf[MessageClassAdvice])
 }
 
 class MessageClassAdvice
@@ -29,7 +29,7 @@ object MessageClassAdvice {
     try {
       e.message match {
         case message: WrappedMessage => ActorCellInfo.simpleClassName(message.message.getClass)
-        case _ => ActorCellInfo.simpleClassName(e.message.getClass)
+        case _                       => ActorCellInfo.simpleClassName(e.message.getClass)
       }
     } catch {
       // NoClassDefFound is thrown in early versions of akka 2.6

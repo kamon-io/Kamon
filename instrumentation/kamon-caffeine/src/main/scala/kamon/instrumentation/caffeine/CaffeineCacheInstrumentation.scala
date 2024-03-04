@@ -41,9 +41,7 @@ object GetIfPresentAdvice {
   }
 
   @Advice.OnMethodExit(suppress = classOf[Throwable])
-  @static def exit(@Advice.Enter span: Span,
-           @Advice.Return ret: Any,
-           @Advice.Argument(0) key: Any): Unit = {
+  @static def exit(@Advice.Enter span: Span, @Advice.Return ret: Any, @Advice.Argument(0) key: Any): Unit = {
     if (ret == null) {
       span.tag("cache.miss", s"No value for key $key")
     }

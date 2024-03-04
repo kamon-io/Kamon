@@ -28,13 +28,13 @@ class EntriesCounterAppender extends UnsynchronizedAppenderBase[ILoggingEvent] {
   private val _countersPerLevel = TrieMap.empty[Int, Counter]
 
   protected def append(event: ILoggingEvent): Unit = {
-    _countersPerLevel.getOrElseUpdate(event.getLevel.toInt, {
-      LogbackMetrics.LogEvents.withTags(TagSet.builder()
-        .add("component", "logback")
-        .add("level", event.getLevel.levelStr)
-        .build()
-      )
-    }).increment()
+    _countersPerLevel.getOrElseUpdate(
+      event.getLevel.toInt, {
+        LogbackMetrics.LogEvents.withTags(TagSet.builder()
+          .add("component", "logback")
+          .add("level", event.getLevel.levelStr)
+          .build())
+      }
+    ).increment()
   }
 }
-

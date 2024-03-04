@@ -21,15 +21,15 @@ import java.time.Duration
 import com.grack.nanojson.{JsonArray, JsonObject, JsonWriter}
 import com.typesafe.config.Config
 import kamon.trace.Span
-import kamon.{ ClassLoading, Kamon }
+import kamon.{ClassLoading, Kamon}
 import kamon.datadog.DatadogSpanReporter.Configuration
-import kamon.module.{ ModuleFactory, SpanReporter }
-import kamon.tag.{ Lookups, Tag, TagSet }
+import kamon.module.{ModuleFactory, SpanReporter}
+import kamon.tag.{Lookups, Tag, TagSet}
 import kamon.trace.Span.TagKeys
-import kamon.util.{ EnvironmentTags, Filter }
+import kamon.util.{EnvironmentTags, Filter}
 import org.slf4j.LoggerFactory
 
-import scala.util.{ Failure }
+import scala.util.{Failure}
 
 trait KamonDataDogTranslator {
   def translate(span: Span.Finished, additionalTags: TagSet, tagFilter: Filter): DdSpan
@@ -74,8 +74,8 @@ object DatadogSpanReporter {
   case class Configuration(
     translator: KamonDataDogTranslator,
     httpClient: HttpClient,
-    tagFilter:  Filter,
-    envTags:    TagSet
+    tagFilter: Filter,
+    envTags: TagSet
   )
 
   private[kamon] val httpConfigPath = "kamon.datadog.trace"

@@ -50,10 +50,12 @@ object KafkaInstrumentation {
             log.warn("W3C TraceContext propagation should be used only with identifier-scheme = double")
           }
           SpanPropagation.W3CTraceContext()
-        case fqcn => try ClassLoading.createInstance[KafkaPropagator](fqcn) catch {
-          case t: Throwable =>
-            sys.error(s"Failed to create kafka propagator instance from FQCN [$fqcn]. Reason: ${t.getMessage}")
-        }
+        case fqcn =>
+          try ClassLoading.createInstance[KafkaPropagator](fqcn)
+          catch {
+            case t: Throwable =>
+              sys.error(s"Failed to create kafka propagator instance from FQCN [$fqcn]. Reason: ${t.getMessage}")
+          }
       }
     )
   }
@@ -68,7 +70,7 @@ object KafkaInstrumentation {
   implicit class Syntax(val cr: ConsumerRecord[_, _]) extends AnyVal {
     def context: Context = cr match {
       case hc: HasContext => hc.context
-      case _ => Context.Empty
+      case _              => Context.Empty
     }
   }
 
@@ -190,14 +192,13 @@ object KafkaInstrumentation {
         consumerSpan.link(incomingSpan, Span.Link.Kind.FollowsFrom)
     }
 
-
     // The additional context information will only be available when instrumentation is enabled.
     if (record.isInstanceOf[ConsumedRecordData]) {
       val consumerRecordData = record.asInstanceOf[ConsumedRecordData]
 
       // The consumer record data might be missing if the `ConsumerRecord` instance is created outside
       // of the instrumented paths.
-      if(consumerRecordData.consumerInfo() != null) {
+      if (consumerRecordData.consumerInfo() != null) {
         consumerSpan
           .tag("kafka.group-id", consumerRecordData.consumerInfo().groupId.getOrElse("unknown"))
           .tag("kafka.client-id", consumerRecordData.consumerInfo().clientId)
@@ -219,7 +220,7 @@ object KafkaInstrumentation {
     * that was injected by Kamon while calling the poll method.
     */
   def copyHiddenState(from: ConsumerRecord[_, _], to: ConsumerRecord[_, _]): ConsumerRecord[_, _] = {
-    if(from != null && to != null && from.isInstanceOf[ConsumedRecordData]) {
+    if (from != null && to != null && from.isInstanceOf[ConsumedRecordData]) {
       val fromRecordData = from.asInstanceOf[ConsumedRecordData]
       val toRecordData = to.asInstanceOf[ConsumedRecordData]
       toRecordData.set(

@@ -26,7 +26,7 @@ object Http4s {
     nameGeneratorFromConfig(Kamon.config())
 
   private def nameGeneratorFromConfig(
-      config: Config
+    config: Config
   ): HttpOperationNameGenerator = {
     val dynamic = new DynamicAccess(getClass.getClassLoader)
     val nameGeneratorFQCN = config.getString(

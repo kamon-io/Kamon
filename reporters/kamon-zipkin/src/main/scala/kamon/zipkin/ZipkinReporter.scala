@@ -48,7 +48,7 @@ class ZipkinReporter(configPath: String) extends SpanReporter {
 
   def checkJoinParameter() = {
     val joinRemoteParentsWithSameID = Kamon.config().getBoolean("kamon.trace.join-remote-parents-with-same-span-id")
-    if(!joinRemoteParentsWithSameID)
+    if (!joinRemoteParentsWithSameID)
       _logger.warn("For full Zipkin compatibility enable `kamon.trace.join-remote-parents-with-same-span-id` to " +
         "preserve span id across client/server sides of a Span.")
   }
@@ -72,14 +72,14 @@ class ZipkinReporter(configPath: String) extends SpanReporter {
     val kind = spanKind(kamonSpan)
     builder.kind(kind)
 
-    if(kind == ZipkinSpan.Kind.CLIENT) {
+    if (kind == ZipkinSpan.Kind.CLIENT) {
       val remoteEndpoint = Endpoint.newBuilder()
         .ip(getStringTag(kamonSpan, PeerKeys.IPv4))
         .ip(getStringTag(kamonSpan, PeerKeys.IPv6))
         .port(getLongTag(kamonSpan, PeerKeys.Port).toInt)
         .build()
 
-      if(hasAnyData(remoteEndpoint))
+      if (hasAnyData(remoteEndpoint))
         builder.remoteEndpoint(remoteEndpoint)
     }
 
@@ -98,12 +98,14 @@ class ZipkinReporter(configPath: String) extends SpanReporter {
     case Span.Kind.Server   => ZipkinSpan.Kind.SERVER
     case Span.Kind.Producer => ZipkinSpan.Kind.PRODUCER
     case Span.Kind.Consumer => ZipkinSpan.Kind.CONSUMER
-    case _ => null
+    case _                  => null
   }
 
   private def addTags(tags: TagSet, builder: ZipkinSpan.Builder): Unit =
     tags.iterator(_.toString)
-      .filterNot(pair => pair.key == Span.TagKeys.Error && pair.value == "false") // zipkin considers any error tag as failed request
+      .filterNot(pair =>
+        pair.key == Span.TagKeys.Error && pair.value == "false"
+      ) // zipkin considers any error tag as failed request
       .foreach(pair => builder.putTag(pair.key, pair.value))
 
   private def getStringTag(span: Span.Finished, tagName: String): String =
@@ -112,10 +114,8 @@ class ZipkinReporter(configPath: String) extends SpanReporter {
   private def getLongTag(span: Span.Finished, tagName: String): Long =
     span.tags.get(longOption(tagName)).orElse(span.metricTags.get(longOption(tagName))).getOrElse(0L)
 
-
   private def hasAnyData(endpoint: Endpoint): Boolean =
     endpoint.ipv4() != null || endpoint.ipv6() != null || endpoint.port() != null || endpoint.serviceName() != null
-
 
   override def reconfigure(newConfig: Config): Unit = {
     _localEndpoint = buildEndpoint()
@@ -153,9 +153,9 @@ object ZipkinReporter {
   }
 
   private object PeerKeys {
-    val Host     = "peer.host"
-    val Port     = "peer.port"
-    val IPv4     = "peer.ipv4"
-    val IPv6     = "peer.ipv6"
+    val Host = "peer.host"
+    val Port = "peer.port"
+    val IPv4 = "peer.ipv4"
+    val IPv6 = "peer.ipv6"
   }
 }

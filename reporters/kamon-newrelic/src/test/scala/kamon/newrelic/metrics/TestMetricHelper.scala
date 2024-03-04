@@ -35,7 +35,9 @@ object TestMetricHelper {
   def buildGauge = {
     val tagSet: TagSet = TagSet.from(Map("foo" -> "bar"))
     val settings = Metric.Settings.ForValueInstrument(
-      new MeasurementUnit(Dimension.Information, new MeasurementUnit.Magnitude("finch", 11.0d)), Duration.ofMillis(12))
+      new MeasurementUnit(Dimension.Information, new MeasurementUnit.Magnitude("finch", 11.0d)),
+      Duration.ofMillis(12)
+    )
     val inst = new Instrument.Snapshot[Double](tagSet, 15.6d)
     new MetricSnapshot.Values[Double]("shirley", "another one", settings, Seq(inst))
   }
@@ -44,10 +46,14 @@ object TestMetricHelper {
     val tagSet: TagSet = TagSet.from(Map("twelve" -> "bishop"))
     val dynamicRange: DynamicRange = DynamicRange.Default
     val settings = Metric.Settings.ForDistributionInstrument(
-      new MeasurementUnit(Dimension.Information, metric.MeasurementUnit.Magnitude("eimer", 603.3d)), Duration.ofMillis(12), dynamicRange)
+      new MeasurementUnit(Dimension.Information, metric.MeasurementUnit.Magnitude("eimer", 603.3d)),
+      Duration.ofMillis(12),
+      dynamicRange
+    )
 
     val percentiles = Map(90d -> Percentage(90d, 2L, 816L), 87d -> Percentage(87d, 2L, 816L))
-    val distribution: Distribution = buildHistogramDist(Percentage(19d, 2L, 816L), Bucket(717L, 881L), Distro(13L, 17L, 101L, 44L), percentiles)
+    val distribution: Distribution =
+      buildHistogramDist(Percentage(19d, 2L, 816L), Bucket(717L, 881L), Distro(13L, 17L, 101L, 44L), percentiles)
     val inst: Snapshot[Distribution] = new Snapshot[Distribution](tagSet, distribution)
     new metric.MetricSnapshot.Distributions("trev", "a good trevor", settings, Seq(inst))
   }
@@ -56,9 +62,13 @@ object TestMetricHelper {
     val tagSet: TagSet = TagSet.from(Map("thirteen" -> "queen"))
     val dynamicRange: DynamicRange = DynamicRange.Default
     val settings = Metric.Settings.ForDistributionInstrument(
-      new MeasurementUnit(Dimension.Information, new metric.MeasurementUnit.Magnitude("timer", 333.3d)), Duration.ofMillis(15), dynamicRange)
+      new MeasurementUnit(Dimension.Information, new metric.MeasurementUnit.Magnitude("timer", 333.3d)),
+      Duration.ofMillis(15),
+      dynamicRange
+    )
     val percentiles = Map(95d -> Percentage(95d, 4L, 1632L), 87d -> Percentage(87d, 2L, 816L))
-    val distribution: Distribution = buildHistogramDist(Percentage(38d, 4L, 1632L), Bucket(1424L, 1672L), Distro(26L, 34L, 202L, 88L), percentiles)
+    val distribution: Distribution =
+      buildHistogramDist(Percentage(38d, 4L, 1632L), Bucket(1424L, 1672L), Distro(26L, 34L, 202L, 88L), percentiles)
     val inst: Snapshot[Distribution] = new Snapshot[Distribution](tagSet, distribution)
     new metric.MetricSnapshot.Distributions("timer", "a good timer", settings, Seq(inst))
   }
@@ -67,9 +77,13 @@ object TestMetricHelper {
     val tagSet: TagSet = TagSet.from(Map("eleven" -> "elevenses"))
     val dynamicRange: DynamicRange = DynamicRange.Default
     val settings = Metric.Settings.ForDistributionInstrument(
-      new MeasurementUnit(Dimension.Information, new metric.MeasurementUnit.Magnitude("home", 333.3d)), Duration.ofMillis(15), dynamicRange)
+      new MeasurementUnit(Dimension.Information, new metric.MeasurementUnit.Magnitude("home", 333.3d)),
+      Duration.ofMillis(15),
+      dynamicRange
+    )
     val percentiles = Map(95d -> Percentage(95d, 8L, 1632L), 87d -> Percentage(87d, 4L, 816L))
-    val distribution: Distribution = buildHistogramDist(Percentage(38d, 4L, 1632L), Bucket(1424L, 1672L), Distro(26L, 34L, 202L, 88L), percentiles)
+    val distribution: Distribution =
+      buildHistogramDist(Percentage(38d, 4L, 1632L), Bucket(1424L, 1672L), Distro(26L, 34L, 202L, 88L), percentiles)
     val inst: Snapshot[Distribution] = new Snapshot[Distribution](tagSet, distribution)
     new metric.MetricSnapshot.Distributions("ranger", "baby's first range sampler", settings, Seq(inst))
   }
@@ -98,7 +112,12 @@ object TestMetricHelper {
 
   case class Distro(min: Long, max: Long, sum: Long, count: Long)
 
-  private def buildHistogramDist(perc: Percentage, bucket: Bucket, distro: Distro, percentileValues: Map[Double, Percentage]) = {
+  private def buildHistogramDist(
+    perc: Percentage,
+    bucket: Bucket,
+    distro: Distro,
+    percentileValues: Map[Double, Percentage]
+  ) = {
 
     val distribution: Distribution = new Distribution() {
       override def dynamicRange: DynamicRange = DynamicRange.Default
@@ -111,7 +130,8 @@ object TestMetricHelper {
 
       override def count: Long = distro.count
 
-      override def percentile(rank: Double): Distribution.Percentile = percentileValues.get(rank).map(r => r.toPercentile).orNull
+      override def percentile(rank: Double): Distribution.Percentile =
+        percentileValues.get(rank).map(r => r.toPercentile).orNull
 
       override def percentiles: Seq[Distribution.Percentile] = Seq(perc.toPercentile)
 

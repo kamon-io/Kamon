@@ -54,8 +54,8 @@ class JedisInstrumentation extends InstrumentationBuilder {
           "toString",
           "hashCode"
         ))),
-      classOf[ClientOperationsAdvice])
-
+      classOf[ClientOperationsAdvice]
+    )
 
   /**
     * For Jedis 3.x. This advice ensures we get the right command name in the Span.
@@ -66,7 +66,8 @@ class JedisInstrumentation extends InstrumentationBuilder {
         .and(isPublic[MethodDescription])
         .and(isStatic[MethodDescription])
         .and(takesArguments(3)),
-      classOf[SendCommandAdvice])
+      classOf[SendCommandAdvice]
+    )
 
   /**
     * For Jedis 4.x. This advice ensures we get the right command name in the Span. Notice
@@ -79,8 +80,8 @@ class JedisInstrumentation extends InstrumentationBuilder {
         .and(isPublic[MethodDescription])
         .and(isStatic[MethodDescription])
         .and(takesArguments(2)),
-      classOf[SendCommandAdviceForJedis4])
-
+      classOf[SendCommandAdviceForJedis4]
+    )
 
 }
 
@@ -92,7 +93,7 @@ object ClientOperationsAdvice {
   @static def enter(@Advice.Origin("#m") methodName: String): Scope = {
     val currentContext = Kamon.currentContext()
 
-    if(currentContext.getTag(plain(currentRedisOperationKey)) == null) {
+    if (currentContext.getTag(plain(currentRedisOperationKey)) == null) {
 
       // The actual span name is going to be set in the SendCommand advice
       val clientSpan = Kamon
@@ -102,14 +103,13 @@ object ClientOperationsAdvice {
 
       Kamon.storeContext(currentContext
         .withEntry(Span.Key, clientSpan)
-        .withTag(currentRedisOperationKey, methodName)
-      )
+        .withTag(currentRedisOperationKey, methodName))
     } else Scope.Empty
   }
 
   @Advice.OnMethodExit(onThrowable = classOf[Throwable], suppress = classOf[Throwable])
   @static def exit(@Advice.Enter scope: Scope, @Advice.Thrown t: Throwable): Unit = {
-    if(scope != Scope.Empty) {
+    if (scope != Scope.Empty) {
       val span = scope.context.get(Span.Key)
       if (t != null) {
         span.fail(t)
@@ -148,4 +148,3 @@ object SendCommandAdviceForJedis4 {
       .tag("db.operation", firstArgument.toString())
   }
 }
-

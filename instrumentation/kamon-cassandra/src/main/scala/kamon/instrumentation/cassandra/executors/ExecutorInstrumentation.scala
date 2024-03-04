@@ -67,7 +67,7 @@ object CreateBlockingTasksExecutorAdvice extends ExecutorMetrics {
 class CreateReaperExecutorAdvice
 object CreateReaperExecutorAdvice extends ExecutorMetrics {
   @static def onExecutorCreated(
-      @SuperCall callable: Callable[ScheduledExecutorService]
+    @SuperCall callable: Callable[ScheduledExecutorService]
   ): ScheduledExecutorService =
     instrumentScheduled(callable, "reaper")
 }
@@ -75,7 +75,7 @@ object CreateReaperExecutorAdvice extends ExecutorMetrics {
 class CreateScheduledTasksExecutorAdvice
 object CreateScheduledTasksExecutorAdvice extends ExecutorMetrics {
   @static def onExecutorCreated(
-      @SuperCall callable: Callable[ScheduledExecutorService]
+    @SuperCall callable: Callable[ScheduledExecutorService]
   ): ScheduledExecutorService =
     instrumentScheduled(callable, "scheduled-tasks")
 }
@@ -83,7 +83,7 @@ object CreateScheduledTasksExecutorAdvice extends ExecutorMetrics {
 class CreateReconnectionExecutorAdvice
 object CreateReconnectionExecutorAdvice extends ExecutorMetrics {
   @static def onExecutorCreated(
-      @SuperCall callable: Callable[ScheduledExecutorService]
+    @SuperCall callable: Callable[ScheduledExecutorService]
   ): ScheduledExecutorService =
     instrumentScheduled(callable, "reconnection")
 }

@@ -53,7 +53,10 @@ class GraphiteReporter extends MetricReporter {
       sender.reportPeriodSnapshot(snapshot)
     } catch {
       case e: Throwable =>
-        log.warn(s"sending failed to ${reporterConfig.hostname}:${reporterConfig.port} - dispose current snapshot and retry sending next snapshot using a new connection", e)
+        log.warn(
+          s"sending failed to ${reporterConfig.hostname}:${reporterConfig.port} - dispose current snapshot and retry sending next snapshot using a new connection",
+          e
+        )
         sender.close()
         sender = buildNewSender()
     }
@@ -62,7 +65,15 @@ class GraphiteReporter extends MetricReporter {
   private def buildNewSender(): GraphiteSender = new GraphiteSender(reporterConfig) with TcpSender
 }
 
-private case class GraphiteSenderConfig(hostname: String, port: Int, metricPrefix: String, legacySupport: Boolean, envTags: TagSet, tagFilter: Filter, percentiles: Seq[Double])
+private case class GraphiteSenderConfig(
+  hostname: String,
+  port: Int,
+  metricPrefix: String,
+  legacySupport: Boolean,
+  envTags: TagSet,
+  tagFilter: Filter,
+  percentiles: Seq[Double]
+)
 private object GraphiteSenderConfig {
   def apply(config: Config): GraphiteSenderConfig = {
     val graphiteConfig = config.getConfig("kamon.graphite")
@@ -107,7 +118,12 @@ private[graphite] abstract class GraphiteSender(val senderConfig: GraphiteSender
       senderConfig.percentiles.foreach { p =>
         write(packetBuilder.build(metric.name, s"p$p", instrument.value.percentile(p).value, instrument.tags))
       }
-      write(packetBuilder.build(metric.name, "average", average(instrument.value.sum, instrument.value.count), instrument.tags))
+      write(packetBuilder.build(
+        metric.name,
+        "average",
+        average(instrument.value.sum, instrument.value.count),
+        instrument.tags
+      ))
       write(packetBuilder.build(metric.name, "sum", instrument.value.sum, instrument.tags))
     }
 
@@ -124,9 +140,10 @@ private class MetricPacketBuilder(baseName: String, timestamp: Long, config: Gra
   private val valueseperator = if (config.legacySupport) '.' else '='
   private val reservedChars = Set(' ', tagseperator, valueseperator)
 
-
-  def build(metricName: String, metricType: String, value: Long, metricTags: TagSet): Array[Byte] = build(metricName, metricType, value.toString, metricTags)
-  def build(metricName: String, metricType: String, value: Double, metricTags: TagSet): Array[Byte] = build(metricName, metricType, value.toString, metricTags)
+  def build(metricName: String, metricType: String, value: Long, metricTags: TagSet): Array[Byte] =
+    build(metricName, metricType, value.toString, metricTags)
+  def build(metricName: String, metricType: String, value: Double, metricTags: TagSet): Array[Byte] =
+    build(metricName, metricType, value.toString, metricTags)
   def build(metricName: String, metricType: String, value: String, metricTags: TagSet): Array[Byte] = {
     builder.setLength(0)
     builder.append(baseName).append(".").append(sanitize(metricName)).append(".").append(metricType)
@@ -134,17 +151,18 @@ private class MetricPacketBuilder(baseName: String, timestamp: Long, config: Gra
     allTags.foreach(tag =>
       if (config.tagFilter.accept(tag.key)) {
         builder
-            .append(tagseperator)
-            .append(sanitizeTag(tag.key))
-            .append(valueseperator)
-            .append(sanitizeTag(Tag.unwrapValue(tag).toString))
-      })
+          .append(tagseperator)
+          .append(sanitizeTag(tag.key))
+          .append(valueseperator)
+          .append(sanitizeTag(Tag.unwrapValue(tag).toString))
+      }
+    )
     builder
-        .append(" ")
-        .append(value)
-        .append(" ")
-        .append(timestamp)
-        .append("\n")
+      .append(" ")
+      .append(value)
+      .append(" ")
+      .append(timestamp)
+      .append("\n")
     val packet = builder.toString
     log.debug("built packet '{}'", packet)
     packet.getBytes(GraphiteSender.GraphiteEncoding)
@@ -188,7 +206,7 @@ private trait TcpSender extends Sender {
   def flush(): Unit = out.foreach(_.flush())
   def close(): Unit = {
     try
-      out.foreach {_.close()}
+      out.foreach { _.close() }
     catch {
       case t: Throwable => log.warn("failed to close connection", t)
     }

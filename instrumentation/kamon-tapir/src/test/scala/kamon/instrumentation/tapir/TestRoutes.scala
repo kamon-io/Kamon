@@ -40,7 +40,7 @@ object TestRoutes {
     .in("mixed").in(path[Boolean]("other_param"))
     .in("types").out(plainBody[String])
   private val nestedRoute = AkkaHttpServerInterpreter().toRoute(
-    nested.serverLogic[Future] { x => Future.successful(Right[Unit,String](x.toString())) }
+    nested.serverLogic[Future] { x => Future.successful(Right[Unit, String](x.toString())) }
   )
 
   val routes = helloRoute ~ nestedRoute

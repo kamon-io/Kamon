@@ -57,7 +57,9 @@ trait TestData {
     )
 
   val traceId128Bit = "13d350d23e4424d4" + contextSpan.trace.id.string
-  val spanWith128BitTraceId = span.copy(trace = Trace(Identifier(traceId128Bit, BigInt(traceId128Bit, 16).toByteArray), Trace.SamplingDecision.Sample))
+  val spanWith128BitTraceId = span.copy(trace =
+    Trace(Identifier(traceId128Bit, BigInt(traceId128Bit, 16).toByteArray), Trace.SamplingDecision.Sample)
+  )
 
   val json = Json.obj(
     "trace_id" -> BigDecimal(traceId),
@@ -90,12 +92,15 @@ trait TestData {
     "error" -> 1
   )
 
-  val spanWithErrorTags = span.copy(tags = TagSet.from(Map(
-    "error" -> true,
-    "error.type" -> "RuntimeException",
-    "error.message" -> "Error message",
-    "error.stacktrace" -> "Error stacktrace"
-  )), hasError = true)
+  val spanWithErrorTags = span.copy(
+    tags = TagSet.from(Map(
+      "error" -> true,
+      "error.type" -> "RuntimeException",
+      "error.message" -> "Error message",
+      "error.stacktrace" -> "Error stacktrace"
+    )),
+    hasError = true
+  )
 
   val jsonWithErrorTags = json ++ Json.obj(
     "meta" -> Json.obj(
@@ -118,7 +123,7 @@ trait TestData {
         "false" -> false,
         "number" -> randomNumber.toString,
         "null" -> null,
-        //Default for span name
+        // Default for span name
         "component" -> "custom.component"
       )
     )
@@ -136,9 +141,11 @@ trait TestData {
     )
   )
 
-  val spanWithMarks = span.copy(marks = Seq(
-    Span.Mark(from, "from")
-  ))
+  val spanWithMarks = span.copy(marks =
+    Seq(
+      Span.Mark(from, "from")
+    )
+  )
 
   val jsonWithMarks = json ++ Json.obj(
     "meta" -> Json.obj(
@@ -173,17 +180,17 @@ trait TestData {
     "span with meta and marks" -> (Seq(spanWithTagsAndMarks), Json.arr(Json.arr(jsonWithTagsAndMarks))),
     "span with error" -> (Seq(spanWithError), Json.arr(Json.arr(jsonWithError))),
     "span with error tags" -> (Seq(spanWithErrorTags), Json.arr(Json.arr(jsonWithErrorTags))),
-
     "multiple spans with same trace" -> (Seq(span, spanWithTags), Json.arr(Json.arr(json, jsonWithTags)))
-  // "multiple spans with two traces" -> (Seq(span, spanWithTags, otherTraceSpan, span), Json.arr(Json.arr(json, jsonWithTags, json), Json.arr(otherTraceJson)))
+    // "multiple spans with two traces" -> (Seq(span, spanWithTags, otherTraceSpan, span), Json.arr(Json.arr(json, jsonWithTags, json), Json.arr(otherTraceJson)))
   )
 }
 
 class DatadogSpanReporterSpec extends AbstractHttpReporter with Matchers with Reconfigure {
 
   "the DatadogSpanReporter" should {
-    val reporter = new DatadogSpanReporterFactory().create(ModuleFactory.Settings(Kamon.config(), ExecutionContext.global))
-    val testData = new TestData { }
+    val reporter =
+      new DatadogSpanReporterFactory().create(ModuleFactory.Settings(Kamon.config(), ExecutionContext.global))
+    val testData = new TestData {}
 
     val (firstSpan, _) = testData.testMap.get("single span").head
 
@@ -222,9 +229,12 @@ class DatadogSpanReporterSpec extends AbstractHttpReporter with Matchers with Re
       server.takeRequest()
     }
 
-    //it needs to be the last one :-( (takeRequest hangs after a timeout test)
+    // it needs to be the last one :-( (takeRequest hangs after a timeout test)
     s"ignore timed out responses" in {
-      val baseUrl = mockResponse("/test", new MockResponse().setStatus("HTTP/1.1 200 OK").setBody("OK").throttleBody(1, 6, TimeUnit.SECONDS))
+      val baseUrl = mockResponse(
+        "/test",
+        new MockResponse().setStatus("HTTP/1.1 200 OK").setBody("OK").throttleBody(1, 6, TimeUnit.SECONDS)
+      )
       applyConfig("kamon.datadog.trace.http.api-url = \"" + baseUrl + "\"")
       reporter.reconfigure(Kamon.config())
       val exception = intercept[IOException] {

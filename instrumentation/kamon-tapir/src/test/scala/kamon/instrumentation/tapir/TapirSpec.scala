@@ -26,10 +26,10 @@ import sttp.client3.{HttpURLConnectionBackend, Identity, SttpBackend, UriContext
 import scala.concurrent.duration.DurationInt
 
 class TapirSpec extends AnyWordSpec with Matchers
-  with TestSpanReporter
-  with Eventually
-  with BeforeAndAfterAll
-  with OptionValues {
+    with TestSpanReporter
+    with Eventually
+    with BeforeAndAfterAll
+    with OptionValues {
 
   var backend: SttpBackend[Identity, Any] = _
 
@@ -42,7 +42,6 @@ class TapirSpec extends AnyWordSpec with Matchers
     TapirAkkaHttpServer.stop
     backend.close()
   }
-
 
   "the Tapir Akka HTTP instrumentation" should {
     "replace params in path when naming span" in {

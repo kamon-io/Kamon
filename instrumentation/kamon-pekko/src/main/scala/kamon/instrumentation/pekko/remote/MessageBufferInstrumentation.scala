@@ -1,6 +1,5 @@
 package kamon.instrumentation.pekko.remote
 
-
 import _root_.kanela.agent.api.instrumentation.InstrumentationBuilder
 import kamon.instrumentation.context.{CaptureCurrentContextOnExit, HasContext, InvokeWithCapturedContext}
 

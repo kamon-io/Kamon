@@ -34,10 +34,8 @@ object Hooks {
       override def beforeStart(builder: SpanBuilder): Unit = builder.name(operationName)
     }
 
-
     /** Context key on used to store and retrieve PreStartTransformation instances on/from the current Context. */
     val Key = Context.key[Tracer.PreStartHook]("preStartTransformation", Noop)
-
 
     /**
       * Tries to find a PreStartHook instance on the current Context and apply it. Since the default value for the
@@ -49,16 +47,12 @@ object Hooks {
         Kamon.currentContext().get(PreStart.Key).beforeStart(builder)
     }
 
-
     /** PreStartTransformation implementation which does not apply any changes to the provided SpanBuilder. */
     object Noop extends Tracer.PreStartHook {
       override def beforeStart(builder: SpanBuilder): Unit = {}
     }
 
   }
-
-
-
 
   object PreFinish {
 
@@ -70,10 +64,8 @@ object Hooks {
       override def beforeFinish(span: Span): Unit = span.name(operationName)
     }
 
-
     /** Context key on used to store and retrieve PreFinishTransformation instances on/from the current Context. */
     val Key = Context.key[Tracer.PreFinishHook]("preFinishTransformation", Noop)
-
 
     /**
       * Tries to find a PreFinishHook instance on the current Context and apply it. Since the default value for the

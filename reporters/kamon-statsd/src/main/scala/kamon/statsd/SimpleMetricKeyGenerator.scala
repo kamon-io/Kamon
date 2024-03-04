@@ -42,11 +42,12 @@ class SimpleMetricKeyGenerator(statsDConfig: Config) extends MetricKeyGenerator 
 
   private def createNormalizer(strategy: String): Normalizer = strategy match {
     case "percent-encode" => PercentEncoder.encode
-    case "normalize"      => (s: String) => s.replace(": ", "-").replace(":", "-").replace(" ", "_").replace("/", "_").replace(".", "_")
+    case "normalize" =>
+      (s: String) => s.replace(": ", "-").replace(":", "-").replace(" ", "_").replace("/", "_").replace(".", "_")
   }
 
   def generateKey(name: String, metricTags: TagSet): String = {
-    val tags = if(includeEnvironmentTags) metricTags.withTags(environmentTags) else metricTags
+    val tags = if (includeEnvironmentTags) metricTags.withTags(environmentTags) else metricTags
     val stringTags = if (tags.nonEmpty) "." + sortAndConcatenateTags(tags) else ""
     s"$baseName.${normalizer(name)}$stringTags"
   }

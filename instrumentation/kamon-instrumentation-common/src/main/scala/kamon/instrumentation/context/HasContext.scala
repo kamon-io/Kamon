@@ -48,7 +48,7 @@ object HasContext {
   class Mixin(@transient private var _context: Context) extends HasContext {
 
     override def context: Context =
-      if(_context != null) _context else Context.Empty
+      if (_context != null) _context else Context.Empty
 
     override def setContext(context: Context): Unit =
       _context = context
@@ -60,7 +60,7 @@ object HasContext {
   class VolatileMixin(@transient @volatile private var _context: Context) extends HasContext {
 
     override def context: Context =
-      if(_context != null) _context else Context.Empty
+      if (_context != null) _context else Context.Empty
 
     override def setContext(context: Context): Unit =
       _context = context

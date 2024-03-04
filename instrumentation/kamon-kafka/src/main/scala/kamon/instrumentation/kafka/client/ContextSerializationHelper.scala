@@ -29,7 +29,7 @@ import kamon.context.{BinaryPropagation, Context}
   */
 object ContextSerializationHelper {
 
- def toByteArray(ctx: Context): Array[Byte] = {
+  def toByteArray(ctx: Context): Array[Byte] = {
     val out = new ByteArrayOutputStream();
     Kamon.defaultBinaryPropagation().write(ctx, BinaryPropagation.ByteStreamWriter.of(out))
     out.toByteArray

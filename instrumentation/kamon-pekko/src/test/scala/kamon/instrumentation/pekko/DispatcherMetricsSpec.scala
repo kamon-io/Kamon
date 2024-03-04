@@ -33,8 +33,9 @@ import java.util.concurrent.Executors
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.concurrent.duration._
 
-class DispatcherMetricsSpec extends TestKit(ActorSystem("DispatcherMetricsSpec")) with AnyWordSpecLike with Matchers with MetricInspection.Syntax
-  with BeforeAndAfterAll with ImplicitSender with Eventually {
+class DispatcherMetricsSpec extends TestKit(ActorSystem("DispatcherMetricsSpec")) with AnyWordSpecLike with Matchers
+    with MetricInspection.Syntax
+    with BeforeAndAfterAll with ImplicitSender with Eventually {
 
   "the Kamon dispatcher metrics" should {
 
@@ -43,12 +44,12 @@ class DispatcherMetricsSpec extends TestKit(ActorSystem("DispatcherMetricsSpec")
       "tracked-pinned-dispatcher",
       "tracked-fjp",
       "tracked-tpe",
-      "pekko.actor.internal-dispatcher")
+      "pekko.actor.internal-dispatcher"
+    )
 
     val excluded = "explicitly-excluded"
     val allDispatchers = trackedDispatchers :+ excluded
     val builtInDispatchers = Seq("pekko.actor.default-dispatcher", "pekko.actor.internal-dispatcher")
-
 
     "track dispatchers configured in the pekko.dispatcher filter" in {
       allDispatchers.foreach(id => forceInit(system.dispatchers.lookup(id)))
@@ -61,7 +62,7 @@ class DispatcherMetricsSpec extends TestKit(ActorSystem("DispatcherMetricsSpec")
         threads.contains(dispatcherName) &&
         queues.contains(dispatcherName) &&
         tasks.contains(dispatcherName)
-      } should be (true)
+      } should be(true)
 
       Seq(threads, queues, tasks).flatten should not contain excluded
     }
@@ -71,9 +72,8 @@ class DispatcherMetricsSpec extends TestKit(ActorSystem("DispatcherMetricsSpec")
         .filter(_.get(plain("pekko.system")) == system.name)
         .map(_.get(plain("name")))
 
-      instrumentExecutorsWithSystem should contain only(trackedDispatchers: _*)
+      instrumentExecutorsWithSystem should contain only (trackedDispatchers: _*)
     }
-
 
     "clean up the metrics recorders after a dispatcher is shutdown" in {
       ExecutorMetrics.Parallelism.tagValues("name") should contain("tracked-fjp")
@@ -83,7 +83,8 @@ class DispatcherMetricsSpec extends TestKit(ActorSystem("DispatcherMetricsSpec")
     }
 
     "play nicely when dispatchers are looked up from a BalancingPool router" in {
-      val balancingPoolRouter = system.actorOf(BalancingPool(5).props(Props[RouterMetricsTestActor]), "test-balancing-pool")
+      val balancingPoolRouter =
+        system.actorOf(BalancingPool(5).props(Props[RouterMetricsTestActor]), "test-balancing-pool")
       balancingPoolRouter ! Ping
       expectMsg(Pong)
 
@@ -98,7 +99,7 @@ class DispatcherMetricsSpec extends TestKit(ActorSystem("DispatcherMetricsSpec")
         .filter(_.get(plain("pekko.system")) == system.name)
         .map(_.get(plain("name")))
 
-      instrumentExecutorsWithSystem should contain only(builtInDispatchers: _*)
+      instrumentExecutorsWithSystem should contain only (builtInDispatchers: _*)
       Await.result(system.terminate(), 5 seconds)
     }
 
@@ -111,15 +112,14 @@ class DispatcherMetricsSpec extends TestKit(ActorSystem("DispatcherMetricsSpec")
         .map(_.get(plain("name")))
 
       val builtInWithoutDefaultDispatcher = builtInDispatchers.filterNot(_.endsWith("default-dispatcher"))
-      if(builtInWithoutDefaultDispatcher.isEmpty)
+      if (builtInWithoutDefaultDispatcher.isEmpty)
         instrumentExecutorsWithSystem shouldBe empty
       else
-        instrumentExecutorsWithSystem should contain only(builtInWithoutDefaultDispatcher: _*)
+        instrumentExecutorsWithSystem should contain only (builtInWithoutDefaultDispatcher: _*)
 
       Await.result(system.terminate(), 5 seconds)
     }
   }
-
 
   def forceInit(dispatcher: MessageDispatcher): MessageDispatcher = {
     val listener = TestProbe()

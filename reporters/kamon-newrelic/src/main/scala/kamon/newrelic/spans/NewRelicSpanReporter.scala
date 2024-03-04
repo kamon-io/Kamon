@@ -28,7 +28,7 @@ import org.slf4j.LoggerFactory
 import scala.collection.JavaConverters._
 
 class NewRelicSpanReporter(spanBatchSenderBuilder: SpanBatchSenderBuilder =
-                           new SimpleSpanBatchSenderBuilder()) extends SpanReporter {
+  new SimpleSpanBatchSenderBuilder()) extends SpanReporter {
 
   private val logger = LoggerFactory.getLogger(classOf[NewRelicSpanReporter])
   @volatile private var spanBatchSender = spanBatchSenderBuilder.build(Kamon.config())
@@ -41,8 +41,10 @@ class NewRelicSpanReporter(spanBatchSenderBuilder: SpanBatchSenderBuilder =
   def checkJoinParameter(): Unit = {
     val joinRemoteParentsWithSameID = Kamon.config().getBoolean("kamon.trace.join-remote-parents-with-same-span-id")
     if (!joinRemoteParentsWithSameID) {
-      logger.warn("For full distributed trace compatibility enable `kamon.trace.join-remote-parents-with-same-span-id` to " +
-        "preserve span id across client/server sides of a Span.")
+      logger.warn(
+        "For full distributed trace compatibility enable `kamon.trace.join-remote-parents-with-same-span-id` to " +
+        "preserve span id across client/server sides of a Span."
+      )
     }
   }
 
@@ -64,7 +66,7 @@ class NewRelicSpanReporter(spanBatchSenderBuilder: SpanBatchSenderBuilder =
     reconfigure(newConfig, Kamon.environment)
   }
 
-  //exposed for testing
+  // exposed for testing
   def reconfigure(newConfig: Config, environment: Environment): Unit = {
     logger.debug("NewRelicSpanReporter reconfigure...")
     spanBatchSender = spanBatchSenderBuilder.build(newConfig)

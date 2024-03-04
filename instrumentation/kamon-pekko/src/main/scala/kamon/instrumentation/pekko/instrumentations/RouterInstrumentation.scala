@@ -25,7 +25,6 @@ class RouterInstrumentation extends InstrumentationBuilder {
     .advise(isConstructor, classOf[RoutedActorRefConstructorAdvice])
 }
 
-
 /**
   * Helps with capturing the Props for both the router and the routees.
   */
@@ -77,7 +76,12 @@ class RoutedActorCellConstructorAdvice
 object RoutedActorCellConstructorAdvice {
 
   @OnMethodExit(suppress = classOf[Throwable])
-  @static def exit(@This cell: Any, @Argument(0) system: ActorSystem, @Argument(1) ref: ActorRef, @Argument(5) parent: ActorRef): Unit = {
+  @static def exit(
+    @This cell: Any,
+    @Argument(0) system: ActorSystem,
+    @Argument(1) ref: ActorRef,
+    @Argument(5) parent: ActorRef
+  ): Unit = {
     cell.asInstanceOf[HasRouterMonitor].setRouterMonitor(RouterMonitor.from(cell, ref, parent, system))
   }
 }
@@ -96,4 +100,3 @@ object SendMessageOnRouterAdvice {
   @static def onExit(@This cell: Any, @Enter timestampBeforeProcessing: Long): Unit =
     routerInstrumentation(cell).processMessageEnd(timestampBeforeProcessing)
 }
-

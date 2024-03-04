@@ -98,7 +98,7 @@ class NodeMonitor(node: Node) {
   }
 
   def cleanup(): Unit = {
-    if(poolMetrics != null)
+    if (poolMetrics != null)
       poolMetrics.remove()
   }
 }

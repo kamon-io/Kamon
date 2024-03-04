@@ -38,7 +38,7 @@ class SlickInstrumentationSpec extends AnyWordSpec with Matchers with Eventually
   "the Slick instrumentation" should {
     "propagate the current Context to the AsyncExecutor on Slick" in {
       applyConfig("kamon.instrumentation.jdbc.add-db-statement-as-span-tag=always")
-      
+
       val db = setup(Database.forConfig("slick-h2"))
       val parent = Kamon.spanBuilder("parent").start()
 
@@ -95,4 +95,3 @@ class SlickInstrumentationSpec extends AnyWordSpec with Matchers with Eventually
   }
 
 }
-

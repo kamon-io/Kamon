@@ -20,7 +20,6 @@ import kamon.Kamon
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 
-
 class FilterSpec extends AnyWordSpec with Matchers {
   val testConfig = ConfigFactory.parseString(
     """

@@ -32,7 +32,7 @@ class AwsSdkRequestHandler extends RequestHandler2 {
   import AwsSdkRequestHandler.SpanContextKey
 
   override def beforeRequest(request: Request[_]): Unit = {
-    if(Kamon.enabled()) {
+    if (Kamon.enabled()) {
       val serviceName = request.getServiceName
       val originalRequestName = {
         // Remove the "Request" part of the request class name, if present
@@ -46,7 +46,7 @@ class AwsSdkRequestHandler extends RequestHandler2 {
 
       val clientSpan = serviceName match {
         case "AmazonSQS" => Kamon.producerSpanBuilder(operationName, serviceName).start()
-        case _ => Kamon.clientSpanBuilder(operationName, serviceName).start()
+        case _           => Kamon.clientSpanBuilder(operationName, serviceName).start()
       }
 
       request.addHandlerContext(SpanContextKey, clientSpan)
@@ -54,7 +54,7 @@ class AwsSdkRequestHandler extends RequestHandler2 {
   }
 
   override def afterResponse(request: Request[_], response: Response[_]): Unit = {
-    if(Kamon.enabled()) {
+    if (Kamon.enabled()) {
       val requestSpan = request.getHandlerContext(SpanContextKey)
       if (requestSpan != null) {
         requestSpan.finish()
@@ -63,7 +63,7 @@ class AwsSdkRequestHandler extends RequestHandler2 {
   }
 
   override def afterError(request: Request[_], response: Response[_], e: Exception): Unit = {
-    if(Kamon.enabled()) {
+    if (Kamon.enabled()) {
       val requestSpan = request.getHandlerContext(SpanContextKey)
       if (requestSpan != null) {
         requestSpan

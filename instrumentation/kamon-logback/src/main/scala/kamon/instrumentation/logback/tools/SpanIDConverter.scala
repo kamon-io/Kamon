@@ -27,7 +27,7 @@ class SpanIDConverter extends ClassicConverter {
     val currentSpan = Kamon.currentSpan()
     val spanID = currentSpan.id
 
-    if(spanID == Identifier.Empty)
+    if (spanID == Identifier.Empty)
       "undefined"
     else
       spanID.string

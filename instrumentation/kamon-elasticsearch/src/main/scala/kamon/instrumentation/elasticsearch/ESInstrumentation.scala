@@ -28,8 +28,14 @@ class ESInstrumentation extends InstrumentationBuilder {
     .advise(method("performRequest").and(takesArguments(1)), classOf[SyncElasticsearchRestClientInstrumentation])
 
   onType("org.elasticsearch.client.RestHighLevelClient")
-    .advise(method("internalPerformRequest").and(takesArguments(5)), classOf[HighLevelElasticsearchClientInstrumentation])
-    .advise(method("internalPerformRequestAsync").and(takesArguments(6)), classOf[HighLevelElasticsearchClientInstrumentation])
+    .advise(
+      method("internalPerformRequest").and(takesArguments(5)),
+      classOf[HighLevelElasticsearchClientInstrumentation]
+    )
+    .advise(
+      method("internalPerformRequestAsync").and(takesArguments(6)),
+      classOf[HighLevelElasticsearchClientInstrumentation]
+    )
 }
 
 class InstrumentedListener(inner: ResponseListener, span: Span) extends ResponseListener {

@@ -23,7 +23,6 @@ import kamon.module.ModuleRegistry
 import kamon.module.Module.{Kind => ModuleKind}
 import kamon.tag.TagSet
 
-
 /**
   * Exposes Kamon components' status information. This is meant to be used for informational and debugging purposes and
   * by no means should replace the use of reporters to extract information from Kamon.
@@ -59,7 +58,6 @@ class Status(_moduleRegistry: ModuleRegistry, _metricRegistry: MetricRegistry, c
 
 }
 
-
 object Status {
 
   /** Describes the global settings currently being used by Kamon */
@@ -94,7 +92,7 @@ object Status {
     * Describes a metric from a metric registry. Contains the basic metric information and details on all instruments
     * registered for that metric.
     */
-  case class Metric (
+  case class Metric(
     name: String,
     description: String,
     unit: MeasurementUnit,
@@ -103,7 +101,7 @@ object Status {
   )
 
   /** Describes the combination of tags in any given instrument */
-  case class Instrument (
+  case class Instrument(
     tags: TagSet
   )
 
@@ -111,7 +109,7 @@ object Status {
     * Describes all known instrumentation modules. This data is completely untyped and not expected to be used anywhere
     * outside Kamon. The data is injected on runtime by the Kanela instrumentation agent.
     */
-  case class Instrumentation (
+  case class Instrumentation(
     present: Boolean,
     kanelaVersion: Option[String],
     modules: Seq[Status.Instrumentation.ModuleInfo],
@@ -126,7 +124,7 @@ object Status {
       * but some modules might be shipped in a disabled state or forced to be disabled via configuration. The "active"
       * flag tells whether the modules has already applied instrumentation to any of its target types.
       */
-    case class ModuleInfo (
+    case class ModuleInfo(
       path: String,
       name: String,
       description: String,
@@ -137,7 +135,7 @@ object Status {
     /**
       * Describes errors that might have occurred while transforming a target type.
       */
-    case class TypeError (
+    case class TypeError(
       targetType: String,
       errors: Seq[Throwable]
     )

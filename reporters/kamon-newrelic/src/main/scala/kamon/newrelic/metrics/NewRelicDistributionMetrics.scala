@@ -44,12 +44,19 @@ object NewRelicDistributionMetrics {
       val buckets: Seq[Bucket] = distValue.buckets
 
       val summary: Summary = buildSummary(start, end, dist, instrumentBaseAttributes, distValue)
-      val percentiles: scala.Seq[_root_.com.newrelic.telemetry.metrics.Metric] = makePercentiles(dist.name, end, distValue, instrumentBaseAttributes)
+      val percentiles: scala.Seq[_root_.com.newrelic.telemetry.metrics.Metric] =
+        makePercentiles(dist.name, end, distValue, instrumentBaseAttributes)
       percentiles :+ summary
     }
   }
 
-  private def buildSummary(start: Long, end: Long, dist: Distributions, instrumentBaseAttributes: Attributes, distValue: Distribution) = {
+  private def buildSummary(
+    start: Long,
+    end: Long,
+    dist: Distributions,
+    instrumentBaseAttributes: Attributes,
+    distValue: Distribution
+  ) = {
     val count: Long = distValue.count
     val sum: Long = distValue.sum
     val min: Long = distValue.min
@@ -57,7 +64,12 @@ object NewRelicDistributionMetrics {
     new Summary(dist.name + ".summary", count.toInt, sum, min, max, start, end, instrumentBaseAttributes)
   }
 
-  private def makePercentiles(name: String, end: Long, distValue: Distribution, instrumentBaseAttributes: Attributes): Seq[Metric] = {
+  private def makePercentiles(
+    name: String,
+    end: Long,
+    distValue: Distribution,
+    instrumentBaseAttributes: Attributes
+  ): Seq[Metric] = {
     percentilesToReport
       .map(rank => distValue.percentile(rank))
       .filter(percentileValue => percentileValue != null)

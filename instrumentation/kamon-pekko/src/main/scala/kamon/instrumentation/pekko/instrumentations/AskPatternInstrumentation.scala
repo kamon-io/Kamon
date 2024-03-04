@@ -47,15 +47,20 @@ object AskPatternInstrumentation {
 
   private class StackTraceCaptureException extends Throwable
 
-  private case class SourceLocation (
+  private case class SourceLocation(
     declaringType: String,
     method: String
   )
 
   @OnMethodExit(suppress = classOf[Throwable])
-  @static def onExit(@Origin origin: String, @Return future: Future[AnyRef], @Argument(0) actor: ActorRef, @Argument(2) timeout: Timeout) = {
+  @static def onExit(
+    @Origin origin: String,
+    @Return future: Future[AnyRef],
+    @Argument(0) actor: ActorRef,
+    @Argument(2) timeout: Timeout
+  ) = {
 
-    if(PekkoPrivateAccess.isInternalAndActiveActorRef(actor) && Kamon.currentContext().nonEmpty()) {
+    if (PekkoPrivateAccess.isInternalAndActiveActorRef(actor) && Kamon.currentContext().nonEmpty()) {
       PekkoInstrumentation.settings().askPatternWarning match {
         case Off         =>
         case Lightweight => hookLightweightWarning(future, sourceLocation(origin), actor)
@@ -69,7 +74,6 @@ object AskPatternInstrumentation {
     case _                      =>
   }
 
-
   private def hookLightweightWarning(future: Future[AnyRef], sourceLocation: SourceLocation, actor: ActorRef): Unit = {
     val locationString = Option(sourceLocation)
       .map(location => s"${location.declaringType}:${location.method}")
@@ -80,7 +84,11 @@ object AskPatternInstrumentation {
     })(CallingThreadExecutionContext)
   }
 
-  private def hookHeavyweightWarning(future: Future[AnyRef], captureException: StackTraceCaptureException, actor: ActorRef): Unit = {
+  private def hookHeavyweightWarning(
+    future: Future[AnyRef],
+    captureException: StackTraceCaptureException,
+    actor: ActorRef
+  ): Unit = {
     val locationString = captureException.getStackTrace.drop(3).mkString("", System.lineSeparator, System.lineSeparator)
 
     future.failed.foreach(ifAskTimeoutException {

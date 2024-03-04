@@ -71,7 +71,7 @@ class ServerInstrumentationSpec
     (srv, client).tupled.use(f.tupled).unsafeRunSync()
 
   private def getResponse[F[_]: Concurrent](
-      path: String
+    path: String
   )(server: Server, client: Client[F]): F[(String, Headers)] = {
     client.get(s"http://127.0.0.1:${server.address.getPort}$path") { r =>
       r.bodyText.compile.toList.map(_.mkString).map(_ -> r.headers)

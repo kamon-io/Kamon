@@ -36,7 +36,7 @@ object QueryOperations {
   val QueryOperationName = "cassandra.query"
   val BatchOperationName = "cassandra.batch"
   val QueryPrepareOperationName: String = QueryOperationName + ".prepare"
-  val ExecutionOperationName:    String = QueryOperationName + ".execution"
+  val ExecutionOperationName: String = QueryOperationName + ".execution"
 }
 
 class QueryExecutionAdvice
@@ -47,15 +47,15 @@ object QueryExecutionAdvice {
 
   @Advice.OnMethodEnter
   @static def onQueryExec(
-      @Advice.This execution:                         HasContext,
-      @Advice.Argument(0) host:                       Host with HasPoolMetrics,
-      @Advice.FieldValue("position") position:        Int,
-      @Advice.FieldValue("queryStateRef") queryState: AtomicReference[QueryState]
+    @Advice.This execution: HasContext,
+    @Advice.Argument(0) host: Host with HasPoolMetrics,
+    @Advice.FieldValue("position") position: Int,
+    @Advice.FieldValue("queryStateRef") queryState: AtomicReference[QueryState]
   ): Unit = {
     val nodeMonitor = host.nodeMonitor
 
     val clientSpan = Kamon.currentSpan()
-    val executionSpan = if(CassandraInstrumentation.settings.createRoundTripSpans) {
+    val executionSpan = if (CassandraInstrumentation.settings.createRoundTripSpans) {
       Kamon
         .clientSpanBuilder(ExecutionOperationName, Tags.CassandraDriverComponent)
         .asChildOf(clientSpan)
@@ -91,8 +91,8 @@ object OnResultSetConstruction {
 
   @Advice.OnMethodExit
   @static def onCreateResultSet(
-      @Advice.Return rs:       ArrayBackedResultSet,
-      @Advice.Argument(0) msg: Responses.Result with HasContext
+    @Advice.Return rs: ArrayBackedResultSet,
+    @Advice.Argument(0) msg: Responses.Result with HasContext
   ): Unit = if (rs.isInstanceOf[HasContext]) {
     rs.asInstanceOf[HasContext].setContext(msg.context)
   }
@@ -132,10 +132,10 @@ object OnSetAdvice {
 
   @Advice.OnMethodEnter
   @static def onSetResult(
-      @Advice.This execution:                    Connection.ResponseCallback with HasContext,
-      @Advice.Argument(0) connection:            Connection,
-      @Advice.Argument(1) response:              Message.Response,
-      @Advice.FieldValue("current") currentHost: Host with HasPoolMetrics
+    @Advice.This execution: Connection.ResponseCallback with HasContext,
+    @Advice.Argument(0) connection: Connection,
+    @Advice.Argument(1) response: Message.Response,
+    @Advice.FieldValue("current") currentHost: Host with HasPoolMetrics
   ): Unit = {
 
     val executionSpan = execution.context.get(Span.Key)
@@ -156,7 +156,7 @@ object OnSetAdvice {
 
     currentHost.nodeMonitor.executionComplete()
 
-    //In order to correlate paging requests with initial one, carry context with message
+    // In order to correlate paging requests with initial one, carry context with message
     response.asInstanceOf[HasContext].setContext(execution.context)
     executionSpan.finish()
   }
@@ -170,10 +170,10 @@ object OnExceptionAdvice {
 
   @Advice.OnMethodEnter
   @static def onException(
-      @Advice.This execution:                    HasContext,
-      @Advice.Argument(0) connection:            Connection,
-      @Advice.Argument(1) exception:             Exception,
-      @Advice.FieldValue("current") currentHost: Host with HasPoolMetrics
+    @Advice.This execution: HasContext,
+    @Advice.Argument(0) connection: Connection,
+    @Advice.Argument(1) exception: Exception,
+    @Advice.FieldValue("current") currentHost: Host with HasPoolMetrics
   ): Unit = {
 
     currentHost.nodeMonitor.clientError()
@@ -193,9 +193,9 @@ object OnTimeoutAdvice {
 
   @Advice.OnMethodEnter
   @static def onTimeout(
-      @Advice.This execution:                    HasContext,
-      @Advice.Argument(0) connection:            Connection,
-      @Advice.FieldValue("current") currentHost: Host with HasPoolMetrics
+    @Advice.This execution: HasContext,
+    @Advice.Argument(0) connection: Connection,
+    @Advice.FieldValue("current") currentHost: Host with HasPoolMetrics
   ): Unit = {
 
     currentHost.nodeMonitor.timeout()
@@ -212,11 +212,11 @@ object HostLocationAdvice {
 
   @Advice.OnMethodExit
   @static def onHostLocationUpdate(
-      @Advice.This host:                            Host with HasPoolMetrics,
-      @Advice.FieldValue("manager") clusterManager: Any
+    @Advice.This host: Host with HasPoolMetrics,
+    @Advice.FieldValue("manager") clusterManager: Any
   ): Unit = {
 
-    val targetHost  = CassandraInstrumentation.createNode(host)
+    val targetHost = CassandraInstrumentation.createNode(host)
     host.setNodeMonitor(new NodeMonitor(targetHost))
   }
 }

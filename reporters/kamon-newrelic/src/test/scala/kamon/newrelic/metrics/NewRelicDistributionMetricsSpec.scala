@@ -26,7 +26,16 @@ class NewRelicDistributionMetricsSpec extends AnyWordSpec with Matchers {
         .put("twelve", "bishop")
         .put("dimension", "information")
         .put("sourceMetricType", "mountain")
-      val summary = new Summary("trev.summary", 44, 101.0, 13.0, 17.0, TestMetricHelper.start, TestMetricHelper.end, summaryAttributes)
+      val summary = new Summary(
+        "trev.summary",
+        44,
+        101.0,
+        13.0,
+        17.0,
+        TestMetricHelper.start,
+        TestMetricHelper.end,
+        summaryAttributes
+      )
       val gaugeAttributes = summaryAttributes.copy().put("percentile", 90.0d)
       val gauge = new Gauge("trev.percentiles", 2.0, TestMetricHelper.end, gaugeAttributes)
       val expectedMetrics = Seq(gauge, summary)

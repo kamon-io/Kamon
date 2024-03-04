@@ -89,12 +89,14 @@ object Environment {
   }
 
   private def generateHostname(): String = {
-    try InetAddress.getLocalHost.getHostName() catch { case t: Throwable =>
-      _logger.warn("Could not automatically resolve a host name for this instance, falling back to 'localhost'", t)
-      "localhost"
+    try InetAddress.getLocalHost.getHostName()
+    catch {
+      case t: Throwable =>
+        _logger.warn("Could not automatically resolve a host name for this instance, falling back to 'localhost'", t)
+        "localhost"
     }
   }
 
   private def readValueOrGenerate(configuredValue: String, generator: => String): String =
-    if(configuredValue == "auto") generator else configuredValue
+    if (configuredValue == "auto") generator else configuredValue
 }

@@ -12,7 +12,6 @@ import kanela.agent.libs.net.bytebuddy.asm.Advice
 
 import scala.annotation.static
 
-
 /**
   * For Artery messages we will always add two sections to the end of each serialized message: the Context and the size
   * of the Context. The layout will look something like this:
@@ -31,15 +30,19 @@ object SerializeForArteryAdvice {
   }
 
   @Advice.OnMethodExit
-  @static def exit(@Advice.Argument(0) serialization: Serialization, @Advice.Argument(1) envelope: OutboundEnvelope,
-      @Advice.Argument(3) envelopeBuffer: EnvelopeBuffer, @Advice.Enter startTime: Long): Unit = {
+  @static def exit(
+    @Advice.Argument(0) serialization: Serialization,
+    @Advice.Argument(1) envelope: OutboundEnvelope,
+    @Advice.Argument(3) envelopeBuffer: EnvelopeBuffer,
+    @Advice.Enter startTime: Long
+  ): Unit = {
 
     val instruments = PekkoRemoteMetrics.serializationInstruments(serialization.system.name)
     val messageBuffer = envelopeBuffer.byteBuffer
     val context = envelope.asInstanceOf[HasContext].context
     val positionBeforeContext = messageBuffer.position()
 
-    if(context.nonEmpty()) {
+    if (context.nonEmpty()) {
       Kamon.defaultBinaryPropagation().write(context, byteBufferWriter(messageBuffer))
     }
 
@@ -87,7 +90,7 @@ object DeserializeForArteryAdvice {
     val contextStart = messageBuffer.limit() - (contextSize + 4)
     val messageSize = contextStart - messageStart
 
-    val context = if(contextSize == 0)
+    val context = if (contextSize == 0)
       Context.Empty
     else {
       messageBuffer
@@ -103,10 +106,14 @@ object DeserializeForArteryAdvice {
   }
 
   @Advice.OnMethodExit(onThrowable = classOf[Throwable])
-  @static def exit(@Advice.Argument(0) system: ActorSystem, @Advice.Argument(5) envelopeBuffer: EnvelopeBuffer,
-      @Advice.Enter deserializationInfo: DeserializationInfo, @Advice.Thrown error: Throwable): Unit = {
+  @static def exit(
+    @Advice.Argument(0) system: ActorSystem,
+    @Advice.Argument(5) envelopeBuffer: EnvelopeBuffer,
+    @Advice.Enter deserializationInfo: DeserializationInfo,
+    @Advice.Thrown error: Throwable
+  ): Unit = {
 
-    if(error == null) {
+    if (error == null) {
       LastDeserializedContext.set(deserializationInfo.context)
 
       val instruments = PekkoRemoteMetrics.serializationInstruments(system.name)
@@ -114,7 +121,6 @@ object DeserializeForArteryAdvice {
       instruments.inboundMessageSize.record(deserializationInfo.messageSize)
     }
   }
-
 
   def byteBufferReader(bb: ByteBuffer): BinaryPropagation.ByteStreamReader = new BinaryPropagation.ByteStreamReader {
     override def available(): Int =
@@ -138,14 +144,13 @@ object DeserializeForArteryAdvice {
   }
 }
 
-
 class CaptureContextOnInboundEnvelope
 object CaptureContextOnInboundEnvelope {
 
   @Advice.OnMethodEnter
   @static def enter(@Advice.This inboundEnvelope: Any): Unit = {
     val lastContext = DeserializeForArteryAdvice.LastDeserializedContext.get()
-    if(lastContext != null) {
+    if (lastContext != null) {
       inboundEnvelope.asInstanceOf[HasContext].setContext(lastContext)
       DeserializeForArteryAdvice.LastDeserializedContext.set(null)
     }

@@ -38,7 +38,6 @@ class AkkaGrpcServerInstrumentation extends InstrumentationBuilder {
   onType("akka.grpc.internal.TelemetrySpi")
     .advise(method("onRequest"), classOf[AkkaGRPCServerRequestHandler])
 
-
   onType("akka.grpc.javadsl.GrpcMarshalling")
     .advise(method("unmarshal"), classOf[AkkaGRPCUnmarshallingContextPropagation])
 }

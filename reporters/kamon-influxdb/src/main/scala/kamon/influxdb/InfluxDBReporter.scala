@@ -32,7 +32,6 @@ import org.slf4j.LoggerFactory
 import java.nio.charset.StandardCharsets.ISO_8859_1
 import scala.util.Try
 
-
 class InfluxDBReporterFactory extends ModuleFactory {
   override def create(settings: ModuleFactory.Settings): InfluxDBReporter = new InfluxDBReporter()
 }
@@ -50,7 +49,7 @@ class InfluxDBReporter extends MetricReporter {
 
     Try {
       val response = client.newCall(request).execute()
-      if(response.isSuccessful()) {
+      if (response.isSuccessful()) {
         if (logger.isTraceEnabled()) {
           logger.trace("Successfully sent metrics to InfluxDB")
         }
@@ -69,7 +68,6 @@ class InfluxDBReporter extends MetricReporter {
     }
   }
 
-
   override def stop(): Unit = {}
 
   override def reconfigure(config: Config): Unit = {
@@ -78,16 +76,16 @@ class InfluxDBReporter extends MetricReporter {
   }
 
   protected def getTimestamp(instant: Instant): String = {
-     settings.measurementPrecision match {
-       case "s" =>
-         instant.getEpochSecond.toString
-       case "ms" =>
-         instant.toEpochMilli.toString
-       case "u" | "µ" =>
-         ((BigInt(instant.getEpochSecond) * 1000000) + TimeUnit.NANOSECONDS.toMicros(instant.getNano)).toString
-       case "ns" =>
-          ((BigInt(instant.getEpochSecond) * 1000000000) + instant.getNano).toString
-     }
+    settings.measurementPrecision match {
+      case "s" =>
+        instant.getEpochSecond.toString
+      case "ms" =>
+        instant.toEpochMilli.toString
+      case "u" | "µ" =>
+        ((BigInt(instant.getEpochSecond) * 1000000) + TimeUnit.NANOSECONDS.toMicros(instant.getNano)).toString
+      case "ns" =>
+        ((BigInt(instant.getEpochSecond) * 1000000000) + instant.getNano).toString
+    }
   }
 
   private def translateToLineProtocol(periodSnapshot: PeriodSnapshot): RequestBody = {
@@ -104,23 +102,38 @@ class InfluxDBReporter extends MetricReporter {
     RequestBody.create(MediaType.parse("text/plain"), builder.result())
   }
 
-  private def writeLongMetricValue(builder: StringBuilder, metric: MetricSnapshot.Values[Long], fieldName: String, timestamp: String): Unit = {
-    metric.instruments.foreach{instrument =>
+  private def writeLongMetricValue(
+    builder: StringBuilder,
+    metric: MetricSnapshot.Values[Long],
+    fieldName: String,
+    timestamp: String
+  ): Unit = {
+    metric.instruments.foreach { instrument =>
       writeNameAndTags(builder, metric.name, instrument.tags)
       writeIntField(builder, fieldName, instrument.value, appendSeparator = false)
       writeTimestamp(builder, timestamp)
     }
   }
 
-  private def writeDoubleMetricValue(builder: StringBuilder, metric: MetricSnapshot.Values[Double], fieldName: String, timestamp: String): Unit = {
-    metric.instruments.foreach{instrument =>
+  private def writeDoubleMetricValue(
+    builder: StringBuilder,
+    metric: MetricSnapshot.Values[Double],
+    fieldName: String,
+    timestamp: String
+  ): Unit = {
+    metric.instruments.foreach { instrument =>
       writeNameAndTags(builder, metric.name, instrument.tags)
       writeDoubleField(builder, fieldName, instrument.value, appendSeparator = false)
       writeTimestamp(builder, timestamp)
     }
   }
 
-  private def writeMetricDistribution(builder: StringBuilder, metric: MetricSnapshot.Distributions, percentiles: Seq[Double], timestamp: String): Unit = {
+  private def writeMetricDistribution(
+    builder: StringBuilder,
+    metric: MetricSnapshot.Distributions,
+    percentiles: Seq[Double],
+    timestamp: String
+  ): Unit = {
     metric.instruments.foreach { instrument =>
       if (instrument.value.count > 0) {
         writeNameAndTags(builder, metric.name, instrument.tags)
@@ -144,9 +157,10 @@ class InfluxDBReporter extends MetricReporter {
     builder
       .append(escapeName(name))
 
-    val tags = (if(settings.additionalTags.nonEmpty) metricTags.withTags(settings.additionalTags) else metricTags).all()
+    val tags =
+      (if (settings.additionalTags.nonEmpty) metricTags.withTags(settings.additionalTags) else metricTags).all()
 
-    if(tags.nonEmpty) {
+    if (tags.nonEmpty) {
       tags.foreach { t =>
         if (settings.tagFilter.accept(t.key)) {
           builder
@@ -169,19 +183,23 @@ class InfluxDBReporter extends MetricReporter {
     in.replace(" ", "\\ ")
       .replace(",", "\\,")
 
-
   private def escapeString(in: String): String =
     in.replace(" ", "\\ ")
       .replace("=", "\\=")
       .replace(",", "\\,")
 
-  def writeDoubleField(builder: StringBuilder, fieldName: String, value: Double, appendSeparator: Boolean = true): Unit = {
+  def writeDoubleField(
+    builder: StringBuilder,
+    fieldName: String,
+    value: Double,
+    appendSeparator: Boolean = true
+  ): Unit = {
     builder
       .append(fieldName)
       .append('=')
       .append(String.valueOf(value))
 
-    if(appendSeparator)
+    if (appendSeparator)
       builder.append(',')
   }
 
@@ -192,7 +210,7 @@ class InfluxDBReporter extends MetricReporter {
       .append(String.valueOf(value))
       .append('i')
 
-    if(appendSeparator)
+    if (appendSeparator)
       builder.append(',')
   }
 
@@ -205,12 +223,14 @@ class InfluxDBReporter extends MetricReporter {
 
   protected def buildClient(settings: Settings): OkHttpClient = {
     val basicBuilder = new OkHttpClient.Builder()
-    val authenticator = settings.credentials.map(credentials => new Interceptor {
-      override def intercept(chain: Interceptor.Chain): Response = {
-        chain.proceed(chain.request().newBuilder().header("Authorization", credentials).build())
+    val authenticator = settings.credentials.map(credentials =>
+      new Interceptor {
+        override def intercept(chain: Interceptor.Chain): Response = {
+          chain.proceed(chain.request().newBuilder().header("Authorization", credentials).build())
+        }
       }
-    })
-    authenticator.foldLeft(basicBuilder){ case (builder, auth) => builder.addInterceptor(auth)}.build()
+    )
+    authenticator.foldLeft(basicBuilder) { case (builder, auth) => builder.addInterceptor(auth) }.build()
   }
 }
 
@@ -221,7 +241,7 @@ object InfluxDBReporter {
     credentials: Option[String],
     tagFilter: Filter,
     postEmptyDistributions: Boolean,
-    additionalTags:TagSet,
+    additionalTags: TagSet,
     measurementPrecision: String
   )
 
@@ -230,7 +250,7 @@ object InfluxDBReporter {
     val influxDBConfig = config.getConfig("kamon.influxdb")
     val host = influxDBConfig.getString("hostname")
     val credentials = if (influxDBConfig.hasPath("authentication")) {
-      if(influxDBConfig.hasPath("authentication.token"))
+      if (influxDBConfig.hasPath("authentication.token"))
         Some("Token " + influxDBConfig.getString("authentication.token"))
       else
         Some(Credentials.basic(
@@ -247,8 +267,10 @@ object InfluxDBReporter {
 
     val precision = influxDBConfig.getString("precision")
 
-    if (!Set("ns","u","µ","ms","s").contains(precision)){
-      throw new RuntimeException("Precision must be one of `[ns,u,µ,ms,s]` to match https://docs.influxdata.com/influxdb/v1.7/tools/api/#query-string-parameters-1")
+    if (!Set("ns", "u", "µ", "ms", "s").contains(precision)) {
+      throw new RuntimeException(
+        "Precision must be one of `[ns,u,µ,ms,s]` to match https://docs.influxdata.com/influxdb/v1.7/tools/api/#query-string-parameters-1"
+      )
 
     }
 

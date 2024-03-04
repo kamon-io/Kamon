@@ -45,18 +45,21 @@ class AkkaHttpClientInstrumentation extends InstrumentationBuilder with VersionF
 
 object AkkaHttpClientInstrumentation {
 
-    @volatile var httpClientInstrumentation: HttpClientInstrumentation = rebuildHttpClientInstrumentation
+  @volatile var httpClientInstrumentation: HttpClientInstrumentation = rebuildHttpClientInstrumentation
 
-    private[http] def rebuildHttpClientInstrumentation(): HttpClientInstrumentation = {
-      val httpClientConfig = Kamon.config().getConfig("kamon.instrumentation.akka.http.client")
-      httpClientInstrumentation = HttpClientInstrumentation.from(httpClientConfig, "akka.http.client")
-      httpClientInstrumentation
-    }
+  private[http] def rebuildHttpClientInstrumentation(): HttpClientInstrumentation = {
+    val httpClientConfig = Kamon.config().getConfig("kamon.instrumentation.akka.http.client")
+    httpClientInstrumentation = HttpClientInstrumentation.from(httpClientConfig, "akka.http.client")
+    httpClientInstrumentation
+  }
 
-  def handleResponse(responseFuture: Future[HttpResponse], handler: RequestHandler[HttpRequest]): Future[HttpResponse] = {
+  def handleResponse(
+    responseFuture: Future[HttpResponse],
+    handler: RequestHandler[HttpRequest]
+  ): Future[HttpResponse] = {
     responseFuture.onComplete {
       case Success(response) => handler.processResponse(toResponse(response))
-      case Failure(t) => handler.span.fail(t).finish()
+      case Failure(t)        => handler.span.fail(t).finish()
     }(CallingThreadExecutionContext)
 
     responseFuture

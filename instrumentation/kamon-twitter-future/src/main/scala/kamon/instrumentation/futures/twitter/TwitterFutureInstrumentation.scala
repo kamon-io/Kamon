@@ -30,7 +30,6 @@ class TwitterFutureInstrumentation extends InstrumentationBuilder {
     .advise(isConstructor, CaptureCurrentContextOnExit)
     .advise(method("apply"), InvokeWithCapturedContext)
 
-
   onType("com.twitter.util.Promise$Interruptible")
     .advise(isConstructor, classOf[InterruptiblePromiseConstructorAdvice])
 }

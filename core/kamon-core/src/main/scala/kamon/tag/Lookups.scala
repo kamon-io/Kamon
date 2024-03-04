@@ -20,7 +20,6 @@ package tag
 import java.util.Optional
 import kamon.tag.TagSet.Lookup
 
-
 object Lookups {
 
   /**
@@ -68,7 +67,7 @@ object Lookups {
   def coerce(key: String): Lookup[String] = new Lookup[String] {
     override def execute(storage: TagSet.Storage): String = {
       val value = storage.get(key)
-      if(value == null)
+      if (value == null)
         "unknown"
       else
         value.toString
@@ -85,7 +84,7 @@ object Lookups {
   def coerce(key: String, default: String): Lookup[String] = new Lookup[String] {
     override def execute(storage: TagSet.Storage): String = {
       val value = storage.get(key)
-      if(value == null)
+      if (value == null)
         default
       else
         value.toString
@@ -146,18 +145,23 @@ object Lookups {
       findAndTransform(key, storage, _longOptional, Optional.empty(), _longSafetyCheck)
   }
 
-
   ////////////////////////////////////////////////////////////////
   // Transformation helpers for the lookup DSL                  //
   ////////////////////////////////////////////////////////////////
 
   @inline
-  private def findAndTransform[T, R](key: String, storage: TagSet.Storage, transform: R => T, default: T, safetyCheck: Any => Boolean): T = {
+  private def findAndTransform[T, R](
+    key: String,
+    storage: TagSet.Storage,
+    transform: R => T,
+    default: T,
+    safetyCheck: Any => Boolean
+  ): T = {
     // This assumes that this code will only be used to lookup values from a Tags instance
     // for which the underlying map always has "null" as the default value.
     val value = storage.get(key)
 
-    if(safetyCheck(value))
+    if (safetyCheck(value))
       transform(value.asInstanceOf[R])
     else
       default

@@ -62,7 +62,8 @@ class EnvironmentTagsSpec extends AnyWordSpec with Matchers {
           |include-host = yes
           |include-instance = yes
           |exclude = []
-        """.stripMargin)
+        """.stripMargin
+      )
 
       val env = Kamon.environment
       val tags = EnvironmentTags.from(env, config)
@@ -78,7 +79,8 @@ class EnvironmentTagsSpec extends AnyWordSpec with Matchers {
           |include-host = yes
           |include-instance = yes
           |exclude = []
-        """.stripMargin)
+        """.stripMargin
+      )
 
       val tags = EnvironmentTags.from(testEnv, config)
       tags("service") shouldBe testEnv.service
@@ -109,7 +111,8 @@ class EnvironmentTagsSpec extends AnyWordSpec with Matchers {
           |include-host = yes
           |include-instance = yes
           |exclude = [ "region" ]
-        """.stripMargin)
+        """.stripMargin
+      )
 
       val tags = EnvironmentTags.from(testEnv, config)
       tags("service") shouldBe testEnv.service
@@ -135,7 +138,8 @@ class EnvironmentTagsSpec extends AnyWordSpec with Matchers {
           | "@tag-with-special-chars",
           | "\"tag-with-quotes\""
           |]
-        """.stripMargin)
+        """.stripMargin
+      )
 
       val tags = EnvironmentTags.from(testEnv, config)
       tags shouldBe empty

@@ -28,7 +28,9 @@ import scala.concurrent.Future
   * Provides APIs for handling common initialization tasks like starting modules, attaching instrumentation and
   * reconfiguring Kamon.
   */
-trait Init { self: ModuleManagement with Configuration with CurrentStatus with Metrics with Utilities with Tracing with ContextStorage =>
+trait Init {
+  self: ModuleManagement with Configuration with CurrentStatus with Metrics with Utilities with Tracing
+    with ContextStorage =>
   private val _logger = LoggerFactory.getLogger(classOf[Init])
   @volatile private var _scheduler: Option[ScheduledExecutorService] = None
 
@@ -38,8 +40,8 @@ trait Init { self: ModuleManagement with Configuration with CurrentStatus with M
     * Attempts to attach the instrumentation agent and start all registered modules.
     */
   def init(): Unit = {
-    if(enabled()) {
-      if(shouldAttachInstrumentation()) {
+    if (enabled()) {
+      if (shouldAttachInstrumentation()) {
         self.attachInstrumentation()
       }
 
@@ -60,7 +62,7 @@ trait Init { self: ModuleManagement with Configuration with CurrentStatus with M
   def init(config: Config): Unit = {
     self.reconfigure(config)
 
-    if(enabled()) {
+    if (enabled()) {
       if (shouldAttachInstrumentation()) {
         self.attachInstrumentation()
       }
@@ -80,7 +82,7 @@ trait Init { self: ModuleManagement with Configuration with CurrentStatus with M
     * Initializes Kamon without trying to attach the instrumentation agent from the Kamon Bundle.
     */
   def initWithoutAttaching(): Unit = {
-    if(enabled()) {
+    if (enabled()) {
       self.initScheduler()
       self.loadModules()
       self.moduleRegistry().init()
@@ -97,14 +99,13 @@ trait Init { self: ModuleManagement with Configuration with CurrentStatus with M
   def initWithoutAttaching(config: Config): Unit = {
     self.reconfigure(config)
 
-    if(enabled()) {
+    if (enabled()) {
       self.initWithoutAttaching()
     } else {
       self.disableInstrumentation()
       self.logInitStatusInfo()
     }
   }
-
 
   def stop(): Future[Unit] = {
     self.clearRegistry()
@@ -118,7 +119,7 @@ trait Init { self: ModuleManagement with Configuration with CurrentStatus with M
     * the Status module indicates that instrumentation has been already applied this method will not try to do anything.
     */
   def attachInstrumentation(): Unit = {
-    if(!InstrumentationStatus.create(warnIfFailed = false).present) {
+    if (!InstrumentationStatus.create(warnIfFailed = false).present) {
       try {
         val attacherClass = Class.forName("kamon.runtime.Attacher")
         val attachMethod = attacherClass.getDeclaredMethod("attach")
@@ -145,7 +146,7 @@ trait Init { self: ModuleManagement with Configuration with CurrentStatus with M
     val isEnabled = enabled()
     val showBanner = !config().getBoolean("kamon.init.hide-banner")
 
-    if(isEnabled) {
+    if (isEnabled) {
       val instrumentationStatus = status().instrumentation()
       val kanelaVersion = instrumentationStatus.kanelaVersion
         .map(v => green("v" + v))
@@ -167,8 +168,10 @@ trait Init { self: ModuleManagement with Configuration with CurrentStatus with M
       } else
         _logger.info(s"Initializing Kamon Telemetry v${BuildInfo.version} / Kanela ${kanelaVersion}")
     } else {
-      _logger.warn(s"Kamon is ${red("DISABLED")}. No instrumentation, reporters, or context propagation will be applied on this " +
-        "process. Restart the process with kamon.enabled=yes to restore Kamon's functionality")
+      _logger.warn(
+        s"Kamon is ${red("DISABLED")}. No instrumentation, reporters, or context propagation will be applied on this " +
+        "process. Restart the process with kamon.enabled=yes to restore Kamon's functionality"
+      )
     }
 
   }
@@ -187,7 +190,7 @@ trait Init { self: ModuleManagement with Configuration with CurrentStatus with M
 
     } catch {
       case _: ClassNotFoundException =>
-        // Do nothing. This means that Kanela wasn't loaded so there was no need to do anything.
+      // Do nothing. This means that Kanela wasn't loaded so there was no need to do anything.
 
       case _: NoSuchMethodException =>
         _logger.error("Failed to disable the Kanela instrumentation agent. Please ensure you are using Kanela >=1.0.17")

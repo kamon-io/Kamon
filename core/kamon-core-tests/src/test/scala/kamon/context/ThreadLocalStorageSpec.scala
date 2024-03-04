@@ -15,7 +15,6 @@
 
 package kamon.context
 
-
 import kamon.context.Storage.Scope
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.concurrent.ScalaFutures._
@@ -48,7 +47,7 @@ class ThreadLocalStorageSpec extends AnyWordSpec with Matchers with BeforeAndAft
       TLS.current() shouldBe Context.Empty
 
       val scope = TLS.store(ScopeWithKey)
-        TLS.current() shouldBe theSameInstanceAs(ScopeWithKey)
+      TLS.current() shouldBe theSameInstanceAs(ScopeWithKey)
       scope.close()
 
       TLS.current() shouldBe Context.Empty

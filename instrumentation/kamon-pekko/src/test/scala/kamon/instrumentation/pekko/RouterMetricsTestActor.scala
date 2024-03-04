@@ -50,4 +50,3 @@ object RouterMetricsTestActor {
     def approximateProcessingTime: Long = afterReceiveTimestamp - dequeueTimestamp
   }
 }
-

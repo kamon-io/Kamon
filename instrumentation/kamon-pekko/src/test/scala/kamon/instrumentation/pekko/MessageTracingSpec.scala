@@ -23,10 +23,10 @@ import java.util.concurrent.TimeUnit
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, Future}
 
-
-class MessageTracingSpec extends TestKit(ActorSystem("MessageTracing")) with AnyWordSpecLike with MetricInspection.Syntax
-  with Matchers with SpanInspection with Reconfigure with InitAndStopKamonAfterAll with ImplicitSender with Eventually
-  with OptionValues with ScalaFutures with TestSpanReporter {
+class MessageTracingSpec extends TestKit(ActorSystem("MessageTracing")) with AnyWordSpecLike
+    with MetricInspection.Syntax
+    with Matchers with SpanInspection with Reconfigure with InitAndStopKamonAfterAll with ImplicitSender with Eventually
+    with OptionValues with ScalaFutures with TestSpanReporter {
 
   "Message tracing instrumentation" should {
     "skip filtered out actors" in {
@@ -43,8 +43,8 @@ class MessageTracingSpec extends TestKit(ActorSystem("MessageTracing")) with Any
         val spanTags = stringTag(span) _
         spanTags("component") shouldBe "pekko.actor"
         span.operationName shouldBe "tell(String)"
-        spanTags("pekko.actor.path") shouldNot include ("filteredout")
-        spanTags("pekko.actor.path") should be ("MessageTracing/user/traced-probe-1")
+        spanTags("pekko.actor.path") shouldNot include("filteredout")
+        spanTags("pekko.actor.path") should be("MessageTracing/user/traced-probe-1")
       }
     }
 
@@ -150,8 +150,9 @@ class MessageTracingSpec extends TestKit(ActorSystem("MessageTracing")) with Any
     }
 
     "create actor message spans when behind a group router " in {
-      val routee = system.actorOf(Props[TracingTestActor],"traced-routee-one")
-      val router = system.actorOf(RoundRobinGroup(Vector(routee.path.toStringWithoutAddress)).props(), "nontraced-group-router")
+      val routee = system.actorOf(Props[TracingTestActor], "traced-routee-one")
+      val router =
+        system.actorOf(RoundRobinGroup(Vector(routee.path.toStringWithoutAddress)).props(), "nontraced-group-router")
 
       router ! "ping"
       expectMsg("pong")
@@ -159,8 +160,8 @@ class MessageTracingSpec extends TestKit(ActorSystem("MessageTracing")) with Any
       eventually(timeout(2 seconds)) {
         val spanTags = stringTag(testSpanReporter().nextSpan().value) _
         spanTags("component") shouldBe "pekko.actor"
-        spanTags("pekko.actor.path") shouldNot include ("nontraced-pool-router")
-        spanTags("pekko.actor.path") should be ("MessageTracing/user/traced-routee-one")
+        spanTags("pekko.actor.path") shouldNot include("nontraced-pool-router")
+        spanTags("pekko.actor.path") should be("MessageTracing/user/traced-routee-one")
       }
     }
 
@@ -173,7 +174,7 @@ class MessageTracingSpec extends TestKit(ActorSystem("MessageTracing")) with Any
       eventually(timeout(2 seconds)) {
         val spanTags = stringTag(testSpanReporter().nextSpan().value) _
         spanTags("component") shouldBe "pekko.actor"
-        spanTags("pekko.actor.path") should be ("MessageTracing/user/traced-pool-router")
+        spanTags("pekko.actor.path") should be("MessageTracing/user/traced-pool-router")
       }
     }
 
@@ -184,7 +185,7 @@ class MessageTracingSpec extends TestKit(ActorSystem("MessageTracing")) with Any
       val _ = Kamon.runWithSpan(Kamon.serverSpanBuilder("wrapper", "test").start()) {
         actorWithMaterializer.ask("stream").mapTo[String]
       }
-      
+
       5 times {
         val allSpans = testSpanReporter()
           .spans()
@@ -226,7 +227,7 @@ class ActorWithMaterializer extends Actor {
 
   override def receive: Receive = {
     case "stream" =>
-      Await.result (
+      Await.result(
         Source(1 to 10)
           .async
           .map(x => x + x)

@@ -28,7 +28,7 @@ import org.scalatest.wordspec.AnyWordSpec
 import java.time.Instant
 
 class DatadogMetricSenderSpec extends AnyWordSpec
-  with Matchers with Reconfigure {
+    with Matchers with Reconfigure {
   reconfigure =>
 
   class TestBuffer extends PacketBuffer {
@@ -37,7 +37,7 @@ class DatadogMetricSenderSpec extends AnyWordSpec
 
     override def flush(): Unit = {}
     override def appendMeasurement(
-      key:             String,
+      key: String,
       measurementData: String
     ): Unit = {
       lst += (key -> measurementData)
@@ -45,9 +45,11 @@ class DatadogMetricSenderSpec extends AnyWordSpec
   }
 
   "the DataDogMetricSender" should {
-    "send counter metrics" in AgentReporter(new TestBuffer(), ConfigFactory.parseString("kamon.environment.tags.env = staging").withFallback(Kamon.config())) {
+    "send counter metrics" in AgentReporter(
+      new TestBuffer(),
+      ConfigFactory.parseString("kamon.environment.tags.env = staging").withFallback(Kamon.config())
+    ) {
       case (buffer, reporter) =>
-
         val now = Instant.now()
         reporter.reportPeriodSnapshot(
           PeriodSnapshot.apply(
@@ -57,7 +59,8 @@ class DatadogMetricSenderSpec extends AnyWordSpec
               "test.counter",
               "test",
               Metric.Settings.ForValueInstrument(MeasurementUnit.none, java.time.Duration.ZERO),
-              Instrument.Snapshot.apply(TagSet.of("tag1", "value1"), 0L) :: Nil) :: Nil,
+              Instrument.Snapshot.apply(TagSet.of("tag1", "value1"), 0L) :: Nil
+            ) :: Nil,
             Nil,
             Nil,
             Nil,
@@ -69,13 +72,16 @@ class DatadogMetricSenderSpec extends AnyWordSpec
         buffer.lst should contain("test.counter" -> "0|c|#service:kamon-application,env:staging,tag1:value1")
     }
 
-    "filter out environment tags" in AgentReporter(new TestBuffer(), ConfigFactory.parseString(
-      """
+    "filter out environment tags" in AgentReporter(
+      new TestBuffer(),
+      ConfigFactory.parseString(
+        """
         |kamon.datadog.environment-tags.exclude = [env]
         |kamon.environment.tags.env = staging
-        |""".stripMargin).withFallback(Kamon.config())) {
+        |""".stripMargin
+      ).withFallback(Kamon.config())
+    ) {
       case (buffer, reporter) =>
-
         val now = Instant.now()
         reporter.reportPeriodSnapshot(
           PeriodSnapshot.apply(
@@ -85,7 +91,8 @@ class DatadogMetricSenderSpec extends AnyWordSpec
               "test.counter",
               "test",
               Metric.Settings.ForValueInstrument(MeasurementUnit.none, java.time.Duration.ZERO),
-              Instrument.Snapshot.apply(TagSet.of("tag1", "value1"), 0L) :: Nil) :: Nil,
+              Instrument.Snapshot.apply(TagSet.of("tag1", "value1"), 0L) :: Nil
+            ) :: Nil,
             Nil,
             Nil,
             Nil,
@@ -97,14 +104,17 @@ class DatadogMetricSenderSpec extends AnyWordSpec
         buffer.lst should contain("test.counter" -> "0|c|#service:kamon-application,tag1:value1")
     }
 
-    "filter other tags" in AgentReporter(new TestBuffer(), ConfigFactory.parseString(
-      """
+    "filter other tags" in AgentReporter(
+      new TestBuffer(),
+      ConfigFactory.parseString(
+        """
         |kamon.datadog.environment-tags.exclude = []
         |kamon.datadog.environment-tags.filter.excludes = [ "tag*" ]
         |kamon.environment.tags.env = staging
-        |""".stripMargin).withFallback(Kamon.config())) {
+        |""".stripMargin
+      ).withFallback(Kamon.config())
+    ) {
       case (buffer, reporter) =>
-
         val now = Instant.now()
         reporter.reportPeriodSnapshot(
           PeriodSnapshot.apply(
@@ -114,7 +124,11 @@ class DatadogMetricSenderSpec extends AnyWordSpec
               "test.counter",
               "test",
               Metric.Settings.ForValueInstrument(MeasurementUnit.none, java.time.Duration.ZERO),
-              Instrument.Snapshot.apply(TagSet.of("tag1", "value1").withTag("tag2", "value2").withTag("otherTag", "otherValue"), 0L) :: Nil) :: Nil,
+              Instrument.Snapshot.apply(
+                TagSet.of("tag1", "value1").withTag("tag2", "value2").withTag("otherTag", "otherValue"),
+                0L
+              ) :: Nil
+            ) :: Nil,
             Nil,
             Nil,
             Nil,
@@ -126,13 +140,16 @@ class DatadogMetricSenderSpec extends AnyWordSpec
         buffer.lst should contain("test.counter" -> "0|c|#service:kamon-application,env:staging,otherTag:otherValue")
     }
 
-    "append no tags" in AgentReporter(new TestBuffer(), ConfigFactory.parseString(
-      """
+    "append no tags" in AgentReporter(
+      new TestBuffer(),
+      ConfigFactory.parseString(
+        """
         |kamon.datadog.environment-tags.include-service = no
         |kamon.datadog.environment-tags.exclude = [env]
-        |""".stripMargin).withFallback(Kamon.config())) {
+        |""".stripMargin
+      ).withFallback(Kamon.config())
+    ) {
       case (buffer, reporter) =>
-
         val now = Instant.now()
         reporter.reportPeriodSnapshot(
           PeriodSnapshot.apply(
@@ -142,7 +159,8 @@ class DatadogMetricSenderSpec extends AnyWordSpec
               "test.counter",
               "test",
               Metric.Settings.ForValueInstrument(MeasurementUnit.none, java.time.Duration.ZERO),
-              Instrument.Snapshot.apply(TagSet.Empty, 0L) :: Nil) :: Nil,
+              Instrument.Snapshot.apply(TagSet.Empty, 0L) :: Nil
+            ) :: Nil,
             Nil,
             Nil,
             Nil,

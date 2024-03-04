@@ -27,7 +27,8 @@ object CallableContextWrapper {
 
     override def call(): T = {
       val scope = Kamon.storeContext(_context)
-      try { callable.call() } finally {
+      try { callable.call() }
+      finally {
         scope.close()
       }
     }

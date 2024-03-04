@@ -28,9 +28,8 @@ class ThreadLocalStorageBenchmark {
   val TestKey: Context.Key[Int] = Context.key("test-key", 0)
   val ContextWithKey: Context = Context.of(TestKey, 43)
 
-  val CrossTLS: Storage =  new CrossThreadLocal
-  val FTLS: Storage =  new Storage.ThreadLocal
-
+  val CrossTLS: Storage = new CrossThreadLocal
+  val FTLS: Storage = new Storage.ThreadLocal
 
   @Benchmark
   @BenchmarkMode(Array(Mode.AverageTime))

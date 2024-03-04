@@ -8,7 +8,7 @@ import scala.language.existentials
 /**
   * Basic information that should be read from an ActorCell for instrumentation purposes.
   */
-case class ActorCellInfo (
+case class ActorCellInfo(
   path: String,
   name: String,
   systemName: String,
@@ -41,7 +41,7 @@ object ActorCellInfo {
     val isTemporary = PekkoPrivateAccess.isUnstartedActorCell(cell)
 
     val (actorOrRouterClass, routeeClass) =
-      if(isRouter)
+      if (isRouter)
         (props.routerConfig.getClass, Some(ref.asInstanceOf[HasRouterProps].routeeProps.actorClass()))
       else if (isRoutee)
         (parent.asInstanceOf[HasRouterProps].routerProps.routerConfig.getClass, Some(props.actorClass()))
@@ -49,8 +49,8 @@ object ActorCellInfo {
         (props.actorClass(), None)
 
     val fullPath = if (isRoutee) cellName(system, parent) else cellName(system, ref)
-    val dispatcherName = if(isRouter) {
-      if(props.routerConfig.isInstanceOf[BalancingPool]) {
+    val dispatcherName = if (isRouter) {
+      if (props.routerConfig.isInstanceOf[BalancingPool]) {
 
         // Even though the router actor for a BalancingPool can have a different dispatcher we will
         // assign the name of the same dispatcher where the routees will run to ensure all metrics are
@@ -71,8 +71,19 @@ object ActorCellInfo {
     val isStreamImplementationActor =
       actorClassName == StreamsSupervisorActorClassName || actorClassName == StreamsInterpreterActorClassName
 
-    ActorCellInfo(fullPath, actorName, system.name, dispatcherName, isRouter, isRoutee, isRootSupervisor,
-      isStreamImplementationActor, isTemporary, actorOrRouterClass, routeeClass)
+    ActorCellInfo(
+      fullPath,
+      actorName,
+      system.name,
+      dispatcherName,
+      isRouter,
+      isRoutee,
+      isRootSupervisor,
+      isStreamImplementationActor,
+      isTemporary,
+      actorOrRouterClass,
+      routeeClass
+    )
   }
 
   /**
@@ -81,15 +92,18 @@ object ActorCellInfo {
   def simpleClassName(cls: Class[_]): String = {
     // Class.getSimpleName could fail if called on a double-nested class.
     // See https://github.com/scala/bug/issues/2034 for more details.
-    try { cls.getSimpleName } catch { case _: Throwable => {
-      val className = cls.getName
-      val lastSeparator = className.lastIndexOf('.')
+    try { cls.getSimpleName }
+    catch {
+      case _: Throwable => {
+        val className = cls.getName
+        val lastSeparator = className.lastIndexOf('.')
 
-      if(lastSeparator > 0)
-        className.substring(lastSeparator + 1)
-      else
-        className
-    }}
+        if (lastSeparator > 0)
+          className.substring(lastSeparator + 1)
+        else
+          className
+      }
+    }
   }
 
   def isTyped(className: Class[_]): Boolean = {
