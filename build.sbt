@@ -58,8 +58,8 @@ lazy val `kamon-core` = (project in file("core/kamon-core"))
       ).inAll
     ),
     libraryDependencies ++= Seq(
-      "com.typesafe"      %  "config"       % "1.4.1",
-      "org.slf4j"         %  "slf4j-api"    % "1.7.36",
+      "com.typesafe"      %  "config"       % "1.4.3",
+      "org.slf4j"         %  "slf4j-api"    % "2.0.12",
       "org.hdrhistogram"  %  "HdrHistogram" % "2.1.9" % "provided,shaded",
       "org.jctools"       %  "jctools-core" % "3.3.0" % "provided,shaded",
       "com.oracle.substratevm" % "svm"      % "19.2.1" % "provided"
@@ -188,7 +188,7 @@ lazy val `kamon-executors-bench` = (project in file("instrumentation/kamon-execu
   .settings(noPublishing: _*)
   .settings(
     libraryDependencies ++= Seq(
-      "com.google.guava" % "guava" % "24.1-jre",
+      "com.google.guava" % "guava" % "33.0.0-jre",
       kanelaAgent % "provided",
     )
   ).dependsOn(`kamon-core`, `kamon-instrumentation-common`)
@@ -856,7 +856,7 @@ lazy val `kamon-datadog` = (project in file("reporters/kamon-datadog"))
     ),
     libraryDependencies ++= Seq(
       okHttp % "shaded,provided",
-      "com.grack" % "nanojson" % "1.6",
+      "com.grack" % "nanojson" % "1.8",
 
       ("com.typesafe.play" %% "play-json" % "2.7.4" % "test").cross(CrossVersion.for3Use2_13),
       scalatest % "test",
@@ -910,8 +910,8 @@ lazy val `kamon-zipkin` = (project in file("reporters/kamon-zipkin"))
   .disablePlugins(AssemblyPlugin)
   .settings(
     libraryDependencies ++= Seq(
-      "io.zipkin.reporter2" % "zipkin-reporter" % "2.7.15",
-      "io.zipkin.reporter2" % "zipkin-sender-okhttp3" % "2.7.15",
+      "io.zipkin.reporter2" % "zipkin-reporter" % "3.3.0",
+      "io.zipkin.reporter2" % "zipkin-sender-okhttp3" % "3.3.0",
       scalatest % "test"
     )
   ).dependsOn(`kamon-core`)
@@ -952,8 +952,8 @@ lazy val `kamon-newrelic` = (project in file("reporters/kamon-newrelic"))
   .disablePlugins(AssemblyPlugin)
   .settings(
     libraryDependencies ++= Seq(
-      "com.newrelic.telemetry" % "telemetry-core" % "0.15.0",
-      "com.newrelic.telemetry" % "telemetry-http-okhttp" % "0.15.0",
+      "com.newrelic.telemetry" % "telemetry-core" % "0.16.0",
+      "com.newrelic.telemetry" % "telemetry-http-okhttp" % "0.16.0",
       scalatest % "test",
       "org.mockito" % "mockito-core" % "3.12.4" % "test"
     )
