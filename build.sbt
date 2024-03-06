@@ -147,7 +147,8 @@ val instrumentationProjects = Seq[ProjectReference](
   `kamon-aws-sdk`,
   `kamon-alpakka-kafka`,
   `kamon-http4s-1_0`,
-  `kamon-http4s-0_23`
+  `kamon-http4s-0_23`,
+  `kamon-apache-httpclient`
 )
 
 lazy val instrumentation = (project in file("instrumentation"))
@@ -820,6 +821,25 @@ lazy val `kamon-http4s-0_23` = (project in file("instrumentation/kamon-http4s-0.
     `kamon-testkit` % Test
   )
 
+lazy val `kamon-apache-httpclient` = (project in file("instrumentation/kamon-apache-httpclient"))
+  .disablePlugins(AssemblyPlugin)
+  .enablePlugins(JavaAgent)
+  .settings(instrumentationSettings)
+  .settings(
+    libraryDependencies ++= Seq(
+      kanelaAgent % "provided",
+      "org.apache.httpcomponents" % "httpclient" % "4.0" % "provided",
+      slf4jApi % "provided",
+
+      scalatest % "test",
+      logbackClassic % "test",
+      "org.mock-server" % "mockserver-client-java" % "5.13.2" % "test",
+      "com.dimafeng" %% "testcontainers-scala" % "0.41.0" % "test",
+      "com.dimafeng" %% "testcontainers-scala-mockserver" % "0.41.0" % "test"
+    )
+  ).dependsOn(`kamon-core`, `kamon-executors`, `kamon-testkit` % "test")
+
+
 /**
  * Reporters
  */
@@ -1087,7 +1107,8 @@ lazy val `kamon-bundle-dependencies-all` = (project in file("bundle/kamon-bundle
     `kamon-okhttp`,
     `kamon-caffeine`,
     `kamon-lagom`,
-    `kamon-aws-sdk`
+    `kamon-aws-sdk`,
+    `kamon-apache-httpclient`
   )
 
 /**
@@ -1151,7 +1172,8 @@ lazy val `kamon-bundle-dependencies-3` = (project in file("bundle/kamon-bundle-d
     `kamon-zio-2`,
     `kamon-pekko`,
     `kamon-pekko-http`,
-    `kamon-pekko-grpc`
+    `kamon-pekko-grpc`,
+    `kamon-apache-httpclient`
   )
 
 lazy val `kamon-bundle` = (project in file("bundle/kamon-bundle"))
