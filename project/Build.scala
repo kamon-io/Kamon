@@ -35,7 +35,7 @@ object BaseProject extends AutoPlugin {
     val okHttp            = "com.squareup.okhttp3"  %  "okhttp"          % "4.12.0"
     val okHttpMockServer  = "com.squareup.okhttp3"  %  "mockwebserver"   % "4.10.0"
     val jsqlparser        = "com.github.jsqlparser" % "jsqlparser"       % "4.1"
-    val oshiCore          = "com.github.oshi"       %  "oshi-core"       % "5.7.5"
+    val oshiCore          = "com.github.oshi"       %  "oshi-core"       % "6.4.13"
 
 
     val kanelaAgentVersion = settingKey[String]("Kanela Agent version")
@@ -57,8 +57,8 @@ object BaseProject extends AutoPlugin {
     )
 
     val `scala_2.11_version` = "2.11.12"
-    val `scala_2.12_version` = "2.12.15"
-    val `scala_2.13_version` = "2.13.8"
+    val `scala_2.12_version` = "2.12.19"
+    val `scala_2.13_version` = "2.13.13"
     val scala_3_version = "3.3.1"
 
     // This installs the GPG signing key from the
@@ -134,7 +134,7 @@ object BaseProject extends AutoPlugin {
 
   private lazy val compilationSettings = Seq(
     crossPaths := true,
-    scalaVersion := autoImport.`scala_2.12_version`,
+    scalaVersion := autoImport.`scala_2.13_version`,
     crossScalaVersions := Seq(
       autoImport.`scala_2.11_version`,
       autoImport.`scala_2.12_version`,
