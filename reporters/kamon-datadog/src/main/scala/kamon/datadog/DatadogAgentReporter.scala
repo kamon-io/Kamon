@@ -106,10 +106,8 @@ class DatadogAgentReporter private[datadog] (@volatile private var config: Datad
 
   }
 
-  private def updateTagsWithEntityID(tags: TagSet, entityID: String): TagSet = {
-    if (entityID == null || entityID.trim().isEmpty()) {
-      entityId = System.getenv("DD_ENTITY_ID")
-    }
+  private def updateTagsWithEntityID(tags: TagSet): TagSet = {
+    val entityId = System.getenv("DD_ENTITY_ID")
     if (entityId != null && !entityId.trim().isEmpty()) {
       return tags.withTag(ENTITY_ID_TAG_NAME, entityId);
     }
