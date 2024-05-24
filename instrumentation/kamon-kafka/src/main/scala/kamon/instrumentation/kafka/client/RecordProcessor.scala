@@ -67,8 +67,8 @@ private[kafka] object RecordProcessor {
         case meta: ConsumerGroupMetadata => Some(meta.groupId())
       }
       else None
-    case value: String => Option(value)
+    case value: String              => Option(value)
     case coord: ConsumerCoordinator => Some(coord.groupMetadata().groupId())
-    case _             => None
+    case _                          => None
   }
 }
