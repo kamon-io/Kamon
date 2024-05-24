@@ -50,6 +50,9 @@ class DatadogAgentReporter private[datadog] (@volatile private var config: Datad
     new DecimalFormat("#.################################################################", symbols)
   private val valueFormat = new DecimalFormat("#0.#########", symbols)
 
+  private val DD_ENTITY_ID_ENV_VAR = "DD_ENTITY_ID"
+  private val ENTITY_ID_TAG_NAME = "dd.internal.entity_id"
+
   logger.info("Started the Kamon Datadog reporter")
 
   override def stop(): Unit = {}
@@ -68,7 +71,7 @@ class DatadogAgentReporter private[datadog] (@volatile private var config: Datad
         counter.name,
         config.measurementFormatter.formatMeasurement(
           encodeDatadogCounter(instrument.value, counter.settings.unit),
-          instrument.tags
+          updateTagsWithEntityID(instrument.tags)
         )
       )
     }
@@ -81,7 +84,7 @@ class DatadogAgentReporter private[datadog] (@volatile private var config: Datad
         gauge.name,
         config.measurementFormatter.formatMeasurement(
           encodeDatadogGauge(instrument.value, gauge.settings.unit),
-          instrument.tags
+          updateTagsWithEntityID(instrument.tags)
         )
       )
     }
@@ -94,13 +97,22 @@ class DatadogAgentReporter private[datadog] (@volatile private var config: Datad
 
       val bucketData = config.measurementFormatter.formatMeasurement(
         encodeDatadogHistogramBucket(bucket.value, bucket.frequency, metric.settings.unit),
-        instruments.tags
+        updateTagsWithEntityID(instruments.tags)
       )
       config.packetBuffer.appendMeasurement(metric.name, bucketData)
     }
 
     config.packetBuffer.flush()
 
+  }
+
+  private def updateTagsWithEntityID(tags: TagSet): TagSet = {
+    val entityId = System.getenv("DD_ENTITY_ID")
+    if (entityId != null && !entityId.trim().isEmpty()) {
+      return tags.withTag(ENTITY_ID_TAG_NAME, entityId);
+    }
+
+    return tags;
   }
 
   private def encodeDatadogHistogramBucket(value: Long, frequency: Long, unit: MeasurementUnit): String = {
