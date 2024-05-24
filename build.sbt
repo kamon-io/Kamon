@@ -1128,7 +1128,8 @@ lazy val `kamon-bundle-dependencies-all` = (project in file("bundle/kamon-bundle
     `kamon-caffeine`,
     `kamon-lagom`,
     `kamon-aws-sdk`,
-    `kamon-apache-httpclient`
+    `kamon-apache-httpclient`,
+    `kamon-apache-cxf`
   )
 
 /**
@@ -1193,7 +1194,8 @@ lazy val `kamon-bundle-dependencies-3` = (project in file("bundle/kamon-bundle-d
     `kamon-pekko`,
     `kamon-pekko-http`,
     `kamon-pekko-grpc`,
-    `kamon-apache-httpclient`
+    `kamon-apache-httpclient`,
+    `kamon-apache-cxf`
   )
 
 lazy val `kamon-bundle` = (project in file("bundle/kamon-bundle"))
