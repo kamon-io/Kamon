@@ -61,7 +61,7 @@ private[kafka] object RecordProcessor {
     * KafkaConsumer which versions < 2.5 relies on internal groupId: String and higher versions in Optional[String].
     */
   private def resolve(groupId: AnyRef): Option[String] = groupId match {
-    case opt: Optional[?] =>
+    case opt: Optional[_] =>
       if (opt.isPresent) opt.get() match {
         case s: String                   => Some(s)
         case meta: ConsumerGroupMetadata => Some(meta.groupId())
