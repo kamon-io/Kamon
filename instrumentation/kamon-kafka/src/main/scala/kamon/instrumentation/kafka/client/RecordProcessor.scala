@@ -18,11 +18,11 @@ package kamon.instrumentation.kafka.client
 
 import java.time.Instant
 import java.util.Optional
-
 import kamon.Kamon
 import kamon.context.Context
 import kamon.instrumentation.kafka.client.ConsumedRecordData.ConsumerInfo
-import org.apache.kafka.clients.consumer.ConsumerRecords
+import org.apache.kafka.clients.consumer.internals.ConsumerCoordinator
+import org.apache.kafka.clients.consumer.{ConsumerGroupMetadata, ConsumerRecords}
 
 private[kafka] object RecordProcessor {
 
@@ -61,8 +61,14 @@ private[kafka] object RecordProcessor {
     * KafkaConsumer which versions < 2.5 relies on internal groupId: String and higher versions in Optional[String].
     */
   private def resolve(groupId: AnyRef): Option[String] = groupId match {
-    case opt: Optional[String] => if (opt.isPresent) Some(opt.get()) else None
-    case value: String         => Option(value)
-    case _                     => None
+    case opt: Optional[_] =>
+      if (opt.isPresent) opt.get() match {
+        case s: String                   => Some(s)
+        case meta: ConsumerGroupMetadata => Some(meta.groupId())
+      }
+      else None
+    case value: String              => Option(value)
+    case coord: ConsumerCoordinator => Some(coord.groupMetadata().groupId())
+    case _                          => None
   }
 }
