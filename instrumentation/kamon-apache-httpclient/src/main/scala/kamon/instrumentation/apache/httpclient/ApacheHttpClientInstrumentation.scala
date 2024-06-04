@@ -35,7 +35,7 @@ class ApacheHttpClientInstrumentation extends InstrumentationBuilder {
         .and(not(isAbstract()))
         .and(takesArguments(2))
         .and(takesArgument(0, named[TypeDescription]("org.apache.http.client.methods.HttpUriRequest")))
-        .and(takesArgument(1, named[TypeDescription]("import org.apache.http.client.ResponseHandler"))),
+        .and(takesArgument(1, named[TypeDescription]("org.apache.http.client.ResponseHandler"))),
       classOf[UriRequestWithHandlerAdvisor]
     )
     .advise(
@@ -43,7 +43,7 @@ class ApacheHttpClientInstrumentation extends InstrumentationBuilder {
         .and(not(isAbstract()))
         .and(takesArguments(3))
         .and(takesArgument(0, named[TypeDescription]("org.apache.http.client.methods.HttpUriRequest")))
-        .and(takesArgument(1, named[TypeDescription]("import org.apache.http.client.ResponseHandler")))
+        .and(takesArgument(1, named[TypeDescription]("org.apache.http.client.ResponseHandler")))
         .and(takesArgument(2, named[TypeDescription]("org.apache.http.protocol.HttpContext"))),
       classOf[UriRequestWithHandlerAdvisor]
     )
@@ -70,7 +70,7 @@ class ApacheHttpClientInstrumentation extends InstrumentationBuilder {
         .and(takesArguments(3))
         .and(takesArgument(0, named[TypeDescription]("org.apache.http.HttpHost")))
         .and(takesArgument(1, named[TypeDescription]("org.apache.http.HttpRequest")))
-        .and(takesArgument(2, named[TypeDescription]("import org.apache.http.client.ResponseHandler"))),
+        .and(takesArgument(2, named[TypeDescription]("org.apache.http.client.ResponseHandler"))),
       classOf[RequestWithHandlerAdvisor]
     )
     .advise(
@@ -80,7 +80,7 @@ class ApacheHttpClientInstrumentation extends InstrumentationBuilder {
         .and(takesArgument(0, named[TypeDescription]("org.apache.http.HttpHost")))
         .and(takesArgument(1, named[TypeDescription]("org.apache.http.HttpRequest")))
         .and(takesArgument(2, named[TypeDescription]("org.apache.http.protocol.HttpContext")))
-        .and(takesArgument(3, named[TypeDescription]("import org.apache.http.client.ResponseHandler"))),
+        .and(takesArgument(3, named[TypeDescription]("org.apache.http.client.ResponseHandler"))),
       classOf[RequestWithHandlerAdvisor]
     )
 
