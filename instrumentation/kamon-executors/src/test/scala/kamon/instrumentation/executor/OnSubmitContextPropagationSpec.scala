@@ -15,11 +15,12 @@
 
 package kamon.instrumentation.executor
 
-import java.util.concurrent.{ExecutorService, Executors => JavaExecutors}
-
+import java.util.concurrent.{Callable, ExecutorService, Executors => JavaExecutors}
 import com.google.common.util.concurrent.MoreExecutors
 import kamon.Kamon
+import kamon.instrumentation.executor.ContextAware.{DefaultContextAwareCallable, DefaultContextAwareRunnable}
 import kamon.testkit.InitAndStopKamonAfterAll
+import kanela.agent.bootstrap.context.ContextHandler
 import org.scalatest.OptionValues
 import org.scalatest.concurrent.Eventually
 import org.scalatest.matchers.should.Matchers
@@ -168,6 +169,28 @@ class OnSubmitContextPropagationSpec extends AnyWordSpec with Matchers with Cont
         ) { (acc, f) => acc += f.get() }
       }
       values should contain allOf ("all-callables-should-see-this-key-A", "all-callables-should-see-this-key-B", "all-callables-should-see-this-key-C")
+    }
+
+    "wrap Runnable to TestContextAwareRunnable when call ContextHandler.wrapInContextAware" in {
+      val simpleRunnable = ContextHandler.wrapInContextAware(new SimpleRunnable)
+      simpleRunnable.isInstanceOf[TestContextAwareRunnable] should be(true)
+      simpleRunnable.isInstanceOf[DefaultContextAwareRunnable] should be(false)
+
+      val notSimpleRunnable = ContextHandler.wrapInContextAware(new Runnable { override def run(): Unit = {} })
+      notSimpleRunnable.isInstanceOf[TestContextAwareRunnable] should be(false)
+      notSimpleRunnable.isInstanceOf[DefaultContextAwareRunnable] should be(true)
+    }
+
+    "wrap Callable to TestContextAwareCallable when call ContextHandler.wrapInContextAware" in {
+      val simpleCallable = ContextHandler.wrapInContextAware(new SimpleCallable)
+      simpleCallable.isInstanceOf[TestContextAwareCallable[_]] should be(true)
+      simpleCallable.isInstanceOf[DefaultContextAwareCallable[_]] should be(false)
+
+      val notSimpleCallable = ContextHandler.wrapInContextAware(new Callable[String] {
+        override def call(): String = "test"
+      })
+      notSimpleCallable.isInstanceOf[TestContextAwareCallable[_]] should be(false)
+      notSimpleCallable.isInstanceOf[DefaultContextAwareCallable[_]] should be(true)
     }
   }
 
