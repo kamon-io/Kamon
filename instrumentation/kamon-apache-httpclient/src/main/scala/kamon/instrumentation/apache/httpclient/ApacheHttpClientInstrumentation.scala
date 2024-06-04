@@ -3,14 +3,10 @@ package kamon.instrumentation.apache.httpclient
 import kanela.agent.api.instrumentation.InstrumentationBuilder
 import kanela.agent.libs.net.bytebuddy.matcher.ElementMatchers._
 import kamon.instrumentation.context.HasContext
-import org.apache.http.client.methods.HttpUriRequest
-import org.apache.http.protocol.HttpContext
-import org.apache.http.client.ResponseHandler
-import org.apache.http.HttpHost
-import org.apache.http.HttpRequest
 import kamon.instrumentation.http.HttpClientInstrumentation
 import kamon.instrumentation.http.HttpClientInstrumentation.RequestHandler
 import kamon.Kamon
+import kanela.agent.libs.net.bytebuddy.description.`type`.TypeDescription
 import org.apache.http.HttpResponse
 
 class ApacheHttpClientInstrumentation extends InstrumentationBuilder {
@@ -23,68 +19,68 @@ class ApacheHttpClientInstrumentation extends InstrumentationBuilder {
       method("execute")
         .and(not(isAbstract()))
         .and(takesArguments(1))
-        .and(withArgument(0, classOf[HttpUriRequest])),
+        .and(takesArgument(0, named[TypeDescription]("org.apache.http.client.methods.HttpUriRequest"))),
       classOf[UriRequestAdvisor]
     )
     .advise(
       method("execute")
         .and(not(isAbstract()))
         .and(takesArguments(2))
-        .and(withArgument(0, classOf[HttpUriRequest]))
-        .and(withArgument(1, classOf[HttpContext])),
+        .and(takesArgument(0, named[TypeDescription]("org.apache.http.client.methods.HttpUriRequest")))
+        .and(takesArgument(1, named[TypeDescription]("org.apache.http.protocol.HttpContext"))),
       classOf[UriRequestAdvisor]
     )
     .advise(
       method("execute")
         .and(not(isAbstract()))
         .and(takesArguments(2))
-        .and(withArgument(0, classOf[HttpUriRequest]))
-        .and(withArgument(1, classOf[ResponseHandler[_]])),
+        .and(takesArgument(0, named[TypeDescription]("org.apache.http.client.methods.HttpUriRequest")))
+        .and(takesArgument(1, named[TypeDescription]("org.apache.http.client.ResponseHandler"))),
       classOf[UriRequestWithHandlerAdvisor]
     )
     .advise(
       method("execute")
         .and(not(isAbstract()))
         .and(takesArguments(3))
-        .and(withArgument(0, classOf[HttpUriRequest]))
-        .and(withArgument(1, classOf[ResponseHandler[_]]))
-        .and(withArgument(2, classOf[HttpContext])),
+        .and(takesArgument(0, named[TypeDescription]("org.apache.http.client.methods.HttpUriRequest")))
+        .and(takesArgument(1, named[TypeDescription]("org.apache.http.client.ResponseHandler")))
+        .and(takesArgument(2, named[TypeDescription]("org.apache.http.protocol.HttpContext"))),
       classOf[UriRequestWithHandlerAdvisor]
     )
     .advise(
       method("execute")
         .and(not(isAbstract()))
         .and(takesArguments(2))
-        .and(withArgument(0, classOf[HttpHost]))
-        .and(withArgument(1, classOf[HttpRequest])),
+        .and(takesArgument(0, named[TypeDescription]("org.apache.http.HttpHost")))
+        .and(takesArgument(1, named[TypeDescription]("org.apache.http.HttpRequest"))),
       classOf[RequestAdvisor]
     )
     .advise(
       method("execute")
         .and(not(isAbstract()))
         .and(takesArguments(3))
-        .and(withArgument(0, classOf[HttpHost]))
-        .and(withArgument(1, classOf[HttpRequest]))
-        .and(withArgument(2, classOf[HttpContext])),
+        .and(takesArgument(0, named[TypeDescription]("org.apache.http.HttpHost")))
+        .and(takesArgument(1, named[TypeDescription]("org.apache.http.HttpRequest")))
+        .and(takesArgument(2, named[TypeDescription]("org.apache.http.protocol.HttpContext"))),
       classOf[RequestAdvisor]
     )
     .advise(
       method("execute")
         .and(not(isAbstract()))
         .and(takesArguments(3))
-        .and(withArgument(0, classOf[HttpHost]))
-        .and(withArgument(1, classOf[HttpRequest]))
-        .and(withArgument(2, classOf[ResponseHandler[_]])),
+        .and(takesArgument(0, named[TypeDescription]("org.apache.http.HttpHost")))
+        .and(takesArgument(1, named[TypeDescription]("org.apache.http.HttpRequest")))
+        .and(takesArgument(2, named[TypeDescription]("org.apache.http.client.ResponseHandler"))),
       classOf[RequestWithHandlerAdvisor]
     )
     .advise(
       method("execute")
         .and(not(isAbstract()))
         .and(takesArguments(4))
-        .and(withArgument(0, classOf[HttpHost]))
-        .and(withArgument(1, classOf[HttpRequest]))
-        .and(withArgument(2, classOf[HttpContext]))
-        .and(withArgument(3, classOf[ResponseHandler[_]])),
+        .and(takesArgument(0, named[TypeDescription]("org.apache.http.HttpHost")))
+        .and(takesArgument(1, named[TypeDescription]("org.apache.http.HttpRequest")))
+        .and(takesArgument(2, named[TypeDescription]("org.apache.http.protocol.HttpContext")))
+        .and(takesArgument(3, named[TypeDescription]("org.apache.http.client.ResponseHandler"))),
       classOf[RequestWithHandlerAdvisor]
     )
 
