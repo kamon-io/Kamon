@@ -9,7 +9,7 @@ import java.net.{URI, URISyntaxException}
 import java.util.Collections.{emptyMap => jEmptyMap, singletonList => jList}
 import java.util.{List => JList, Map => JMap}
 import scala.collection.mutable
-import scala.jdk.CollectionConverters.{ListHasAsScala, MapHasAsJava, MapHasAsScala}
+import scala.collection.JavaConverters._
 
 class ApacheCxfClientHelper
 
@@ -25,7 +25,9 @@ object ApacheCxfClientHelper {
       val uri: URI = getUri(request)
 
       override def write(header: String, value: String): Unit = {
-        val headers: mutable.Map[String, String] = getAllHeaders(delegate).to(mutable.Map)
+        val builder = mutable.Map.newBuilder[String, String]
+        builder ++= getAllHeaders(delegate)
+        val headers: mutable.Map[String, String] = builder.result()
         headers.put(header, value)
         delegate.put(Message.PROTOCOL_HEADERS, headers.map(m => m._1 -> jList(m._2)).toMap.asJava)
       }

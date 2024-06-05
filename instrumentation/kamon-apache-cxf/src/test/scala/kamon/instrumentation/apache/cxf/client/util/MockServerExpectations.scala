@@ -8,7 +8,7 @@ import org.mockserver.model.HttpRequest.request
 import org.mockserver.model.HttpResponse.response
 import org.slf4j.LoggerFactory
 
-import scala.jdk.CollectionConverters.SeqHasAsJava
+import scala.collection.JavaConverters._
 
 class MockServerExpectations(private val host: String, private val port: Int) {
 
