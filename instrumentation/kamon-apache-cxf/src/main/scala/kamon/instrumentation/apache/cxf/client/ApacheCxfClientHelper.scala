@@ -8,7 +8,6 @@ import org.slf4j.LoggerFactory
 import java.net.{URI, URISyntaxException}
 import java.util.Collections.{emptyMap => jEmptyMap, singletonList => jList}
 import java.util.{List => JList, Map => JMap}
-import scala.collection.mutable
 import scala.collection.JavaConverters._
 
 class ApacheCxfClientHelper
@@ -25,11 +24,10 @@ object ApacheCxfClientHelper {
       val uri: URI = getUri(request)
 
       override def write(header: String, value: String): Unit = {
-        val builder = mutable.Map.newBuilder[String, String]
-        builder ++= getAllHeaders(delegate)
-        val headers: mutable.Map[String, String] = builder.result()
-        headers.put(header, value)
-        delegate.put(Message.PROTOCOL_HEADERS, headers.map(m => m._1 -> jList(m._2)).toMap.asJava)
+        val builder = Map.newBuilder[String, JList[String]]
+        builder ++= getAllHeaders(delegate).map(m => m._1 -> jList(m._2))
+        builder += header -> jList(value)
+        delegate.put(Message.PROTOCOL_HEADERS, builder.result().asJava)
       }
 
       override def build(): Message = {
