@@ -845,7 +845,6 @@ lazy val `kamon-apache-cxf` = (project in file("instrumentation/kamon-apache-cxf
   .enablePlugins(JavaAgent)
   .settings(instrumentationSettings)
   .settings(
-    crossScalaVersions := Seq(`scala_2.13_version`, `scala_3_version`),
     libraryDependencies ++= Seq(
       kanelaAgent % "provided",
       "org.apache.cxf" % "cxf-rt-frontend-simple" % "3.3.6" % "provided",
