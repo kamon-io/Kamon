@@ -54,9 +54,7 @@ object HasStorage {
   }
 }
 
-
 class NewSupervisor extends Supervisor[Any] {
-
 
   override def value(implicit trace: zio.Trace): UIO[Any] = ZIO.unit
 
