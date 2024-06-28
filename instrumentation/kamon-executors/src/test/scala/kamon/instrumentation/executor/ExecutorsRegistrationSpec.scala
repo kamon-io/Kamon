@@ -27,14 +27,19 @@ import org.scalatest.wordspec.AnyWordSpec
 
 import scala.concurrent.ExecutionContext
 
-class ExecutorsRegistrationSpec extends AnyWordSpec with Matchers with MetricInspection.Syntax with InitAndStopKamonAfterAll {
+class ExecutorsRegistrationSpec extends AnyWordSpec with Matchers with MetricInspection.Syntax
+    with InitAndStopKamonAfterAll {
 
   "the Executors registration function" should {
     "accept all types of known executors" in {
-      val registeredForkJoin  = ExecutorInstrumentation.instrument(new JavaForkJoinPool(1), "fjp")
+      val registeredForkJoin = ExecutorInstrumentation.instrument(new JavaForkJoinPool(1), "fjp")
       val registeredThreadPool = ExecutorInstrumentation.instrument(JavaExecutors.newFixedThreadPool(1), "thread-pool")
-      val registeredScheduled = ExecutorInstrumentation.instrument(JavaExecutors.newScheduledThreadPool(1), "scheduled-thread-pool")
-      val registeredExecContext = ExecutorInstrumentation.instrumentExecutionContext(ExecutionContext.fromExecutorService(JavaExecutors.newFixedThreadPool(1)), "execution-context")
+      val registeredScheduled =
+        ExecutorInstrumentation.instrument(JavaExecutors.newScheduledThreadPool(1), "scheduled-thread-pool")
+      val registeredExecContext = ExecutorInstrumentation.instrumentExecutionContext(
+        ExecutionContext.fromExecutorService(JavaExecutors.newFixedThreadPool(1)),
+        "execution-context"
+      )
 
       assertContainsAllExecutorNames(ThreadsActive.tagValues("name"))
       assertContainsAllExecutorNames(TasksSubmitted.tagValues("name"))

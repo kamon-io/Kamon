@@ -26,12 +26,19 @@ import org.testcontainers.containers.GenericContainer
 import software.amazon.awssdk.auth.credentials.{AwsBasicCredentials, StaticCredentialsProvider}
 import software.amazon.awssdk.regions.Region
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient
-import software.amazon.awssdk.services.dynamodb.model.{AttributeDefinition, CreateTableRequest, KeySchemaElement, KeyType, ProvisionedThroughput}
+import software.amazon.awssdk.services.dynamodb.model.{
+  AttributeDefinition,
+  CreateTableRequest,
+  KeySchemaElement,
+  KeyType,
+  ProvisionedThroughput
+}
 
 import scala.concurrent.duration._
 import java.net.URI
 
-class DynamoDBTracingSpec extends AnyWordSpec with Matchers with OptionValues with InitAndStopKamonAfterAll with Eventually with TestSpanReporter {
+class DynamoDBTracingSpec extends AnyWordSpec with Matchers with OptionValues with InitAndStopKamonAfterAll
+    with Eventually with TestSpanReporter {
   val dynamoPort = 8000
   val dynamoContainer: GenericContainer[_] = new GenericContainer("amazon/dynamodb-local:latest")
     .withExposedPorts(dynamoPort)
@@ -42,16 +49,14 @@ class DynamoDBTracingSpec extends AnyWordSpec with Matchers with OptionValues wi
     .region(Region.US_EAST_1)
     .build()
 
-
   "the DynamoDB instrumentation on the SDK" should {
     "create a Span for simple calls" in {
       client.createTable(CreateTableRequest.builder()
         .tableName("people")
         .attributeDefinitions(AttributeDefinition.builder().attributeName("customerId").attributeType("S").build())
         .keySchema(KeySchemaElement.builder().attributeName("customerId").keyType(KeyType.HASH).build())
-        .provisionedThroughput(ProvisionedThroughput.builder().readCapacityUnits(5l).writeCapacityUnits(5l).build())
+        .provisionedThroughput(ProvisionedThroughput.builder().readCapacityUnits(5L).writeCapacityUnits(5L).build())
         .build())
-
 
       eventually(timeout(5 seconds)) {
         val span = testSpanReporter().nextSpan().value

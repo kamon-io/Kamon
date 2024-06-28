@@ -18,14 +18,16 @@ object LagomMetrics {
     description = "Call duration timer of Lagom Circuit Breakers"
   )
 
-  class CircuitBreakerInstruments(circuitBreaker: String, tags: TagSet) extends InstrumentGroup(tags.withTag("cb.name", circuitBreaker)) {
+  class CircuitBreakerInstruments(circuitBreaker: String, tags: TagSet)
+      extends InstrumentGroup(tags.withTag("cb.name", circuitBreaker)) {
 
     val state: Gauge = register(CBState)
-    val okTimer : Timer = register(CBCallDuration, "status_code", "Ok")
+    val okTimer: Timer = register(CBCallDuration, "status_code", "Ok")
     val errorTagSet: TagSet = TagSet.of("status_code", "Error")
-    val errorTimer : Timer = register(CBCallDuration, errorTagSet)
-    val openTimer : Timer = register(CBCallDuration, errorTagSet.withTag("exception.type", "CircuitBreakerOpenException"))
-    val timeoutTimer : Timer = register(CBCallDuration, errorTagSet.withTag("exception.type", "TimeoutException"))
+    val errorTimer: Timer = register(CBCallDuration, errorTagSet)
+    val openTimer: Timer =
+      register(CBCallDuration, errorTagSet.withTag("exception.type", "CircuitBreakerOpenException"))
+    val timeoutTimer: Timer = register(CBCallDuration, errorTagSet.withTag("exception.type", "TimeoutException"))
   }
 
 }

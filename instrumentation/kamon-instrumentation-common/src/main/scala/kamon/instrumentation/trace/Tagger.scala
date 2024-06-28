@@ -71,8 +71,8 @@ object SpanTagger {
 
     def from(value: String): TagMode = value.toLowerCase match {
       case "metric" => TagMode.Metric
-      case "span" => TagMode.Span
-      case _ => TagMode.Off
+      case "span"   => TagMode.Span
+      case _        => TagMode.Off
     }
   }
 }

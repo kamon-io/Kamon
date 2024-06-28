@@ -38,7 +38,7 @@ class MongoSyncDriverInstrumentationSpec extends EmbeddedMongoTest(port = 4445) 
         span
       }
 
-      while(aggregateResults.hasNext) {
+      while (aggregateResults.hasNext) {
         aggregateResults.next()
       }
 
@@ -135,7 +135,7 @@ class MongoSyncDriverInstrumentationSpec extends EmbeddedMongoTest(port = 4445) 
       }
 
       // We are exhausting the iterator to for the getMore operation to happen
-      while(results.hasNext) {
+      while (results.hasNext) {
         results.next()
       }
 
@@ -225,10 +225,22 @@ class MongoSyncDriverInstrumentationSpec extends EmbeddedMongoTest(port = 4445) 
       //        fetching all the results from Mongo. If that behavior changes we should make sure that any getMore
       //        operations are covered by this test.
 
-      tools.insertOne(new Document("name", "kamon").append("reduce", true).append("license", "apache").append("value", 100))
-      tools.insertOne(new Document("name", "zipkin").append("reduce", true).append("license", "apache").append("value", 100))
-      tools.insertOne(new Document("name", "prometheus").append("reduce", true).append("license", "apache").append("value", 100))
-      tools.insertOne(new Document("name", "linux").append("reduce", true).append("license", "gpl").append("value", 100))
+      tools.insertOne(new Document("name", "kamon").append("reduce", true).append("license", "apache").append(
+        "value",
+        100
+      ))
+      tools.insertOne(new Document("name", "zipkin").append("reduce", true).append("license", "apache").append(
+        "value",
+        100
+      ))
+      tools.insertOne(new Document("name", "prometheus").append("reduce", true).append("license", "apache").append(
+        "value",
+        100
+      ))
+      tools.insertOne(new Document("name", "linux").append("reduce", true).append("license", "gpl").append(
+        "value",
+        100
+      ))
 
       tools.mapReduce(
         """
@@ -240,7 +252,6 @@ class MongoSyncDriverInstrumentationSpec extends EmbeddedMongoTest(port = 4445) 
           |  }
           |}
         """.stripMargin,
-
         """
           |function(key, values) {
           |  return Array.sum(values)

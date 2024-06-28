@@ -1,6 +1,5 @@
 package kamon.instrumentation.http
 
-
 import com.typesafe.config.ConfigFactory
 import kamon.Kamon
 import kamon.context.Context
@@ -22,11 +21,18 @@ class HttpClientInstrumentationSpec extends AnyWordSpec with Matchers with Instr
     "configured for context propagation" should {
       "write context entries and tags to the outgoing request" in {
         val context = Context.of(TagSet.of("example", "tag"))
-        val handler = httpClient().createHandler(fakeRequest("http://localhost:8080/", "/", "GET", Map(
-          "some-header" -> "tag=value;none=0011223344556677;",
-          "some-other-header" -> "0011223344556677"
-        )), context)
-
+        val handler = httpClient().createHandler(
+          fakeRequest(
+            "http://localhost:8080/",
+            "/",
+            "GET",
+            Map(
+              "some-header" -> "tag=value;none=0011223344556677;",
+              "some-other-header" -> "0011223344556677"
+            )
+          ),
+          context
+        )
 
         handler.request.read("context-tags").value shouldBe "example=tag;upstream.name=kamon-application;"
         handler.request.readAll().keys should contain allOf (
@@ -66,12 +72,16 @@ class HttpClientInstrumentationSpec extends AnyWordSpec with Matchers with Instr
       }
 
       "record span metrics when enabled" in {
-        val handler = httpClient().createHandler(fakeRequest("http://localhost:8080/", "/", "GET", Map.empty), Context.Empty)
+        val handler =
+          httpClient().createHandler(fakeRequest("http://localhost:8080/", "/", "GET", Map.empty), Context.Empty)
         handler.span.isTrackingMetrics() shouldBe true
       }
 
       "not record span metrics when disabled" in {
-        val handler = noSpanMetricsHttpClient().createHandler(fakeRequest("http://localhost:8080/", "/", "GET", Map.empty), Context.Empty)
+        val handler = noSpanMetricsHttpClient().createHandler(
+          fakeRequest("http://localhost:8080/", "/", "GET", Map.empty),
+          Context.Empty
+        )
         handler.span.isTrackingMetrics() shouldBe false
       }
 
@@ -87,7 +97,10 @@ class HttpClientInstrumentationSpec extends AnyWordSpec with Matchers with Instr
       }
 
       "honour user provided operation name mappings" in {
-        val handler = httpClient().createHandler(fakeRequest("http://localhost:8080/", "/events/123/rsvps", "GET", Map.empty), Context.Empty)
+        val handler = httpClient().createHandler(
+          fakeRequest("http://localhost:8080/", "/events/123/rsvps", "GET", Map.empty),
+          Context.Empty
+        )
         handler.processResponse(fakeResponse(200))
 
         val span = handler.span
@@ -99,7 +112,10 @@ class HttpClientInstrumentationSpec extends AnyWordSpec with Matchers with Instr
       }
 
       "fallback to the default operation name when there is a problem while figuring out a custom operation name" in {
-        val handler = httpClient().createHandler(fakeRequest("http://localhost:8080/", "/fail-operation-name", "GET", Map.empty), Context.Empty)
+        val handler = httpClient().createHandler(
+          fakeRequest("http://localhost:8080/", "/fail-operation-name", "GET", Map.empty),
+          Context.Empty
+        )
         handler.processResponse(fakeResponse(200))
 
         val span = handler.span
@@ -115,7 +131,8 @@ class HttpClientInstrumentationSpec extends AnyWordSpec with Matchers with Instr
       "not write any context to the outgoing requests" in {
         val parent = parentSpan()
         val context = Context.of(Span.Key, parent, TagSet.of("example", "tag"))
-        val handler = noopHttpClient().createHandler(fakeRequest("http://localhost:8080/", "/", "GET", Map.empty), context)
+        val handler =
+          noopHttpClient().createHandler(fakeRequest("http://localhost:8080/", "/", "GET", Map.empty), context)
 
         handler.request.readAll() shouldBe empty
       }
@@ -123,7 +140,8 @@ class HttpClientInstrumentationSpec extends AnyWordSpec with Matchers with Instr
       "not create any span to represent the client request" in {
         val parent = parentSpan()
         val context = Context.of(Span.Key, parent, TagSet.of("example", "tag"))
-        val handler = noopHttpClient().createHandler(fakeRequest("http://localhost:8080/", "/", "GET", Map.empty), context)
+        val handler =
+          noopHttpClient().createHandler(fakeRequest("http://localhost:8080/", "/", "GET", Map.empty), context)
 
         handler.span shouldBe empty
       }
@@ -136,18 +154,26 @@ class HttpClientInstrumentationSpec extends AnyWordSpec with Matchers with Instr
     HttpClientInstrumentation.from(ConfigFactory.empty(), TestComponent)
 
   def noSpanMetricsHttpClient(): HttpClientInstrumentation =
-    HttpClientInstrumentation.from( Kamon.config().getConfig("kamon.instrumentation.http-client.no-span-metrics"), TestComponent)
+    HttpClientInstrumentation.from(
+      Kamon.config().getConfig("kamon.instrumentation.http-client.no-span-metrics"),
+      TestComponent
+    )
 
   def noopHttpClient(): HttpClientInstrumentation =
-    HttpClientInstrumentation.from( Kamon.config().getConfig("kamon.instrumentation.http-client.noop"), TestComponent)
+    HttpClientInstrumentation.from(Kamon.config().getConfig("kamon.instrumentation.http-client.noop"), TestComponent)
 
-  def fakeRequest(requestUrl: String, requestPath: String, requestMethod: String, initialHeaders: Map[String, String]): HttpMessage.RequestBuilder[HttpMessage.Request] =
+  def fakeRequest(
+    requestUrl: String,
+    requestPath: String,
+    requestMethod: String,
+    initialHeaders: Map[String, String]
+  ): HttpMessage.RequestBuilder[HttpMessage.Request] =
     new HttpMessage.RequestBuilder[HttpMessage.Request] {
       private var _headers = mutable.Map.empty[String, String]
-      initialHeaders.foreach { case (k, v) => _headers += (k -> v)}
+      initialHeaders.foreach { case (k, v) => _headers += (k -> v) }
 
       override def url: String = requestUrl
-      override def path: String = if(requestPath == "/fail-operation-name") sys.error("fail") else requestPath
+      override def path: String = if (requestPath == "/fail-operation-name") sys.error("fail") else requestPath
       override def method: String = requestMethod
       override def read(header: String): Option[String] = _headers.get(header)
       override def readAll(): Map[String, String] = _headers.toMap

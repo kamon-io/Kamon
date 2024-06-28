@@ -36,18 +36,19 @@ import kamon.instrumentation.akka.http.TracingDirectives
 import org.json4s.{DefaultFormats, native}
 import kamon.tag.Lookups.plain
 import kamon.trace.Trace
+import org.json4s.native.Serialization
 import scala.concurrent.{ExecutionContext, Future}
 
 trait TestWebServer extends TracingDirectives {
-  implicit val serialization = native.Serialization
-  implicit val formats = DefaultFormats
+  implicit val serialization: Serialization.type = native.Serialization
+  implicit val formats: DefaultFormats.type = DefaultFormats
   import Json4sSupport._
 
   def startServer(interface: String, port: Int, https: Boolean = false)(implicit system: ActorSystem): WebServer = {
     import Endpoints._
 
     implicit val ec: ExecutionContext = system.dispatcher
-    implicit val materializer = ActorMaterializer()
+    implicit val materializer: ActorMaterializer = ActorMaterializer()
 
     val routes = logRequest("routing-request") {
       get {
@@ -56,55 +57,55 @@ trait TestWebServer extends TracingDirectives {
         } ~
         pathPrefix("extraction") {
           authenticateBasic("realm", credentials => Option("Okay")) { srt =>
-          (post | get) {
-            pathPrefix("nested") {
-              pathPrefix(IntNumber / "fixed") { num =>
-                pathPrefix("anchor" / IntNumber.? / JavaUUID / "fixed") { (number, uuid) =>
-                  pathPrefix(LongNumber / HexIntNumber) { (longNum, hex) =>
-                    complete("OK")
+            (post | get) {
+              pathPrefix("nested") {
+                pathPrefix(IntNumber / "fixed") { num =>
+                  pathPrefix("anchor" / IntNumber.? / JavaUUID / "fixed") { (number, uuid) =>
+                    pathPrefix(LongNumber / HexIntNumber) { (longNum, hex) =>
+                      complete("OK")
+                    }
                   }
                 }
-              }
-            } ~
-            pathPrefix("concat") {
-              path("fixed" ~ JavaUUID ~ HexIntNumber) { (uuid, num) =>
-                complete("OK")
-              }
-            } ~
-            pathPrefix("on-complete" / IntNumber) { _ =>
-              onComplete(Future("hello")) { _ =>
-                extract(samplingDecision) { decision =>
-                  path("more-path") {
-                    complete(decision.toString)
+              } ~
+              pathPrefix("concat") {
+                path("fixed" ~ JavaUUID ~ HexIntNumber) { (uuid, num) =>
+                  complete("OK")
+                }
+              } ~
+              pathPrefix("on-complete" / IntNumber) { _ =>
+                onComplete(Future("hello")) { _ =>
+                  extract(samplingDecision) { decision =>
+                    path("more-path") {
+                      complete(decision.toString)
+                    }
                   }
                 }
-              }
-            } ~
-            pathPrefix("on-success" / IntNumber) { _ =>
-              onSuccess(Future("hello")) { text =>
-                pathPrefix("after") {
-                  complete(text)
+              } ~
+              pathPrefix("on-success" / IntNumber) { _ =>
+                onSuccess(Future("hello")) { text =>
+                  pathPrefix("after") {
+                    complete(text)
+                  }
                 }
-              }
-            } ~
-            pathPrefix("complete-or-recover-with" / IntNumber) { _ =>
-              completeOrRecoverWith(Future("bad".charAt(10).toString)) { failure =>
-                pathPrefix("after") {
-                  failWith(failure)
+              } ~
+              pathPrefix("complete-or-recover-with" / IntNumber) { _ =>
+                completeOrRecoverWith(Future("bad".charAt(10).toString)) { failure =>
+                  pathPrefix("after") {
+                    failWith(failure)
+                  }
                 }
-              }
-            } ~
-            pathPrefix("complete-or-recover-with-success" / IntNumber) { _ =>
-              completeOrRecoverWith(Future("good")) { failure =>
-                pathPrefix("after") {
-                  failWith(failure)
+              } ~
+              pathPrefix("complete-or-recover-with-success" / IntNumber) { _ =>
+                completeOrRecoverWith(Future("good")) { failure =>
+                  pathPrefix("after") {
+                    failWith(failure)
+                  }
                 }
+              } ~
+              path("segment" / Segment) { segment =>
+                complete(HttpResponse(entity = HttpEntity(ContentTypes.`text/plain(UTF-8)`, segment)))
               }
-            } ~
-            path("segment" / Segment){ segment =>
-              complete(HttpResponse(entity = HttpEntity(ContentTypes.`text/plain(UTF-8)`, segment)))
             }
-          }
           }
         } ~
         path(rootOk) {
@@ -179,8 +180,13 @@ trait TestWebServer extends TracingDirectives {
       }
     }
 
-    if(https)
-      new WebServer(interface, port, "https", Http().bindAndHandleAsync(Route.asyncHandler(routes), interface, port, httpContext()))
+    if (https)
+      new WebServer(
+        interface,
+        port,
+        "https",
+        Http().bindAndHandleAsync(Route.asyncHandler(routes), interface, port, httpContext())
+      )
     else
       new WebServer(interface, port, "http", Http().bindAndHandle(routes, interface, port))
   }
@@ -215,7 +221,9 @@ trait TestWebServer extends TracingDirectives {
   }
 
   def loadX509Certificate(resourceName: String): Certificate =
-    CertificateFactory.getInstance("X.509").generateCertificate(getClass.getClassLoader.getResourceAsStream(resourceName))
+    CertificateFactory.getInstance("X.509").generateCertificate(
+      getClass.getClassLoader.getResourceAsStream(resourceName)
+    )
 
   def samplingDecision(ctx: RequestContext): Trace.SamplingDecision =
     Kamon.currentSpan().trace.samplingDecision
@@ -238,7 +246,12 @@ trait TestWebServer extends TracingDirectives {
     }
   }
 
-  class WebServer(val interface: String, val port: Int, val protocol: String, bindingFuture: Future[Http.ServerBinding])(implicit ec: ExecutionContext) {
+  class WebServer(
+    val interface: String,
+    val port: Int,
+    val protocol: String,
+    bindingFuture: Future[Http.ServerBinding]
+  )(implicit ec: ExecutionContext) {
     def shutdown(): Future[_] = {
       bindingFuture.flatMap(binding => binding.unbind())
     }

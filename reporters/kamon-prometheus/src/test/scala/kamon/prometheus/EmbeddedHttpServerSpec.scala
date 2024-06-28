@@ -15,10 +15,10 @@ class SunHttpServerSpecSuite extends EmbeddedHttpServerSpecSuite {
 }
 
 abstract class EmbeddedHttpServerSpecSuite extends AnyWordSpec
-  with Matchers
-  with BeforeAndAfterAll
-  with KamonTestSnapshotSupport
-  with Eventually {
+    with Matchers
+    with BeforeAndAfterAll
+    with KamonTestSnapshotSupport
+    with Eventually {
   protected def testConfig: Config
 
   protected def port: Int = 9095
@@ -31,47 +31,47 @@ abstract class EmbeddedHttpServerSpecSuite extends AnyWordSpec
 
   "the embedded sun http server" should {
     "provide no data comment on GET to /metrics when no data loaded yet" in {
-      //act
+      // act
       val metrics = httpGetMetrics("/metrics")
-      //assert
+      // assert
       metrics shouldBe "# The kamon-prometheus module didn't receive any data just yet.\n"
     }
 
     "provide the metrics on GET to /metrics with empty data" in {
-      //arrange
+      // arrange
       testee.reportPeriodSnapshot(emptyPeriodSnapshot)
-      //act
+      // act
       val metrics = httpGetMetrics("/metrics")
-      //assert
+      // assert
       metrics shouldBe ""
     }
 
     "provide the metrics on GET to /metrics with data" in {
-      //arrange
+      // arrange
       testee.reportPeriodSnapshot(counter("jvm.mem"))
-      //act
+      // act
       val metrics = httpGetMetrics("/metrics")
-      //assert
+      // assert
       metrics shouldBe "# TYPE jvm_mem_total counter\njvm_mem_total 1.0\n"
     }
 
     "provide the metrics on GET to /metrics with data after reconfigure" in {
-      //arrange
+      // arrange
       testee.reconfigure(testConfig)
       testee.reportPeriodSnapshot(counter("jvm.mem"))
-      //act
+      // act
       val metrics = httpGetMetrics("/metrics")
-      //assert
+      // assert
       metrics shouldBe "# TYPE jvm_mem_total counter\njvm_mem_total 2.0\n"
     }
 
     "respect gzip Content-Encoding headers" in {
-      //arrange
+      // arrange
       testee.reportPeriodSnapshot(counter("jvm.mem"))
-      //act
+      // act
       val metrics = httpGetMetrics("/metrics")
       val gzippedMetrics = httpGetGzippedMetrics("/metrics")
-      //assert
+      // assert
       metrics.length should be > gzippedMetrics.length
     }
 
@@ -110,6 +110,7 @@ abstract class EmbeddedHttpServerSpecSuite extends AnyWordSpec
 
   private def changeEndpoint(path: String): Config = {
     ConfigFactory.parseString(
-      s"""kamon.prometheus.embedded-server.metrics-path = ${path}""").withFallback(testConfig)
+      s"""kamon.prometheus.embedded-server.metrics-path = ${path}"""
+    ).withFallback(testConfig)
   }
 }

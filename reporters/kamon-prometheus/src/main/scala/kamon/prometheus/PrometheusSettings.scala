@@ -29,6 +29,7 @@ object PrometheusSettings {
     defaultBuckets: Seq[java.lang.Double],
     timeBuckets: Seq[java.lang.Double],
     informationBuckets: Seq[java.lang.Double],
+    percentageBuckets: Seq[java.lang.Double],
     customBuckets: Map[String, Seq[java.lang.Double]],
     includeEnvironmentTags: Boolean,
     summarySettings: SummarySettings,
@@ -47,6 +48,7 @@ object PrometheusSettings {
       defaultBuckets = prometheusConfig.getDoubleList("buckets.default-buckets").asScala.toSeq,
       timeBuckets = prometheusConfig.getDoubleList("buckets.time-buckets").asScala.toSeq,
       informationBuckets = prometheusConfig.getDoubleList("buckets.information-buckets").asScala.toSeq,
+      percentageBuckets = prometheusConfig.getDoubleList("buckets.percentage-buckets").asScala.toSeq,
       customBuckets = readCustomBuckets(prometheusConfig.getConfig("buckets.custom")),
       includeEnvironmentTags = prometheusConfig.getBoolean("include-environment-tags"),
       summarySettings = SummarySettings(

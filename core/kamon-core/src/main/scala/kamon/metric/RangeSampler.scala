@@ -26,7 +26,6 @@ import org.slf4j.LoggerFactory
 
 import scala.annotation.tailrec
 
-
 /**
   * Instrument that tracks the behavior of a variable that can increase and decrease over time. A range sampler keeps
   * track of the observed minimum and maximum values for the tracked variable and is constantly recording and resetting
@@ -71,7 +70,6 @@ trait RangeSampler extends Instrument[RangeSampler, Metric.Settings.ForDistribut
 
 }
 
-
 object RangeSampler {
 
   private val _logger = LoggerFactory.getLogger(classOf[RangeSampler])
@@ -81,8 +79,11 @@ object RangeSampler {
     * and updated concurrently. This is, in fact, a close copy of the Histogram.Atomic implementation, modified to match
     * the Timer interface.
     */
-  class Atomic(val metric: BaseMetric[RangeSampler, Metric.Settings.ForDistributionInstrument, Distribution],
-      val tags: TagSet, val dynamicRange: DynamicRange) extends BaseAtomicHdrHistogram(dynamicRange) with RangeSampler
+  class Atomic(
+    val metric: BaseMetric[RangeSampler, Metric.Settings.ForDistributionInstrument, Distribution],
+    val tags: TagSet,
+    val dynamicRange: DynamicRange
+  ) extends BaseAtomicHdrHistogram(dynamicRange) with RangeSampler
       with Instrument.Snapshotting[Distribution] with DistributionSnapshotBuilder
       with BaseMetricAutoUpdate[RangeSampler, Metric.Settings.ForDistributionInstrument, Distribution] {
 
@@ -143,7 +144,7 @@ object RangeSampler {
 
       } catch {
         case _: ArrayIndexOutOfBoundsException =>
-          _logger.warn (
+          _logger.warn(
             s"Failed to record value on [${metric.name},${tags}] because the value is outside of the " +
             "configured range. You might need to change your dynamic range configuration for this metric"
           )
@@ -155,21 +156,19 @@ object RangeSampler {
     override protected def baseMetric: BaseMetric[RangeSampler, Settings.ForDistributionInstrument, Distribution] =
       metric
 
-
     /**
       * Keeps track of the max value of an observed value using an AtomicLong as the underlying storage.
       */
     private class AtomicLongMaxUpdater(value: AtomicLong) {
 
-      def update(newMax: Long):Unit = {
+      def update(newMax: Long): Unit = {
         @tailrec def compare(): Long = {
           val currentMax = value.get()
-          if(newMax > currentMax) {
+          if (newMax > currentMax) {
             if (!value.compareAndSet(currentMax, newMax)) {
               compare()
             } else newMax
-          }
-          else currentMax
+          } else currentMax
         }
         compare()
       }

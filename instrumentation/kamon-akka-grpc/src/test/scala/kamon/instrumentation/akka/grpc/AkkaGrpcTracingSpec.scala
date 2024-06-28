@@ -26,19 +26,19 @@ import org.scalatest.concurrent.Eventually
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 
+import scala.concurrent.ExecutionContextExecutor
 import scala.concurrent.duration._
 
 class AkkaGrpcTracingSpec extends AnyWordSpec with InitAndStopKamonAfterAll with Matchers with Eventually
     with TestSpanReporter with OptionValues {
 
-  implicit val system = ActorSystem("akka-grpc-instrumentation")
-  implicit val ec = system.dispatcher
+  implicit val system: ActorSystem = ActorSystem("akka-grpc-instrumentation")
+  implicit val ec: ExecutionContextExecutor = system.dispatcher
 
   val greeterService = GreeterServiceHandler(new GreeterServiceImpl())
   val serverBinding = Http()
     .newServerAt("127.0.0.1", 8598)
     .bind(greeterService)
-
 
   val client = GreeterServiceClient(GrpcClientSettings.connectToServiceAt("127.0.0.1", 8598).withTls(false))
 
@@ -55,10 +55,5 @@ class AkkaGrpcTracingSpec extends AnyWordSpec with InitAndStopKamonAfterAll with
         span.metricTags.get(plain("rpc.method")) shouldBe "SayHello"
       }
     }
-  }
-
-  override protected def beforeAll(): Unit = {
-    super.beforeAll()
-    enableFastSpanFlushing()
   }
 }

@@ -21,7 +21,13 @@ import java.util
 
 import com.datastax.driver.core._
 import com.google.common.base.Function
-import com.google.common.util.concurrent.{FutureCallback, Futures, ListenableFuture, ListeningExecutorService, MoreExecutors}
+import com.google.common.util.concurrent.{
+  FutureCallback,
+  Futures,
+  ListenableFuture,
+  ListeningExecutorService,
+  MoreExecutors
+}
 import kamon.Kamon
 import kamon.instrumentation.cassandra.CassandraInstrumentation
 import kamon.trace.Span
@@ -41,15 +47,19 @@ class InstrumentedSession(underlying: Session) extends AbstractSession {
     new InstrumentedSession(underlying.init())
 
   override def initAsync(): ListenableFuture[Session] = {
-    Futures.transform(underlying.initAsync(), new Function[Session, Session] {
-      override def apply(session: Session): Session =
-        new InstrumentedSession(session)
-    }, executor)
+    Futures.transform(
+      underlying.initAsync(),
+      new Function[Session, Session] {
+        override def apply(session: Session): Session =
+          new InstrumentedSession(session)
+      },
+      executor
+    )
   }
 
   override def prepareAsync(
-      query:         String,
-      customPayload: util.Map[String, ByteBuffer]
+    query: String,
+    customPayload: util.Map[String, ByteBuffer]
   ): ListenableFuture[PreparedStatement] = {
     val statement = new SimpleStatement(query)
     statement.setOutgoingPayload(customPayload)
@@ -57,8 +67,8 @@ class InstrumentedSession(underlying: Session) extends AbstractSession {
   }
 
   private def buildClientSpan(statement: Statement): Span =
-    if(CassandraInstrumentation.settings.enableTracing) {
-      val query         = extractQuery(statement)
+    if (CassandraInstrumentation.settings.enableTracing) {
+      val query = extractQuery(statement)
       val statementKind = extractStatementType(query)
 
       val clientSpan = Kamon
@@ -108,7 +118,7 @@ class InstrumentedSession(underlying: Session) extends AbstractSession {
   }
 
   private def recordClientQueryExecutionInfo(clientSpan: Span, result: ResultSet): Unit = {
-    val info    = result.getExecutionInfo
+    val info = result.getExecutionInfo
     val hasMore = !result.isFullyFetched
 
     val trace = info.getQueryTrace

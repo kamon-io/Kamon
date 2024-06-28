@@ -19,7 +19,7 @@ package status
 
 import java.net.InetAddress
 import java.util.concurrent.ThreadLocalRandom
-import com.typesafe.config.Config
+import com.typesafe.config.{Config, ConfigUtil}
 import kamon.tag.TagSet
 import kamon.util.HexCodec
 import org.slf4j.LoggerFactory
@@ -83,18 +83,20 @@ object Environment {
       tagsConfig.entrySet()
         .iterator()
         .asScala
-        .map { e => e.getKey -> e.getValue.unwrapped().toString }
+        .map { e => ConfigUtil.splitPath(e.getKey).asScala.mkString(".") -> e.getValue.unwrapped().toString }
         .toMap
     )
   }
 
   private def generateHostname(): String = {
-    try InetAddress.getLocalHost.getHostName() catch { case t: Throwable =>
-      _logger.warn("Could not automatically resolve a host name for this instance, falling back to 'localhost'", t)
-      "localhost"
+    try InetAddress.getLocalHost.getHostName()
+    catch {
+      case t: Throwable =>
+        _logger.warn("Could not automatically resolve a host name for this instance, falling back to 'localhost'", t)
+        "localhost"
     }
   }
 
   private def readValueOrGenerate(configuredValue: String, generator: => String): String =
-    if(configuredValue == "auto") generator else configuredValue
+    if (configuredValue == "auto") generator else configuredValue
 }

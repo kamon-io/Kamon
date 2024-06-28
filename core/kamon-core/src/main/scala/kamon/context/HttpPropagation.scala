@@ -61,12 +61,13 @@ object HttpPropagation {
     def write(header: String, value: String): Unit
   }
 
-
-
   /**
     * Create a new HTTP propagation instance from the provided configuration.
     */
-  def from(propagationConfig: Config, identifierScheme: String): Propagation[HttpPropagation.HeaderReader, HttpPropagation.HeaderWriter] = {
+  def from(
+    propagationConfig: Config,
+    identifierScheme: String
+  ): Propagation[HttpPropagation.HeaderReader, HttpPropagation.HeaderWriter] = {
     new HttpPropagation.Default(Settings.from(propagationConfig, identifierScheme))
   }
 
@@ -110,7 +111,7 @@ object HttpPropagation {
           }
       }
 
-      //apply filter on tags on the exclusion list
+      // apply filter on tags on the exclusion list
       val filteredTags = tags.result().filterNot(kv => tagFilter(kv._1))
 
       // Incoming Entries
@@ -151,11 +152,11 @@ object HttpPropagation {
       }
 
       // Write the upstream name, if needed
-      if(settings.includeUpstreamName)
+      if (settings.includeUpstreamName)
         appendTag(Span.TagKeys.UpstreamName, Kamon.environment.service)
 
       // Write the context tags header.
-      if(contextTagsHeader.nonEmpty) {
+      if (contextTagsHeader.nonEmpty) {
         writer.write(settings.tagsHeaderName, contextTagsHeader.result())
       }
 
@@ -165,7 +166,8 @@ object HttpPropagation {
           try {
             entryWriter.write(context, writer)
           } catch {
-            case NonFatal(t) => log.warn("Failed to write entry [{}] due to: {}", entryName.asInstanceOf[Any], t.asInstanceOf[Any])
+            case NonFatal(t) =>
+              log.warn("Failed to write entry [{}] due to: {}", entryName.asInstanceOf[Any], t.asInstanceOf[Any])
           }
       }
     }
@@ -176,8 +178,8 @@ object HttpPropagation {
     /**
       * Filter for checking the tag towards the configured filter from ''kamon.propagation.http.default.tags.filter''
       */
-    private def tagFilter(tag:Tag):Boolean = tagFilter(tag.key)
-    private def tagFilter(tagName:String):Boolean = settings.tagsFilter.exists(_.accept(tagName))
+    private def tagFilter(tag: Tag): Boolean = tagFilter(tag.key)
+    private def tagFilter(tagName: String): Boolean = settings.tagsFilter.exists(_.accept(tagName))
 
     /**
       * Tries to infer and parse a value into one of the supported tag types: String, Long or Boolean by looking for the
@@ -187,7 +189,7 @@ object HttpPropagation {
       if (value.length < 2) // Empty and short values definitely do not have type indicators.
         value
       else {
-        if(value.startsWith(_longTypePrefix)) {
+        if (value.startsWith(_longTypePrefix)) {
           // Try to parse the content as a Long value.
           val remaining = value.substring(2)
           try {
@@ -196,12 +198,12 @@ object HttpPropagation {
             case _: java.lang.NumberFormatException => remaining
           }
 
-        } else if(value.startsWith(_booleanTypePrefix)) {
+        } else if (value.startsWith(_booleanTypePrefix)) {
           // Try to parse the content as a Boolean value.
           val remaining = value.substring(2)
-          if(remaining == "true")
+          if (remaining == "true")
             true
-          else if(remaining == "false")
+          else if (remaining == "false")
             false
           else
             remaining
@@ -243,7 +245,7 @@ object HttpPropagation {
     )
 
     def from(config: Config, identifierScheme: String): Settings = {
-      def buildInstances[ExpectedType : ClassTag](mappings: Map[String, String]): Map[String, ExpectedType] = {
+      def buildInstances[ExpectedType: ClassTag](mappings: Map[String, String]): Map[String, ExpectedType] = {
         val instanceMap = Map.newBuilder[String, ExpectedType]
 
         mappings.foreach {
@@ -258,8 +260,12 @@ object HttpPropagation {
               try {
                 instanceMap += (contextKey -> ClassLoading.createInstance[ExpectedType](componentClass, Nil))
               } catch {
-                case exception: Exception => log.warn("Failed to instantiate {} [{}] due to []",
-                  implicitly[ClassTag[ExpectedType]].runtimeClass.getName, componentClass, exception)
+                case exception: Exception => log.warn(
+                    "Failed to instantiate {} [{}] due to []",
+                    implicitly[ClassTag[ExpectedType]].runtimeClass.getName,
+                    componentClass,
+                    exception
+                  )
               }
             })(readerWriter => instanceMap += (contextKey -> readerWriter.asInstanceOf[ExpectedType]))
         }
@@ -271,8 +277,10 @@ object HttpPropagation {
       val tagsIncludeUpstreamName = config.getBoolean("tags.include-upstream-name")
       val tagsFilter = config.getStringList("tags.filter").asScala.map(Glob).toSeq
       val tagsMappings = config.getConfig("tags.mappings").pairs
-      val incomingEntries = buildInstances[Propagation.EntryReader[HeaderReader]](config.getConfig("entries.incoming").pairs)
-      val outgoingEntries = buildInstances[Propagation.EntryWriter[HeaderWriter]](config.getConfig("entries.outgoing").pairs)
+      val incomingEntries =
+        buildInstances[Propagation.EntryReader[HeaderReader]](config.getConfig("entries.incoming").pairs)
+      val outgoingEntries =
+        buildInstances[Propagation.EntryWriter[HeaderWriter]](config.getConfig("entries.outgoing").pairs)
 
       Settings(tagsHeaderName, tagsIncludeUpstreamName, tagsFilter, tagsMappings, incomingEntries, outgoingEntries)
     }

@@ -33,16 +33,24 @@ class ActorSystemMetricsSpec extends TestKit(ActorSystem("ActorSystemMetricsSpec
     with InstrumentInspection.Syntax with Matchers with InitAndStopKamonAfterAll with ImplicitSender with Eventually {
 
   // Akka 2.6 creates two more actors by default for the streams materializers supervisor.
-  val baseActorCount = if(Version.current.startsWith("2.6")) 8L else 6L
+  val (baseActorCount, totalActorCount) = Version.current match {
+    case v if v.startsWith("2.6") => (8L, 29)
+    case v if v.startsWith("2.7") => (8L, 29)
+    case _ => (6L, 27)
+  }
+
   val systemMetrics = AkkaMetrics.forSystem(system.name)
 
   "the Actor System metrics" should {
     "record active actor counts" in {
-      eventually(timeout(5 seconds)) {
+      testActor.tell("wake up!", testActor)
+
+      eventually(timeout(10 seconds)) {
         val activeActors = systemMetrics.activeActors.distribution()
 
         // This establishes a baseline on actor counts for the rest of the test.
         activeActors.count should be > 0L
+
         activeActors.min shouldBe baseActorCount
         activeActors.max shouldBe baseActorCount
       }
@@ -55,19 +63,20 @@ class ActorSystemMetricsSpec extends TestKit(ActorSystem("ActorSystemMetricsSpec
         parent ! Discard
       }
 
-      eventually(timeout(5 seconds)) {
+      eventually(timeout(10 seconds)) {
         val activeActors = systemMetrics.activeActors.distribution()
         activeActors.count should be > 0L
-        activeActors.min shouldBe 21L + baseActorCount
-        activeActors.max shouldBe 21L + baseActorCount
+        activeActors.min shouldBe totalActorCount
+        activeActors.max shouldBe totalActorCount
       }
 
       actors.foreach(system.stop)
       system.stop(parent)
 
-      eventually(timeout(5 seconds)) {
+      eventually(timeout(10 seconds)) {
         val activeActors = systemMetrics.activeActors.distribution()
         activeActors.count should be > 0L
+
         activeActors.min shouldBe baseActorCount
         activeActors.max shouldBe baseActorCount
       }

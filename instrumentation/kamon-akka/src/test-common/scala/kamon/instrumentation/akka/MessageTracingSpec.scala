@@ -178,7 +178,7 @@ class MessageTracingSpec extends TestKit(ActorSystem("MessageTracing")) with Any
     }
 
     "not track Akka Streams actors" in {
-      implicit val timeout = Timeout(10 seconds)
+      implicit val timeout: Timeout = Timeout(10 seconds)
       val actorWithMaterializer = system.actorOf(Props[ActorWithMaterializer])
 
       val finishedStream = Kamon.runWithSpan(Kamon.serverSpanBuilder("wrapper", "test").start()) {
@@ -222,7 +222,7 @@ class TracingTestActor extends Actor {
 }
 
 class ActorWithMaterializer extends Actor {
-  implicit val mat = ActorMaterializer()
+  implicit val mat: Materializer = ActorMaterializer()
 
   override def receive: Receive = {
     case "stream" =>

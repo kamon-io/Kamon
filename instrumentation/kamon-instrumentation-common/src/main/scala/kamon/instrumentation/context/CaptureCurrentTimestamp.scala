@@ -18,14 +18,17 @@ package kamon.instrumentation.context
 
 import kanela.agent.libs.net.bytebuddy.asm.Advice
 
+import scala.annotation.static
+
 /**
   * Advise that copies the current System.nanoTime into a HasTimestamp instance when the advised method starts
   * executing.
   */
+class CaptureCurrentTimestampOnEnter private ()
 object CaptureCurrentTimestampOnEnter {
 
   @Advice.OnMethodEnter
-  def enter(@Advice.This hasTimestamp: HasTimestamp): Unit =
+  @static def enter(@Advice.This hasTimestamp: HasTimestamp): Unit =
     hasTimestamp.setTimestamp(System.nanoTime())
 
 }

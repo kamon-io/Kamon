@@ -17,26 +17,49 @@
 package kamon.instrumentation.kafka.client
 
 import java.time.{Duration, Instant}
-
 import kamon.context.Context
 import kamon.instrumentation.kafka.client.ConsumedRecordData.ConsumerInfo
-import kamon.instrumentation.kafka.client.advisor.PollMethodAdvisor
+import kamon.instrumentation.kafka.client.advisor.{
+  PollMethodAdvisor,
+  PollMethodAdvisor_3_7_0_and_up_Async,
+  PollMethodAdvisor_3_7_0_and_up_Legacy
+}
 import kanela.agent.api.instrumentation.InstrumentationBuilder
+import kanela.agent.libs.net.bytebuddy.matcher.ElementMatchers.{declaresField, hasType, named}
 
 class ConsumerInstrumentation extends InstrumentationBuilder {
+
   /**
     * Instruments org.apache.kafka.clients.consumer.KafkaConsumer::poll(Long)
     * Kafka version < 2.3
     */
-  onType("org.apache.kafka.clients.consumer.KafkaConsumer")
+  onTypesMatching(named("org.apache.kafka.clients.consumer.KafkaConsumer").and(declaresField(named("groupId"))))
     .advise(method("poll").and(withArgument(0, classOf[Long])), classOf[PollMethodAdvisor])
 
   /**
     * Instruments org.apache.kafka.clients.consumer.KafkaConsumer::poll(Duration)
-    * Kafka version >= 2.3
+    * Kafka version >= 2.3 < 3.7
     */
-  onType("org.apache.kafka.clients.consumer.KafkaConsumer")
+  onTypesMatching(named("org.apache.kafka.clients.consumer.KafkaConsumer").and(declaresField(named("groupId"))))
     .advise(method("poll").and(withArgument(0, classOf[Duration])), classOf[PollMethodAdvisor])
+
+  /**
+    * Instruments org.apache.kafka.clients.consumer.KafkaConsumer::poll(Duration)
+    * Kafka version >= 3.7
+    */
+  onTypesMatching(
+    named("org.apache.kafka.clients.consumer.internals.AsyncKafkaConsumer").and(declaresField(named("groupMetadata")))
+  )
+    .advise(method("poll").and(withArgument(0, classOf[Duration])), classOf[PollMethodAdvisor_3_7_0_and_up_Async])
+
+  /**
+    * Instruments org.apache.kafka.clients.consumer.KafkaConsumer::poll(Duration)
+    * Kafka version >= 3.7
+    */
+  onTypesMatching(
+    named("org.apache.kafka.clients.consumer.internals.LegacyKafkaConsumer").and(declaresField(named("coordinator")))
+  )
+    .advise(method("poll").and(withArgument(0, classOf[Duration])), classOf[PollMethodAdvisor_3_7_0_and_up_Legacy])
 
   /**
     * Instruments org.apache.kafka.clients.consumer.ConsumerRecord with the HasSpan mixin in order
@@ -48,10 +71,9 @@ class ConsumerInstrumentation extends InstrumentationBuilder {
 }
 
 trait ConsumedRecordData {
-  def incomingContext(): Context
   def nanosSincePollStart(): Long
   def consumerInfo(): ConsumerInfo
-  def set(incomingContext: Context, nanosSincePollStart: Long, consumerInfo: ConsumerInfo): Unit
+  def set(nanosSincePollStart: Long, consumerInfo: ConsumerInfo): Unit
 }
 
 object ConsumedRecordData {
@@ -59,12 +81,8 @@ object ConsumedRecordData {
   case class ConsumerInfo(groupId: Option[String], clientId: String)
 
   class Mixin extends ConsumedRecordData {
-    private var _incomingContext: Context = _
     private var _nanosSincePollStart: Long = _
     private var _consumerInfo: ConsumerInfo = _
-
-    override def incomingContext(): Context =
-      _incomingContext
 
     override def nanosSincePollStart(): Long =
       _nanosSincePollStart
@@ -72,11 +90,9 @@ object ConsumedRecordData {
     override def consumerInfo(): ConsumerInfo =
       _consumerInfo
 
-    override def set(incomingContext: Context, nanosSincePollStart: Long, consumerInfo: ConsumerInfo): Unit = {
-      _incomingContext = incomingContext
+    override def set(nanosSincePollStart: Long, consumerInfo: ConsumerInfo): Unit = {
       _nanosSincePollStart = nanosSincePollStart
       _consumerInfo = consumerInfo
     }
   }
 }
-

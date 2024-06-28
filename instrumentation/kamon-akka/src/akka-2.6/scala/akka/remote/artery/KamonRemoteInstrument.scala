@@ -9,6 +9,7 @@ import kanela.agent.libs.net.bytebuddy.asm.Advice
 import org.slf4j.LoggerFactory
 
 import java.nio.ByteBuffer
+import scala.annotation.static
 import scala.util.control.NonFatal
 
 class KamonRemoteInstrument(system: ExtendedActorSystem) extends RemoteInstrument {
@@ -85,12 +86,12 @@ object CaptureCurrentInboundEnvelope {
   }
 
   @Advice.OnMethodEnter
-  def enter(@Advice.Argument(0) inboundEnvelope: InboundEnvelope): Unit = {
+  @static def enter(@Advice.Argument(0) inboundEnvelope: InboundEnvelope): Unit = {
     CurrentInboundEnvelope.set(inboundEnvelope)
   }
 
   @Advice.OnMethodExit
-  def exit(): Unit = {
+  @static def exit(): Unit = {
     CurrentInboundEnvelope.remove()
   }
 }

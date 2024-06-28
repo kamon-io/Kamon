@@ -26,10 +26,9 @@ import org.scalatest.wordspec.AnyWordSpec
 
 import java.time.Instant
 
-
-class LocalTailSamplerSpec extends AnyWordSpec with Matchers with OptionValues with SpanInspection.Syntax with Eventually
+class LocalTailSamplerSpec extends AnyWordSpec with Matchers with OptionValues with SpanInspection.Syntax
+    with Eventually
     with SpanSugar with TestSpanReporter with Reconfigure with InitAndStopKamonAfterAll {
-
 
   "the Kamon local tail sampler" should {
     "keep traces that match the error count threshold" in {
@@ -44,7 +43,8 @@ class LocalTailSamplerSpec extends AnyWordSpec with Matchers with OptionValues w
           |    error-count-threshold = 3
           |  }
           |}
-          |""".stripMargin)
+          |""".stripMargin
+      )
 
       val parentSpan = Kamon.spanBuilder("parent-with-errors").start()
 
@@ -79,7 +79,8 @@ class LocalTailSamplerSpec extends AnyWordSpec with Matchers with OptionValues w
           |    latency-threshold = 3 seconds
           |  }
           |}
-          |""".stripMargin)
+          |""".stripMargin
+      )
 
       val startInstant = Instant.now()
       val parentSpan = Kamon.spanBuilder("parent-with-high-latency").start(startInstant)
@@ -115,7 +116,8 @@ class LocalTailSamplerSpec extends AnyWordSpec with Matchers with OptionValues w
           |    latency-threshold = 3 seconds
           |  }
           |}
-          |""".stripMargin)
+          |""".stripMargin
+      )
 
       val startInstant = Instant.now()
       val parentSpan = Kamon.spanBuilder("parent-with-disabled-tail-sampler").start(startInstant)

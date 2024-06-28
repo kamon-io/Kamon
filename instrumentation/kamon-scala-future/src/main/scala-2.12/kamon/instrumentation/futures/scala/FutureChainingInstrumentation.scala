@@ -88,7 +88,7 @@ object CallbackRunnableRunInstrumentation {
   def enter(@Advice.This runnable: HasContext with HasTimestamp with InternalState): Scope = {
     val timestamp = runnable.timestamp
     val valueContext = runnable.valueBridge().asInstanceOf[HasContext].context
-    val context = if(valueContext.nonEmpty()) valueContext else runnable.context
+    val context = if (valueContext.nonEmpty()) valueContext else runnable.context
 
     storeCurrentRunnableTimestamp(timestamp)
     Kamon.storeContext(context)

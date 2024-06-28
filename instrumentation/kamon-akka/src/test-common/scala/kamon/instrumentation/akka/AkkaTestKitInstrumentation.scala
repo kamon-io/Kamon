@@ -3,6 +3,8 @@ package kamon.instrumentation.akka
 import kanela.agent.api.instrumentation.InstrumentationBuilder
 import kanela.agent.libs.net.bytebuddy.asm.Advice
 
+import scala.annotation.static
+
 class AkkaTestKitInstrumentation extends InstrumentationBuilder {
 
   /**
@@ -15,10 +17,11 @@ class AkkaTestKitInstrumentation extends InstrumentationBuilder {
     .advise(method("receiveOne"), DelayReceiveOne)
 }
 
+class DelayReceiveOne
 object DelayReceiveOne {
 
   @Advice.OnMethodExit(suppress = classOf[Throwable])
-  def exit(): Unit =
+  @static def exit(): Unit =
     Thread.sleep(5)
 
 }

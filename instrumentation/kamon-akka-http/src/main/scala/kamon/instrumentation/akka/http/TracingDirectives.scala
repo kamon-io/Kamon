@@ -20,7 +20,6 @@ import akka.http.scaladsl.server.Directive0
 import akka.http.scaladsl.server.directives.BasicDirectives
 import kamon.Kamon
 
-
 trait TracingDirectives extends BasicDirectives {
 
   /**
@@ -31,7 +30,7 @@ trait TracingDirectives extends BasicDirectives {
     val operationSpan = Kamon.currentSpan()
     operationSpan.name(name)
 
-    if(takeSamplingDecision)
+    if (takeSamplingDecision)
       operationSpan.takeSamplingDecision()
 
     req

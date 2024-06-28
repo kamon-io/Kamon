@@ -26,6 +26,7 @@ import org.springframework.web.servlet.HandlerMapping
 
 import java.util.concurrent.Callable
 import javax.servlet.http.{HttpServletRequest, HttpServletResponse}
+import scala.annotation.static
 
 class SpringMVCInstrumentation extends InstrumentationBuilder {
 
@@ -35,10 +36,10 @@ class SpringMVCInstrumentation extends InstrumentationBuilder {
    */
   onType("org.springframework.web.servlet.DispatcherServlet")
     .mixin(classOf[HasServerInstrumentation.Mixin])
-    .advise(method("doDispatch"), DispatchAdvice)
-    .advise(method("render"), RenderAdvice)
-    .advise(method("processHandlerException"), ProcessHandlerExceptionAdvice)
-    .advise(method("getHandler").and(takesArguments(1)), GetHandlerAdvice)
+    .advise(method("doDispatch"), classOf[DispatchAdvice])
+    .advise(method("render"), classOf[RenderAdvice])
+    .advise(method("processHandlerException"), classOf[ProcessHandlerExceptionAdvice])
+    .advise(method("getHandler").and(takesArguments(1)), classOf[GetHandlerAdvice])
 
   /*
    * Changes Callable argument of startCallableProcessing with an
@@ -47,13 +48,18 @@ class SpringMVCInstrumentation extends InstrumentationBuilder {
   onType("org.springframework.web.context.request.async.WebAsyncManager")
     .advise(
       method("startCallableProcessing")
-        .and(withArgument(0, classOf[Callable[_]])), classOf[CallableWrapper])
+        .and(withArgument(0, classOf[Callable[_]])),
+      classOf[CallableWrapper]
+    )
 }
 
+class DispatchAdvice
 object DispatchAdvice {
   @Advice.OnMethodEnter()
-  def enter(@Advice.This dispatcherServlet: HasServerInstrumentation,
-            @Advice.Argument(0) request: HttpServletRequest): (RequestHandler, Scope) = {
+  @static def enter(
+    @Advice.This dispatcherServlet: HasServerInstrumentation,
+    @Advice.Argument(0) request: HttpServletRequest
+  ): (RequestHandler, Scope) = {
     val requestHandler = Option(request.getAttribute("kamon-handler").asInstanceOf[RequestHandler])
       .getOrElse({
         val serverInstrumentation = dispatcherServlet.getServerInstrumentation(request)
@@ -68,9 +74,11 @@ object DispatchAdvice {
   }
 
   @Advice.OnMethodExit(onThrowable = classOf[Throwable], suppress = classOf[Throwable])
-  def exit(@Advice.Enter enter: (RequestHandler, Scope),
-           @Advice.Argument(0) request: HttpServletRequest,
-           @Advice.Argument(1) response: HttpServletResponse): Unit = {
+  @static def exit(
+    @Advice.Enter enter: (RequestHandler, Scope),
+    @Advice.Argument(0) request: HttpServletRequest,
+    @Advice.Argument(1) response: HttpServletResponse
+  ): Unit = {
     val (handler, scope) = enter
 
     if (response.isCommitted) {
@@ -83,9 +91,10 @@ object DispatchAdvice {
   }
 }
 
+class GetHandlerAdvice
 object GetHandlerAdvice {
   @Advice.OnMethodExit()
-  def exit(@Advice.Argument(0) request: HttpServletRequest): Unit = {
+  @static def exit(@Advice.Argument(0) request: HttpServletRequest): Unit = {
     val handler = request.getAttribute("kamon-handler").asInstanceOf[RequestHandler]
     val pattern = request.getAttribute(HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE)
 
@@ -96,21 +105,23 @@ object GetHandlerAdvice {
   }
 }
 
+class ProcessHandlerExceptionAdvice
 object ProcessHandlerExceptionAdvice {
   @Advice.OnMethodExit(onThrowable = classOf[Throwable], suppress = classOf[Throwable])
-  def exit(@Advice.Argument(3) throwable: Throwable): Unit = {
+  @static def exit(@Advice.Argument(3) throwable: Throwable): Unit = {
     if (throwable != null) {
       Kamon.currentSpan().fail(throwable)
     }
   }
 }
 
+class RenderAdvice
 object RenderAdvice {
   @Advice.OnMethodEnter()
-  def enter(): Span =
+  @static def enter(): Span =
     Kamon.internalSpanBuilder("view.render", "spring.server").start()
 
   @Advice.OnMethodExit()
-  def exit(@Advice.Enter span: Span): Unit =
+  @static def exit(@Advice.Enter span: Span): Unit =
     span.finish()
 }

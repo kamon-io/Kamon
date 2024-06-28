@@ -45,5 +45,4 @@ abstract class EmbeddedMongoTest(port: Int) extends AnyWordSpec with BeforeAndAf
     super.afterAll()
   }
 
-
 }

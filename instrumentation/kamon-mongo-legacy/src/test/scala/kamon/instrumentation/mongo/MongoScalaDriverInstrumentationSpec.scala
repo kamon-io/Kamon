@@ -216,7 +216,9 @@ class MongoScalaDriverInstrumentationSpec extends EmbeddedMongoTest(port = 4445)
 
       tools.insertOne(Document("name" -> "kamon", "reduce" -> true, "license" -> "apache", "value" -> 100)).consume()
       tools.insertOne(Document("name" -> "zipkin", "reduce" -> true, "license" -> "apache", "value" -> 100)).consume()
-      tools.insertOne(Document("name" -> "prometheus", "reduce" -> true, "license" -> "apache", "value" -> 100)).consume()
+      tools.insertOne(
+        Document("name" -> "prometheus", "reduce" -> true, "license" -> "apache", "value" -> 100)
+      ).consume()
       tools.insertOne(Document("name" -> "linux", "reduce" -> true, "license" -> "gpl", "value" -> 100)).consume()
 
       tools.mapReduce(
@@ -229,7 +231,6 @@ class MongoScalaDriverInstrumentationSpec extends EmbeddedMongoTest(port = 4445)
           |  }
           |}
         """.stripMargin,
-
         """
           |function(key, values) {
           |  return Array.sum(values)
@@ -253,7 +254,9 @@ class MongoScalaDriverInstrumentationSpec extends EmbeddedMongoTest(port = 4445)
 
       tools.insertOne(Document("name" -> "kamon", "reduce" -> true, "license" -> "apache", "value" -> 100)).consume()
       tools.insertOne(Document("name" -> "zipkin", "reduce" -> true, "license" -> "apache", "value" -> 100)).consume()
-      tools.insertOne(Document("name" -> "prometheus", "reduce" -> true, "license" -> "apache", "value" -> 100)).consume()
+      tools.insertOne(
+        Document("name" -> "prometheus", "reduce" -> true, "license" -> "apache", "value" -> 100)
+      ).consume()
       tools.insertOne(Document("name" -> "linux", "reduce" -> true, "license" -> "gpl", "value" -> 100)).consume()
 
       tools.mapReduce(
@@ -266,7 +269,6 @@ class MongoScalaDriverInstrumentationSpec extends EmbeddedMongoTest(port = 4445)
           |  }
           |}
         """.stripMargin,
-
         """
           |function(key, values) {
           |  return Array.sum(values)
@@ -336,9 +338,7 @@ class MongoScalaDriverInstrumentationSpec extends EmbeddedMongoTest(port = 4445)
       }
     }
 
-
   }
-
 
   implicit class RichSingleObservable[T](observable: Observable[T]) {
 

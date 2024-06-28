@@ -21,14 +21,15 @@ import java.time.Duration
 import com.grack.nanojson.{JsonArray, JsonObject, JsonWriter}
 import com.typesafe.config.Config
 import kamon.trace.Span
-import kamon.{ ClassLoading, Kamon }
+import kamon.{ClassLoading, Kamon}
 import kamon.datadog.DatadogSpanReporter.Configuration
-import kamon.module.{ ModuleFactory, SpanReporter }
-import kamon.tag.{ Lookups, Tag, TagSet }
-import kamon.util.{ EnvironmentTags, Filter }
+import kamon.module.{ModuleFactory, SpanReporter}
+import kamon.tag.{Lookups, Tag, TagSet}
+import kamon.trace.Span.TagKeys
+import kamon.util.{EnvironmentTags, Filter}
 import org.slf4j.LoggerFactory
 
-import scala.util.{ Failure }
+import scala.util.{Failure}
 
 trait KamonDataDogTranslator {
   def translate(span: Span.Finished, additionalTags: TagSet, tagFilter: Filter): DdSpan
@@ -52,7 +53,14 @@ object KamonDataDogTranslatorDefault extends KamonDataDogTranslator {
     val start = from.getEpochNano
     val duration = Duration.between(from, span.to)
     val marks = span.marks.map { m => m.key -> m.instant.getEpochNano.toString }.toMap
-    val tags = (span.tags.all() ++ span.metricTags.all() ++ additionalTags.all()).map { t =>
+    val errorTags = if (span.hasError) {
+      val builder = TagSet.builder()
+      span.tags.get(Lookups.option(TagKeys.ErrorMessage)).foreach(msg => builder.add("error.msg", msg))
+      span.tags.get(Lookups.option(TagKeys.ErrorStacktrace)).foreach(st => builder.add("error.stack", st))
+      builder.build()
+    } else TagSet.Empty
+
+    val tags = (span.tags.all() ++ span.metricTags.all() ++ errorTags.all() ++ additionalTags.all()).map { t =>
       t.key -> Tag.unwrapValue(t).toString
     }
     val meta = (marks ++ tags).filterKeys(tagFilter.accept(_)).toMap
@@ -66,8 +74,8 @@ object DatadogSpanReporter {
   case class Configuration(
     translator: KamonDataDogTranslator,
     httpClient: HttpClient,
-    tagFilter:  Filter,
-    envTags:    TagSet
+    tagFilter: Filter,
+    envTags: TagSet
   )
 
   private[kamon] val httpConfigPath = "kamon.datadog.trace"

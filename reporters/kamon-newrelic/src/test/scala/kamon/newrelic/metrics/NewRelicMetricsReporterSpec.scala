@@ -70,25 +70,51 @@ class NewRelicMetricsReporterSpec extends AnyWordSpec with Matchers {
     .put("dimension", "information")
     .put("sourceMetricType", "rangeSampler")
 
-  private val count1: Metric = new Count("flib", TestMetricHelper.value1, TestMetricHelper.start, TestMetricHelper.end, countAttributes)
-  private val count2: Metric = new Count("flib", TestMetricHelper.value2, TestMetricHelper.start, TestMetricHelper.end, countAttributes)
+  private val count1: Metric =
+    new Count("flib", TestMetricHelper.value1, TestMetricHelper.start, TestMetricHelper.end, countAttributes)
+  private val count2: Metric =
+    new Count("flib", TestMetricHelper.value2, TestMetricHelper.start, TestMetricHelper.end, countAttributes)
 
   private val gauge: Metric = new Gauge("shirley", 15.6d, TestMetricHelper.end, gaugeAttributes)
 
-  private val histogramGauge: Metric = new Gauge("trev.percentiles", 2.0, TestMetricHelper.end,
-    histogramSummaryAttributes.copy().put("percentile", 90.0d))
-  private val histogramSummary: Metric = new Summary("trev.summary", 44, 101.0, 13.0, 17.0,
-    TestMetricHelper.start, TestMetricHelper.end, histogramSummaryAttributes)
+  private val histogramGauge: Metric =
+    new Gauge("trev.percentiles", 2.0, TestMetricHelper.end, histogramSummaryAttributes.copy().put("percentile", 90.0d))
+  private val histogramSummary: Metric = new Summary(
+    "trev.summary",
+    44,
+    101.0,
+    13.0,
+    17.0,
+    TestMetricHelper.start,
+    TestMetricHelper.end,
+    histogramSummaryAttributes
+  )
 
-  private val rangeSamplerGauge: Metric = new Gauge("ranger.percentiles", 8.0, TestMetricHelper.end,
-    rangeSamplerAttributes.copy().put("percentile", 95.0d))
-  private val rangeSamplerSummary: Metric = new Summary("ranger.summary", 88, 202.0, 26.0, 34.0,
-    TestMetricHelper.start, TestMetricHelper.end, rangeSamplerAttributes)
+  private val rangeSamplerGauge: Metric =
+    new Gauge("ranger.percentiles", 8.0, TestMetricHelper.end, rangeSamplerAttributes.copy().put("percentile", 95.0d))
+  private val rangeSamplerSummary: Metric = new Summary(
+    "ranger.summary",
+    88,
+    202.0,
+    26.0,
+    34.0,
+    TestMetricHelper.start,
+    TestMetricHelper.end,
+    rangeSamplerAttributes
+  )
 
-  private val timerGauge: Metric = new Gauge("timer.percentiles", 4.0, TestMetricHelper.end,
-    timerSummaryAttributes.copy().put("percentile", 95.0d))
-  private val timerSummary: Metric = new Summary("timer.summary", 88, 202.0, 26.0, 34.0,
-    TestMetricHelper.start, TestMetricHelper.end, timerSummaryAttributes)
+  private val timerGauge: Metric =
+    new Gauge("timer.percentiles", 4.0, TestMetricHelper.end, timerSummaryAttributes.copy().put("percentile", 95.0d))
+  private val timerSummary: Metric = new Summary(
+    "timer.summary",
+    88,
+    202.0,
+    26.0,
+    34.0,
+    TestMetricHelper.start,
+    TestMetricHelper.end,
+    timerSummaryAttributes
+  )
 
   "The metrics reporter" should {
     "send some metrics" in {
@@ -97,8 +123,15 @@ class NewRelicMetricsReporterSpec extends AnyWordSpec with Matchers {
       val histogram = TestMetricHelper.buildHistogramDistribution
       val timer = TestMetricHelper.buildTimerDistribution
       val rangeSampler = TestMetricHelper.buildRangeSamplerDistribution
-      val periodSnapshot = new PeriodSnapshot(TestMetricHelper.startInstant, TestMetricHelper.endInstant,
-        Seq(counter), Seq(kamonGauge), Seq(histogram), Seq(timer), Seq(rangeSampler))
+      val periodSnapshot = new PeriodSnapshot(
+        TestMetricHelper.startInstant,
+        TestMetricHelper.endInstant,
+        Seq(counter),
+        Seq(kamonGauge),
+        Seq(histogram),
+        Seq(timer),
+        Seq(rangeSampler)
+      )
 
       val expectedCommonAttributes: Attributes = new Attributes()
         .put("service.name", "kamon-application")
@@ -106,8 +139,20 @@ class NewRelicMetricsReporterSpec extends AnyWordSpec with Matchers {
         .put("host.hostname", InetAddress.getLocalHost.getHostName)
         .put("testTag", "testValue")
       val expectedBatch: MetricBatch =
-        new MetricBatch(Seq(count1, count2, gauge, histogramGauge, histogramSummary, timerGauge, timerSummary, rangeSamplerGauge, rangeSamplerSummary).asJava,
-          expectedCommonAttributes)
+        new MetricBatch(
+          Seq(
+            count1,
+            count2,
+            gauge,
+            histogramGauge,
+            histogramSummary,
+            timerGauge,
+            timerSummary,
+            rangeSamplerGauge,
+            rangeSamplerSummary
+          ).asJava,
+          expectedCommonAttributes
+        )
 
       val sender = mock(classOf[MetricBatchSender])
 
@@ -121,18 +166,27 @@ class NewRelicMetricsReporterSpec extends AnyWordSpec with Matchers {
       val counter = TestMetricHelper.buildCounter
       val kamonGauge = TestMetricHelper.buildGauge
       val histogram = TestMetricHelper.buildHistogramDistribution
-      val periodSnapshot = new PeriodSnapshot(TestMetricHelper.startInstant, TestMetricHelper.endInstant,
-        Seq(counter), Seq(kamonGauge), Seq(histogram), Seq(), Seq())
+      val periodSnapshot = new PeriodSnapshot(
+        TestMetricHelper.startInstant,
+        TestMetricHelper.endInstant,
+        Seq(counter),
+        Seq(kamonGauge),
+        Seq(histogram),
+        Seq(),
+        Seq()
+      )
 
       val expectedCommonAttributes: Attributes = new Attributes()
         .put("service.name", "cheese-whiz")
         .put("instrumentation.provider", "kamon-agent")
         .put("testTag", "testThing")
         .put("host.hostname", "thing")
-      val expectedBatch: MetricBatch = new MetricBatch(Seq(count1, count2, gauge, histogramGauge, histogramSummary).asJava, expectedCommonAttributes)
+      val expectedBatch: MetricBatch =
+        new MetricBatch(Seq(count1, count2, gauge, histogramGauge, histogramSummary).asJava, expectedCommonAttributes)
 
       val tagDetails = ConfigValueFactory.fromMap(Map("testTag" -> "testThing").asJava)
-      val configObject: ConfigValue = ConfigValueFactory.fromMap(Map("service" -> "cheese-whiz", "host" -> "thing", "tags" -> tagDetails).asJava)
+      val configObject: ConfigValue =
+        ConfigValueFactory.fromMap(Map("service" -> "cheese-whiz", "host" -> "thing", "tags" -> tagDetails).asJava)
       val config: Config = Kamon.config().withValue("kamon.environment", configObject)
 
       val sender = mock(classOf[MetricBatchSender])
@@ -146,26 +200,48 @@ class NewRelicMetricsReporterSpec extends AnyWordSpec with Matchers {
   }
 
   "The metrics reporter builder" should {
-    "default the url when config not provided" in {
-      val newrelicConfig: ConfigValue = ConfigValueFactory.fromMap(Map(
-        "enable-audit-logging" -> false,
-        "nr-insights-insert-key" -> "secret"
-      ).asJava)
-      val config: Config = Kamon.config().withValue("kamon.newrelic", newrelicConfig)
+    val defaultConfig = Map(
+      "enable-audit-logging" -> false,
+      "license-key" -> "none",
+      "nr-insights-insert-key" -> "none"
+    )
 
-      val result = NewRelicMetricsReporter.buildSenderConfig(config)
-      assert(new URL("https://metric-api.newrelic.com/metric/v1") == result.getEndpointUrl)
+    def createSenderConfiguration(configMap: Map[String, AnyRef]) = {
+      val nrConfig = ConfigValueFactory.fromMap((defaultConfig ++ configMap).asJava)
+      val config = Kamon.config().withValue("kamon.newrelic", nrConfig)
+      NewRelicMetricsReporter.buildSenderConfig(config)
     }
 
-    "use config to override the URI" in {
-      val newrelicConfig: ConfigValue = ConfigValueFactory.fromMap(Map(
-        "enable-audit-logging" -> false,
-        "nr-insights-insert-key" -> "secret",
-        "metric-ingest-uri" -> "https://example.com/foo"
-      ).asJava)
-      val config: Config = Kamon.config().withValue("kamon.newrelic", newrelicConfig)
+    "use \"none\" insights insert key by default" in {
+      val result = createSenderConfiguration(Map.empty)
+      assert("none" == result.getApiKey)
+      assert(!result.useLicenseKey)
+    }
+    "be able to use insights insert key" in {
+      val result = createSenderConfiguration(Map("nr-insights-insert-key" -> "insights"))
+      assert("insights" == result.getApiKey)
+      assert(!result.useLicenseKey)
+    }
+    "be able to use license key" in {
+      val result = createSenderConfiguration(Map("license-key" -> "license"))
+      assert("license" == result.getApiKey)
+      assert(result.useLicenseKey)
+    }
+    "use insights insert key if both configured" in {
+      val result = createSenderConfiguration(Map("license-key" -> "license", "nr-insights-insert-key" -> "insights"))
+      assert("insights" == result.getApiKey)
+      assert(!result.useLicenseKey)
+    }
 
-      val result = NewRelicMetricsReporter.buildSenderConfig(config)
+    "default the url when config not provided" in {
+      val result = createSenderConfiguration(Map("nr-insights-insert-key" -> "secret"))
+      assert(new URL("https://metric-api.newrelic.com/metric/v1") == result.getEndpointUrl)
+    }
+    "use config to override the URI" in {
+      val result = createSenderConfiguration(Map(
+        "nr-insights-insert-key" -> "none",
+        "metric-ingest-uri" -> "https://example.com/foo"
+      ))
       assert(new URL("https://example.com/foo") == result.getEndpointUrl)
     }
   }

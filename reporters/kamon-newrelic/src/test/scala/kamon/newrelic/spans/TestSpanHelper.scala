@@ -21,7 +21,12 @@ object TestSpanHelper {
   val traceId = "nineohtwooneoh"
   val parentId = "pppppppppppppppp21"
 
-  def makeKamonSpan(kind: Kind, id: String = spanId, tags: TagSet = TagSet.of("foo", "bar"), hasError: Boolean = false) = {
+  def makeKamonSpan(
+    kind: Kind,
+    id: String = spanId,
+    tags: TagSet = TagSet.of("foo", "bar"),
+    hasError: Boolean = false
+  ) = {
     val kamonSpan = Span.Finished(
       id = Identifier(id, Array[Byte](2)),
       trace = Trace(Identifier(traceId, Array[Byte](1)), SamplingDecision.Sample),

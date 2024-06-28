@@ -13,14 +13,14 @@
  * =========================================================================================
  */
 
-
 package kamon.instrumentation.executor
 
-import java.util.concurrent.{ExecutorService, Executors => JavaExecutors}
-
+import java.util.concurrent.{Callable, ExecutorService, Executors => JavaExecutors}
 import com.google.common.util.concurrent.MoreExecutors
 import kamon.Kamon
+import kamon.instrumentation.executor.ContextAware.{DefaultContextAwareCallable, DefaultContextAwareRunnable}
 import kamon.testkit.InitAndStopKamonAfterAll
+import kanela.agent.bootstrap.context.ContextHandler
 import org.scalatest.OptionValues
 import org.scalatest.concurrent.Eventually
 import org.scalatest.matchers.should.Matchers
@@ -29,7 +29,8 @@ import org.scalatest.wordspec.AnyWordSpec
 import scala.collection.mutable.ListBuffer
 import scala.util.Random
 
-class OnSubmitContextPropagationSpec extends AnyWordSpec with Matchers with ContextTesting with Eventually with OptionValues
+class OnSubmitContextPropagationSpec extends AnyWordSpec with Matchers with ContextTesting with Eventually
+    with OptionValues
     with InitAndStopKamonAfterAll {
 
   "an instrumented executor with context propagation on submit enabled" should {
@@ -41,7 +42,7 @@ class OnSubmitContextPropagationSpec extends AnyWordSpec with Matchers with Cont
         runnable.ctx
       }
 
-      ctx.value should be ("in-runnable-body")
+      ctx.value should be("in-runnable-body")
     }
 
     "capture the context when call execute(Runnable) in ThreadPool" in {
@@ -53,7 +54,7 @@ class OnSubmitContextPropagationSpec extends AnyWordSpec with Matchers with Cont
         runnable.ctx
       }
 
-      ctx.value should be ("in-runnable-body")
+      ctx.value should be("in-runnable-body")
     }
 
     "capture the context when call submit(Runnable) in ThreadPool" in {
@@ -65,7 +66,7 @@ class OnSubmitContextPropagationSpec extends AnyWordSpec with Matchers with Cont
         runnable.ctx
       }
 
-      ctx.value should be ("in-runnable-body")
+      ctx.value should be("in-runnable-body")
     }
 
     "capture the context when call execute(Runnable) in ForkJoinPool" in {
@@ -78,7 +79,7 @@ class OnSubmitContextPropagationSpec extends AnyWordSpec with Matchers with Cont
         runnable.ctx
       }
 
-      ctx.value should be ("in-runnable-body")
+      ctx.value should be("in-runnable-body")
     }
 
     "capture the context when call submit(Runnable) in ForkJoinPool" in {
@@ -91,7 +92,7 @@ class OnSubmitContextPropagationSpec extends AnyWordSpec with Matchers with Cont
         runnable.ctx
       }
 
-      ctx.value should be ("in-runnable-body")
+      ctx.value should be("in-runnable-body")
     }
 
     "capture the context when call execute(Runnable) in ScheduledThreadPool" in {
@@ -104,7 +105,7 @@ class OnSubmitContextPropagationSpec extends AnyWordSpec with Matchers with Cont
         runnable.ctx
       }
 
-      ctx.value should be ("in-runnable-body")
+      ctx.value should be("in-runnable-body")
     }
 
     "capture the context when call submit(Runnable) in ScheduledThreadPool" in {
@@ -117,7 +118,7 @@ class OnSubmitContextPropagationSpec extends AnyWordSpec with Matchers with Cont
         runnable.ctx
       }
 
-      ctx.value should be ("in-runnable-body")
+      ctx.value should be("in-runnable-body")
     }
 
     "capture the context when call submit(Callable) in ThreadPool" in {
@@ -129,7 +130,7 @@ class OnSubmitContextPropagationSpec extends AnyWordSpec with Matchers with Cont
         callable.ctx
       }
 
-      ctx.value should be ("in-callable-body")
+      ctx.value should be("in-callable-body")
     }
 
     "capture the context when call submit(Callable) in ScheduledThreadPool" in {
@@ -141,7 +142,7 @@ class OnSubmitContextPropagationSpec extends AnyWordSpec with Matchers with Cont
         callable.ctx
       }
 
-      ctx.value should be ("in-callable-body")
+      ctx.value should be("in-callable-body")
     }
 
     "capture the context when call submit(Callable) in ForkJoinPool" in {
@@ -154,21 +155,50 @@ class OnSubmitContextPropagationSpec extends AnyWordSpec with Matchers with Cont
         callable.ctx
       }
 
-      ctx.value should be ("in-callable-body")
+      ctx.value should be("in-callable-body")
     }
 
     "capture the context when call invokeAll(Collection<Callables>) in ExecutorService" in {
       import scala.collection.JavaConverters._
 
       val values = Kamon.runWithContext(testContext("all-callables-should-see-this-key")) {
-        val callables = new CallableWithContext("A") :: new CallableWithContext( "B") :: new CallableWithContext("C") :: Nil
-        instrument(JavaExecutors.newCachedThreadPool()).invokeAll(callables.asJava).asScala.foldLeft(ListBuffer.empty[String]) { (acc, f) => acc += f.get() }
+        val callables =
+          new CallableWithContext("A") :: new CallableWithContext("B") :: new CallableWithContext("C") :: Nil
+        instrument(JavaExecutors.newCachedThreadPool()).invokeAll(callables.asJava).asScala.foldLeft(
+          ListBuffer.empty[String]
+        ) { (acc, f) => acc += f.get() }
       }
-      values should contain allOf("all-callables-should-see-this-key-A", "all-callables-should-see-this-key-B", "all-callables-should-see-this-key-C")
+      values should contain allOf ("all-callables-should-see-this-key-A", "all-callables-should-see-this-key-B", "all-callables-should-see-this-key-C")
+    }
+
+    "wrap Runnable to TestContextAwareRunnable when call ContextHandler.wrapInContextAware" in {
+      val simpleRunnable = ContextHandler.wrapInContextAware(new SimpleRunnable)
+      simpleRunnable.isInstanceOf[TestContextAwareRunnable] should be(true)
+      simpleRunnable.isInstanceOf[DefaultContextAwareRunnable] should be(false)
+
+      val notSimpleRunnable = ContextHandler.wrapInContextAware(new Runnable { override def run(): Unit = {} })
+      notSimpleRunnable.isInstanceOf[TestContextAwareRunnable] should be(false)
+      notSimpleRunnable.isInstanceOf[DefaultContextAwareRunnable] should be(true)
+    }
+
+    "wrap Callable to TestContextAwareCallable when call ContextHandler.wrapInContextAware" in {
+      val simpleCallable = ContextHandler.wrapInContextAware(new SimpleCallable)
+      simpleCallable.isInstanceOf[TestContextAwareCallable[_]] should be(true)
+      simpleCallable.isInstanceOf[DefaultContextAwareCallable[_]] should be(false)
+
+      val notSimpleCallable = ContextHandler.wrapInContextAware(new Callable[String] {
+        override def call(): String = "test"
+      })
+      notSimpleCallable.isInstanceOf[TestContextAwareCallable[_]] should be(false)
+      notSimpleCallable.isInstanceOf[DefaultContextAwareCallable[_]] should be(true)
     }
   }
 
   def instrument(executor: ExecutorService): ExecutorService = {
-    ExecutorInstrumentation.instrument(executor, Random.nextString(10), ExecutorInstrumentation.DefaultSettings.propagateContextOnSubmit())
+    ExecutorInstrumentation.instrument(
+      executor,
+      Random.nextString(10),
+      ExecutorInstrumentation.DefaultSettings.propagateContextOnSubmit()
+    )
   }
 }

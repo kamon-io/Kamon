@@ -1,18 +1,28 @@
 name: Test all the things
 
-on: [push, pull_request]
+on: [ push, pull_request ]
 
 jobs:
   ci:
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     env:
       JAVA_OPTS: -Xms5120M -Xmx5120M -Xss6M -XX:ReservedCodeCacheSize=256M -Dfile.encoding=UTF-8
       JVM_OPTS: -Xms5120M -Xmx5120M -Xss6M -XX:ReservedCodeCacheSize=256M -Dfile.encoding=UTF-8
     steps:
       - uses: actions/checkout@v1
-      - run: git fetch --depth=1 origin '+refs/tags/*:refs/tags/*'
-      - uses: olafurpg/setup-scala@v10
+      - run: git fetch -f --depth=1 origin '+refs/tags/*:refs/tags/*'
+      - uses: coursier/cache-action@v6
+      - uses: coursier/setup-action@v1
         with:
-          java-version: adopt@1.8.0-292
+          jvm: adopt:8
+          apps: sbt
       - name: Test
         run: sbt -v ";+core/test;+instrumentation/test;+reporters/test"
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - uses: coursier/cache-action@v6
+      - name: Test
+        run: sbt -v "+scalafmtCheckAll"
+

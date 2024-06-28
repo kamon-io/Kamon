@@ -29,41 +29,51 @@ import kamon.trace.Span
   * included in the "software/amazon/awssdk/global/handlers/execution.interceptors" file shipped with this module.
   */
 class AwsSdkRequestHandler extends RequestHandler2 {
-  val SpanContextKey = new HandlerContextKey[Span](classOf[Span].getName)
+  import AwsSdkRequestHandler.SpanContextKey
 
   override def beforeRequest(request: Request[_]): Unit = {
-    val serviceName = request.getServiceName
-    val originalRequestName = {
-      // Remove the "Request" part of the request class name, if present
-      var requestClassName = request.getOriginalRequest.getClass.getSimpleName
-      if(requestClassName.endsWith("Request"))
-        requestClassName = requestClassName.substring(0, requestClassName.length - 7)
-      requestClassName
+    if (Kamon.enabled()) {
+      val serviceName = request.getServiceName
+      val originalRequestName = {
+        // Remove the "Request" part of the request class name, if present
+        var requestClassName = request.getOriginalRequest.getClass.getSimpleName
+        if (requestClassName.endsWith("Request"))
+          requestClassName = requestClassName.substring(0, requestClassName.length - 7)
+        requestClassName
+      }
+
+      val operationName = serviceName + "." + originalRequestName
+
+      val clientSpan = serviceName match {
+        case "AmazonSQS" => Kamon.producerSpanBuilder(operationName, serviceName).start()
+        case _           => Kamon.clientSpanBuilder(operationName, serviceName).start()
+      }
+
+      request.addHandlerContext(SpanContextKey, clientSpan)
     }
-
-    val operationName = serviceName + "." + originalRequestName
-
-    val clientSpan = serviceName match {
-      case "AmazonSQS" => Kamon.producerSpanBuilder(operationName, serviceName).start()
-      case _ => Kamon.clientSpanBuilder(operationName, serviceName).start()
-    }
-
-    request.addHandlerContext(SpanContextKey, clientSpan)
   }
 
   override def afterResponse(request: Request[_], response: Response[_]): Unit = {
-    val requestSpan = request.getHandlerContext(SpanContextKey)
-    if(requestSpan != null) {
-      requestSpan.finish()
+    if (Kamon.enabled()) {
+      val requestSpan = request.getHandlerContext(SpanContextKey)
+      if (requestSpan != null) {
+        requestSpan.finish()
+      }
     }
   }
 
   override def afterError(request: Request[_], response: Response[_], e: Exception): Unit = {
-    val requestSpan = request.getHandlerContext(SpanContextKey)
-    if(requestSpan != null) {
-      requestSpan
-        .fail(e)
-        .finish()
+    if (Kamon.enabled()) {
+      val requestSpan = request.getHandlerContext(SpanContextKey)
+      if (requestSpan != null) {
+        requestSpan
+          .fail(e)
+          .finish()
+      }
     }
   }
+}
+
+object AwsSdkRequestHandler {
+  private val SpanContextKey = new HandlerContextKey[Span](classOf[Span].getName)
 }

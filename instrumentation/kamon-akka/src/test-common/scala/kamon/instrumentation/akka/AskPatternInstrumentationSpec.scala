@@ -28,13 +28,14 @@ import kamon.instrumentation.akka.ContextTesting._
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
 
+import scala.concurrent.ExecutionContextExecutor
 import scala.concurrent.duration._
 
 class AskPatternInstrumentationSpec extends TestKit(ActorSystem("AskPatternInstrumentationSpec")) with AnyWordSpecLike
     with InitAndStopKamonAfterAll with ImplicitSender {
 
-  implicit lazy val ec = system.dispatcher
-  implicit val askTimeout = Timeout(10 millis)
+  implicit lazy val ec: ExecutionContextExecutor = system.dispatcher
+  implicit val askTimeout: Timeout = Timeout(10 millis)
 
   // TODO: Make this work with ActorSelections
 
@@ -93,7 +94,7 @@ class AskPatternInstrumentationSpec extends TestKit(ActorSystem("AskPatternInstr
 }
 
 class NoReply extends Actor {
-  def receive = {
+  def receive: Receive = {
     case _ =>
   }
 }

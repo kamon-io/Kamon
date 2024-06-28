@@ -51,10 +51,9 @@ object DotFileGenerator {
     bw.close()
     val cmd = "dot -Tjpeg $FILENAME.dot | feh -".replace("$FILENAME", filename)
     val rc = executeShellCommand("sh", "-c", cmd)
-    if(rc == 0) {
+    if (rc == 0) {
       println(s"DotFileGenerator: wrote and processed file: ${file.getAbsolutePath}")
-    }
-    else {
+    } else {
       println(s"DOT generation failed! rc=$rc, cmd='$cmd'")
     }
   }
@@ -70,7 +69,7 @@ object DotFileGenerator {
     }
     import java.util.concurrent.Executors
     val builder = new ProcessBuilder
-    builder.command(cmd :_ *)
+    builder.command(cmd: _*)
     builder.directory(new File("."))
     val process = builder.start
     val streamGobbler = new StreamGobbler(process.getInputStream, println)
@@ -78,10 +77,9 @@ object DotFileGenerator {
     process.waitFor
   }
 
-
   private def toDotString(spans: List[Span.Finished], name: String, allTags: Boolean = true): String = {
-    def filterTags(span: Span.Finished) : List[(String,String)]= {
-      if(allTags) {
+    def filterTags(span: Span.Finished): List[(String, String)] = {
+      if (allTags) {
         (span.tags.iterator.map(t => t.key -> Tag.unwrapValue(t).toString) ++
         span.metricTags.iterator.map(t => s"metric - ${t.key}" -> Tag.unwrapValue(t).toString)).toList
       } else {
@@ -90,7 +88,9 @@ object DotFileGenerator {
           "span.kind" -> span.tags.get(plain("span.kind")),
           "hasError" -> span.hasError.toString
         )
-        commonTags ++ optionalMetricTags.map(t => t -> Option(span.tags.get(plain(t)))).filter(_._2.isDefined).map(t => (t._1, t._2.get))
+        commonTags ++ optionalMetricTags.map(t => t -> Option(span.tags.get(plain(t)))).filter(_._2.isDefined).map(t =>
+          (t._1, t._2.get)
+        )
       }
     }
     def getLabel(s: Span.Finished) = {
@@ -108,11 +108,11 @@ object DotFileGenerator {
       val comp = s.metricTags.get(plain("component"))
       val opName = s.operationName
       (comp, opName) match {
-        case ("kafka.stream", _) => ("box", "rounded,bold")
+        case ("kafka.stream", _)      => ("box", "rounded,bold")
         case ("kafka.stream.node", _) => ("box", "rounded")
-        case (_, "poll") => ("box", "dotted")
-        case (_, "send") => ("box", "dotted")
-        case _ => ("oval", "solid")
+        case (_, "poll")              => ("box", "dotted")
+        case (_, "send")              => ("box", "dotted")
+        case _                        => ("oval", "solid")
       }
     }
 
@@ -122,7 +122,7 @@ object DotFileGenerator {
     }
 
     def createNodes = {
-      spans.map{s =>
+      spans.map { s =>
         createNode(s)
       }.mkString("\n")
     }
@@ -139,16 +139,20 @@ object DotFileGenerator {
 
       spans.map(s => {
         val sourceNode = getParent(s)
-        s""" "$sourceNode" -> "${s.id.string}" [style="${if(sourceNode==StartNode) "dotted" else "bold"}"];"""
+        s""" "$sourceNode" -> "${s.id.string}" [style="${if (sourceNode == StartNode) "dotted" else "bold"}"];"""
       }).mkString("\n")
     }
 
     def createLinkEdges = {
-      spans.flatMap(sTarget => sTarget.links.filter(_.spanId.string != "").map(sSource => s""" "${sSource.spanId.string}" -> "${sTarget.id.string}" [style="dashed"];""")).mkString("\n")
+      spans.flatMap(sTarget =>
+        sTarget.links.filter(_.spanId.string != "").map(sSource =>
+          s""" "${sSource.spanId.string}" -> "${sTarget.id.string}" [style="dashed"];"""
+        )
+      ).mkString("\n")
     }
 
     def createSubgraphsPerTrace: String = {
-      spans.map(_.trace.id.string).distinct.map{ traceId =>
+      spans.map(_.trace.id.string).distinct.map { traceId =>
         s"""
            |	subgraph cluster_$traceId {
            |		label="Trace $traceId";

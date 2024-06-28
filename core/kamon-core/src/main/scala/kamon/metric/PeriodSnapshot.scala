@@ -27,7 +27,7 @@ import scala.collection.mutable
 /**
   * Contains immutable snapshots of all metrics and the values recorded on their instruments for a given period of time.
   */
-case class PeriodSnapshot (
+case class PeriodSnapshot(
   from: Instant,
   to: Instant,
   counters: Seq[MetricSnapshot.Values[Long]],
@@ -51,7 +51,6 @@ object PeriodSnapshot {
     */
   def accumulator(period: Duration, margin: Duration, stalePeriod: Duration): PeriodSnapshot.Accumulator =
     new PeriodSnapshot.Accumulator(period, margin, stalePeriod)
-
 
   /**
     * Accumulates PeriodSnapshot instances over the specified period of time and produces a single PeriodSnapshot that
@@ -99,12 +98,14 @@ object PeriodSnapshot {
     def add(periodSnapshot: PeriodSnapshot): Option[PeriodSnapshot] = {
 
       // Initialize the next tick based on incoming snapshots.
-      if(_nextTick == Instant.EPOCH)
+      if (_nextTick == Instant.EPOCH)
         _nextTick = Clock.nextAlignedInstant(periodSnapshot.to, period)
 
       // short-circuit if there is no need to accumulate (e.g. when metrics tick-interval is the same as duration or the
       // snapshots have a longer period than the duration).
-      if(isSameDurationAsTickInterval() || (isAroundNextTick(periodSnapshot.to) && _accumulatingFrom.isEmpty)) Some(periodSnapshot) else {
+      if (isSameDurationAsTickInterval() || (isAroundNextTick(periodSnapshot.to) && _accumulatingFrom.isEmpty))
+        Some(periodSnapshot)
+      else {
         if (_accumulatingFrom.isEmpty)
           _accumulatingFrom = Some(periodSnapshot.from)
 
@@ -114,7 +115,7 @@ object PeriodSnapshot {
         periodSnapshot.timers.foreach(t => accumulateDistribution(periodSnapshot.to, _timers, t))
         periodSnapshot.rangeSamplers.foreach(rs => accumulateDistribution(periodSnapshot.to, _rangeSamplers, rs))
 
-        for(from <- _accumulatingFrom if isAroundNextTick(periodSnapshot.to)) yield {
+        for (from <- _accumulatingFrom if isAroundNextTick(periodSnapshot.to)) yield {
           val accumulatedPeriodSnapshot = buildPeriodSnapshot(from, periodSnapshot.to, resetState = true)
           _nextTick = Clock.nextAlignedInstant(_nextTick, period)
           _accumulatingFrom = None
@@ -140,7 +141,9 @@ object PeriodSnapshot {
     private def buildPeriodSnapshot(from: Instant, to: Instant, resetState: Boolean): PeriodSnapshot = {
       cleanStaleEntries(to)
 
-      val snapshot = PeriodSnapshot(from, to,
+      val snapshot = PeriodSnapshot(
+        from,
+        to,
         counters = valueSnapshots(_counters),
         gauges = valueSnapshots(_gauges),
         histograms = distributionSnapshots(_histograms),
@@ -148,7 +151,7 @@ object PeriodSnapshot {
         rangeSamplers = distributionSnapshots(_rangeSamplers)
       )
 
-      if(resetState)
+      if (resetState)
         clearAccumulatedData()
 
       snapshot
@@ -158,7 +161,7 @@ object PeriodSnapshot {
       var metrics = List.empty[MetricSnapshot.Values[T]]
       storage.foreach {
         case (_, metricEntry) =>
-          val snapshot = MetricSnapshot.ofValues (
+          val snapshot = MetricSnapshot.ofValues(
             metricEntry.snapshot.name,
             metricEntry.snapshot.description,
             metricEntry.snapshot.settings,
@@ -175,7 +178,7 @@ object PeriodSnapshot {
       var metrics = List.empty[MetricSnapshot.Distributions]
       storage.foreach {
         case (_, metricEntry) =>
-          val snapshot = MetricSnapshot.ofDistributions (
+          val snapshot = MetricSnapshot.ofDistributions(
             metricEntry.snapshot.name,
             metricEntry.snapshot.description,
             metricEntry.snapshot.settings,
@@ -188,24 +191,40 @@ object PeriodSnapshot {
       metrics
     }
 
-    private def accumulateValue(currentInstant: Instant, storage: ValueMetricStorage[Long], current: MetricSnapshot.Values[Long]): Unit =
+    private def accumulateValue(
+      currentInstant: Instant,
+      storage: ValueMetricStorage[Long],
+      current: MetricSnapshot.Values[Long]
+    ): Unit =
       accumulate(currentInstant, storage, current)(_ + _)
 
-    private def keepLastValue(currentInstant: Instant, storage: ValueMetricStorage[Double], current: MetricSnapshot.Values[Double]): Unit =
+    private def keepLastValue(
+      currentInstant: Instant,
+      storage: ValueMetricStorage[Double],
+      current: MetricSnapshot.Values[Double]
+    ): Unit =
       accumulate(currentInstant, storage, current)((c, _) => c)
 
-    private def accumulateDistribution(currentInstant: Instant, storage: DistributionMetricStorage, current: MetricSnapshot.Distributions): Unit =
+    private def accumulateDistribution(
+      currentInstant: Instant,
+      storage: DistributionMetricStorage,
+      current: MetricSnapshot.Distributions
+    ): Unit =
       accumulate(currentInstant, storage, current)(Distribution.merge)
 
-    private def accumulate[IS, MS <: Metric.Settings](currentInstant: Instant, storage: mutable.Map[String, MetricEntry[MS, IS]],
-      current: MetricSnapshot[MS, IS])(combine: (IS, IS) => IS): Unit = {
+    private def accumulate[IS, MS <: Metric.Settings](
+      currentInstant: Instant,
+      storage: mutable.Map[String, MetricEntry[MS, IS]],
+      current: MetricSnapshot[MS, IS]
+    )(combine: (IS, IS) => IS): Unit = {
 
       storage.get(current.name) match {
         case None =>
           // If the metric is not present just register it
           val instruments = mutable.Map.newBuilder[TagSet, InstrumentEntry[IS]]
           current.instruments.foreach {
-            case Instrument.Snapshot(tags, snapshot) => instruments += (tags -> InstrumentEntry(snapshot, currentInstant))
+            case Instrument.Snapshot(tags, snapshot) =>
+              instruments += (tags -> InstrumentEntry(snapshot, currentInstant))
           }
 
           storage.put(current.name, MetricEntry[MS, IS](current, instruments.result()))
@@ -232,9 +251,11 @@ object PeriodSnapshot {
 
       def clean[A <: Metric.Settings, B](store: mutable.Map[String, MetricEntry[A, B]]): Unit = {
         // Removes all stale instruments
-        store.foreach { case (_, metricEntry) => metricEntry.instruments.retain {
-          case (_, instrumentEntry) => instrumentEntry.lastSeen.isAfter(cutoff)
-        }}
+        store.foreach { case (_, metricEntry) =>
+          metricEntry.instruments.retain {
+            case (_, instrumentEntry) => instrumentEntry.lastSeen.isAfter(cutoff)
+          }
+        }
 
         // Removes all metrics that don't have any instruments left
         store.retain { case (_, metricEntry) => metricEntry.instruments.nonEmpty }
@@ -256,14 +277,15 @@ object PeriodSnapshot {
     }
 
     private type ValueMetricStorage[T] = mutable.Map[String, MetricEntry[Metric.Settings.ForValueInstrument, T]]
-    private type DistributionMetricStorage = mutable.Map[String, MetricEntry[Metric.Settings.ForDistributionInstrument, Distribution]]
+    private type DistributionMetricStorage =
+      mutable.Map[String, MetricEntry[Metric.Settings.ForDistributionInstrument, Distribution]]
 
-    private case class MetricEntry[Sett <: Metric.Settings, Snap] (
+    private case class MetricEntry[Sett <: Metric.Settings, Snap](
       snapshot: MetricSnapshot[Sett, Snap],
       instruments: mutable.Map[TagSet, InstrumentEntry[Snap]]
     )
 
-    private case class InstrumentEntry[Snap] (
+    private case class InstrumentEntry[Snap](
       var snapshot: Snap,
       var lastSeen: Instant
     )

@@ -24,7 +24,6 @@ import org.scalatest.wordspec.AnyWordSpec
 
 import scala.collection.mutable
 
-
 class UberSpanPropagationSpec extends AnyWordSpec with Matchers with OptionValues {
   import SpanPropagation.Uber
   val uberPropagation = Uber()
@@ -43,7 +42,6 @@ class UberSpanPropagationSpec extends AnyWordSpec with Matchers with OptionValue
 
       headersMap.get(Uber.HeaderName).value shouldBe "1234:4321:0:1"
     }
-
 
     "not inject anything if there is no Span in the Context" in {
       val headersMap = mutable.Map.empty[String, String]
@@ -83,10 +81,14 @@ class UberSpanPropagationSpec extends AnyWordSpec with Matchers with OptionValue
     "include the sampled header if the sampling decision is unknown" in {
       val context = testContext()
       val sampledSpan = context.get(Span.Key)
-      val notSampledSpanContext = Context.Empty.withEntry(Span.Key,
-        Span.Remote(sampledSpan.id, sampledSpan.parentId, Trace(sampledSpan.trace.id, SamplingDecision.DoNotSample)))
-      val unknownSamplingSpanContext = Context.Empty.withEntry(Span.Key,
-        Span.Remote(sampledSpan.id, sampledSpan.parentId, Trace(sampledSpan.trace.id, SamplingDecision.Unknown)))
+      val notSampledSpanContext = Context.Empty.withEntry(
+        Span.Key,
+        Span.Remote(sampledSpan.id, sampledSpan.parentId, Trace(sampledSpan.trace.id, SamplingDecision.DoNotSample))
+      )
+      val unknownSamplingSpanContext = Context.Empty.withEntry(
+        Span.Key,
+        Span.Remote(sampledSpan.id, sampledSpan.parentId, Trace(sampledSpan.trace.id, SamplingDecision.Unknown))
+      )
 
       val headersMap = mutable.Map.empty[String, String]
 
@@ -98,7 +100,7 @@ class UberSpanPropagationSpec extends AnyWordSpec with Matchers with OptionValue
       headersMap.get(Uber.HeaderName).value shouldBe "1234:4321:2222:0"
       headersMap.clear()
 
-      uberPropagation.write(unknownSamplingSpanContext,headerWriterFromMap(headersMap))
+      uberPropagation.write(unknownSamplingSpanContext, headerWriterFromMap(headersMap))
       headersMap.get(Uber.HeaderName).value shouldBe "1234:4321:2222:0"
       headersMap.clear()
     }
@@ -143,7 +145,9 @@ class UberSpanPropagationSpec extends AnyWordSpec with Matchers with OptionValue
       val writenHeaders = mutable.Map.empty[String, String]
       val context = uberPropagation.read(headerReaderFromMap(headers), Context.Empty)
       uberPropagation.write(context, headerWriterFromMap(writenHeaders))
-      writenHeaders.map { case (k, v) => k -> SpanPropagation.Util.urlDecode(v) } should contain theSameElementsAs headers
+      writenHeaders.map { case (k, v) =>
+        k -> SpanPropagation.Util.urlDecode(v)
+      } should contain theSameElementsAs headers
     }
 
     "extract a SpanContext from a URL-encoded header" in {
@@ -159,7 +163,7 @@ class UberSpanPropagationSpec extends AnyWordSpec with Matchers with OptionValue
 
   def headerReaderFromMap(map: Map[String, String]): HttpPropagation.HeaderReader = new HttpPropagation.HeaderReader {
     override def read(header: String): Option[String] = {
-      if(map.get("fail").nonEmpty)
+      if (map.get("fail").nonEmpty)
         sys.error("failing on purpose")
 
       map.get(header)
@@ -168,27 +172,34 @@ class UberSpanPropagationSpec extends AnyWordSpec with Matchers with OptionValue
     override def readAll(): Map[String, String] = map
   }
 
-  def headerWriterFromMap(map: mutable.Map[String, String]): HttpPropagation.HeaderWriter = new HttpPropagation.HeaderWriter {
-    override def write(header: String, value: String): Unit = map.put(header, value)
-  }
+  def headerWriterFromMap(map: mutable.Map[String, String]): HttpPropagation.HeaderWriter =
+    new HttpPropagation.HeaderWriter {
+      override def write(header: String, value: String): Unit = map.put(header, value)
+    }
 
   def testContext(): Context =
-    Context.of(Span.Key, new Span.Remote(
-      id = Identifier("4321", Array[Byte](4, 3, 2, 1)),
-      parentId = Identifier("2222", Array[Byte](2, 2, 2, 2)),
-      trace = Trace(
-        id = Identifier("1234", Array[Byte](1, 2, 3, 4)),
-        samplingDecision = SamplingDecision.Sample
+    Context.of(
+      Span.Key,
+      new Span.Remote(
+        id = Identifier("4321", Array[Byte](4, 3, 2, 1)),
+        parentId = Identifier("2222", Array[Byte](2, 2, 2, 2)),
+        trace = Trace(
+          id = Identifier("1234", Array[Byte](1, 2, 3, 4)),
+          samplingDecision = SamplingDecision.Sample
+        )
       )
-    ))
+    )
 
   def testContextWithoutParent(): Context =
-    Context.of(Span.Key, new Span.Remote(
-      id = Identifier("4321", Array[Byte](4, 3, 2, 1)),
-      parentId = Identifier.Empty,
-      trace = Trace(
-        id = Identifier("1234", Array[Byte](1, 2, 3, 4)),
-        samplingDecision = SamplingDecision.Sample
+    Context.of(
+      Span.Key,
+      new Span.Remote(
+        id = Identifier("4321", Array[Byte](4, 3, 2, 1)),
+        parentId = Identifier.Empty,
+        trace = Trace(
+          id = Identifier("1234", Array[Byte](1, 2, 3, 4)),
+          samplingDecision = SamplingDecision.Sample
+        )
       )
-    ))
+    )
 }

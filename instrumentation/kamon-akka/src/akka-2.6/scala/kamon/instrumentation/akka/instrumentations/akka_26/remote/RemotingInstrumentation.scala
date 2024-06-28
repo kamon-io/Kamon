@@ -14,10 +14,12 @@ import kamon.instrumentation.context.{CaptureCurrentContextOnExit, HasContext}
 import kanela.agent.api.instrumentation.InstrumentationBuilder
 import kanela.agent.libs.net.bytebuddy.asm.Advice
 
+import scala.annotation.static
+
 
 class RemotingInstrumentation extends InstrumentationBuilder with VersionFiltering {
 
-  onAkka("2.6") {
+  onAkka("2.6", "2.7") {
 
     /**
       * Send messages might be buffered if they reach the EndpointWriter before it has been initialized and the current
@@ -70,41 +72,45 @@ class RemotingInstrumentation extends InstrumentationBuilder with VersionFilteri
 
 }
 
+class ArteryMessageDispatcherAdvice
 object ArteryMessageDispatcherAdvice {
 
   @Advice.OnMethodEnter
-  def enter(@Advice.Argument(0) envelope: Any): Storage.Scope =
+  @static def enter(@Advice.Argument(0) envelope: Any): Storage.Scope =
     Kamon.storeContext(envelope.asInstanceOf[HasContext].context)
 
   @Advice.OnMethodExit
-  def exit(@Advice.Enter scope: Storage.Scope): Unit =
+  @static def exit(@Advice.Enter scope: Storage.Scope): Unit =
     scope.close()
 }
 
+class CopyContextOnReusableEnvelope
 object CopyContextOnReusableEnvelope {
 
   @Advice.OnMethodExit
-  def exit(@Advice.This oldEnvelope: Any, @Advice.Return newEnvelope: Any): Unit =
+  @static def exit(@Advice.This oldEnvelope: Any, @Advice.Return newEnvelope: Any): Unit =
     newEnvelope.asInstanceOf[HasContext].setContext(oldEnvelope.asInstanceOf[HasContext].context)
 }
 
+class CaptureCurrentContextOnReusableEnvelope
 object CaptureCurrentContextOnReusableEnvelope {
 
   @Advice.OnMethodExit
-  def exit(@Advice.Return envelope: Any): Unit = {
+  @static def exit(@Advice.Return envelope: Any): Unit = {
     envelope.asInstanceOf[HasContext].setContext(Kamon.currentContext())
   }
 }
 
+class WriteSendWithContext
 object WriteSendWithContext {
 
   @Advice.OnMethodEnter
-  def enter(@Advice.Argument(0) send: Any): Scope = {
+  @static def enter(@Advice.Argument(0) send: Any): Scope = {
     Kamon.storeContext(send.asInstanceOf[HasContext].context)
   }
 
   @Advice.OnMethodExit
-  def exit(@Advice.Enter scope: Scope): Unit = {
+  @static def exit(@Advice.Enter scope: Scope): Unit = {
     scope.asInstanceOf[Scope].close()
   }
 }
@@ -122,23 +128,25 @@ object HasSerializationInstruments {
   }
 }
 
+class InitializeActorSystemAdvice
 object InitializeActorSystemAdvice {
 
   @Advice.OnMethodExit
-  def exit(@Advice.This system: ActorSystem with HasSerializationInstruments): Unit =
+  @static def exit(@Advice.This system: ActorSystem with HasSerializationInstruments): Unit =
     system.setSerializationInstruments(new SerializationInstruments(system.name))
 
 }
 
+class MeasureSerializationTime
 object MeasureSerializationTime {
 
   @Advice.OnMethodEnter
-  def enter(): Long = {
+  @static def enter(): Long = {
     if(AkkaRemoteInstrumentation.settings().trackSerializationMetrics) System.nanoTime() else 0L
   }
 
   @Advice.OnMethodExit
-  def exit(@Advice.Argument(0) system: AnyRef, @Advice.Enter startNanoTime: Long): Unit = {
+  @static def exit(@Advice.Argument(0) system: AnyRef, @Advice.Enter startNanoTime: Long): Unit = {
     if(startNanoTime != 0L) {
       system.asInstanceOf[HasSerializationInstruments]
         .serializationInstruments
@@ -148,15 +156,16 @@ object MeasureSerializationTime {
   }
 }
 
+class MeasureDeserializationTime
 object MeasureDeserializationTime {
 
   @Advice.OnMethodEnter
-  def enter(): Long = {
+  @static def enter(): Long = {
     if(AkkaRemoteInstrumentation.settings().trackSerializationMetrics) System.nanoTime() else 0L
   }
 
   @Advice.OnMethodExit
-  def exit(@Advice.Argument(0) system: AnyRef, @Advice.Enter startNanoTime: Long, @Advice.Return msg: Any): Unit = {
+  @static def exit(@Advice.Argument(0) system: AnyRef, @Advice.Enter startNanoTime: Long, @Advice.Return msg: Any): Unit = {
 
     if(AkkaPrivateAccess.isSystemMessage(msg)) {
       msg match {

@@ -17,6 +17,7 @@
 package kamon
 
 import com.typesafe.config.{Config, ConfigFactory}
+import kamon.Configuration.{InitAttachInstrumentationConfigurationName, EnabledConfigurationName}
 import org.slf4j.LoggerFactory
 
 import scala.util.control.NonFatal
@@ -28,7 +29,9 @@ trait Configuration {
   private val _logger = LoggerFactory.getLogger(classOf[Configuration])
   private var _currentConfig: Config = loadInitialConfiguration()
   private var _onReconfigureHooks = Seq.empty[Configuration.OnReconfigureHook]
-
+  @volatile private var _enabled: Boolean = _currentConfig.getBoolean(EnabledConfigurationName)
+  @volatile private var _shouldAttachInstrumentation: Boolean =
+    _currentConfig.getBoolean(InitAttachInstrumentationConfigurationName)
 
   /**
     * Retrieve Kamon's current configuration.
@@ -36,11 +39,16 @@ trait Configuration {
   def config(): Config =
     _currentConfig
 
+  def enabled(): Boolean =
+    _enabled
+
   /**
     * Supply a new Config instance to rule Kamon's world.
     */
   def reconfigure(newConfig: Config): Unit = synchronized {
     _currentConfig = newConfig
+    _enabled = newConfig.getBoolean(EnabledConfigurationName)
+    _shouldAttachInstrumentation = newConfig.getBoolean(InitAttachInstrumentationConfigurationName)
     _onReconfigureHooks.foreach(hook => {
       try {
         hook.onReconfigure(newConfig)
@@ -68,6 +76,8 @@ trait Configuration {
     })
   }
 
+  protected def shouldAttachInstrumentation(): Boolean =
+    _shouldAttachInstrumentation
 
   private def loadInitialConfiguration(): Config = {
     import System.{err, lineSeparator}
@@ -81,12 +91,16 @@ trait Configuration {
 
         try {
           val referenceConfig = ConfigFactory.defaultReference(ClassLoading.classLoader())
-          err.println("Initializing Kamon with the reference configuration, none of the user settings will be in effect")
+          err.println(
+            "Initializing Kamon with the reference configuration, none of the user settings will be in effect"
+          )
           referenceConfig
         } catch {
           case NonFatal(t) =>
-            err.println("Kamon couldn't load the reference configuration settings from the reference.conf files due to: " +
-              t.getMessage + " at " + t.getStackTrace().mkString("", lineSeparator, lineSeparator))
+            err.println(
+              "Kamon couldn't load the reference configuration settings from the reference.conf files due to: " +
+              t.getMessage + " at " + t.getStackTrace().mkString("", lineSeparator, lineSeparator)
+            )
 
             ConfigFactory.empty()
         }
@@ -96,6 +110,9 @@ trait Configuration {
 }
 
 object Configuration {
+
+  private val EnabledConfigurationName = "kamon.enabled"
+  private val InitAttachInstrumentationConfigurationName = "kamon.init.attach-instrumentation"
 
   trait OnReconfigureHook {
     def onReconfigure(newConfig: Config): Unit

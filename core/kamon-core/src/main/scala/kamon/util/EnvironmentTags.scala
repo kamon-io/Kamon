@@ -23,7 +23,6 @@ import kamon.tag.TagSet
 
 import scala.collection.JavaConverters._
 
-
 /**
   * Utility class for creating TagSet instances out of Environment instances. When an Environment is turned into tags
   * it will generate the following pairs:
@@ -69,10 +68,10 @@ object EnvironmentTags {
     * If any of the settings are missing this function will default to include all Environment information.
     */
   def from(environment: Environment, config: Config): TagSet = {
-    val includeHost = if(config.hasPath("include-host")) config.getBoolean("include-host") else true
-    val includeService = if(config.hasPath("include-service")) config.getBoolean("include-service") else true
-    val includeInstance = if(config.hasPath("include-instance")) config.getBoolean("include-instance") else true
-    val exclude = if(config.hasPath("exclude")) config.getStringList("exclude").asScala.toSet else Set.empty[String]
+    val includeHost = if (config.hasPath("include-host")) config.getBoolean("include-host") else true
+    val includeService = if (config.hasPath("include-service")) config.getBoolean("include-service") else true
+    val includeInstance = if (config.hasPath("include-instance")) config.getBoolean("include-instance") else true
+    val exclude = if (config.hasPath("exclude")) config.getStringList("exclude").asScala.toSet else Set.empty[String]
 
     from(environment, includeService, includeHost, includeInstance, exclude)
   }
@@ -80,23 +79,28 @@ object EnvironmentTags {
   /**
     * Turns the information enclosed in the provided Environment instance into a TagSet.
     */
-  def from(environment: Environment, includeService: Boolean, includeHost: Boolean, includeInstance: Boolean,
-      exclude: Set[String]): TagSet = {
+  def from(
+    environment: Environment,
+    includeService: Boolean,
+    includeHost: Boolean,
+    includeInstance: Boolean,
+    exclude: Set[String]
+  ): TagSet = {
 
     val tagSet = TagSet.builder()
 
-    if(includeService)
+    if (includeService)
       tagSet.add(TagKeys.Service, environment.service)
 
-    if(includeHost)
+    if (includeHost)
       tagSet.add(TagKeys.Host, environment.host)
 
-    if(includeInstance)
+    if (includeInstance)
       tagSet.add(TagKeys.Instance, environment.instance)
 
     // We know for sure that all environment tags are treated as Strings
     environment.tags.iterator(_.toString).foreach { pair =>
-      if(!exclude.contains(pair.key)) tagSet.add(pair.key, pair.value)
+      if (!exclude.contains(pair.key)) tagSet.add(pair.key, pair.value)
     }
 
     tagSet.build()

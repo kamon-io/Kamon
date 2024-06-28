@@ -41,7 +41,9 @@ object Reflection {
   /**
     * Invokes a method on the target object using reflection.
     */
-  def invoke[T, R](target: Any, fieldName: String, parameters: (Class[_], AnyRef)*)(implicit classTag: ClassTag[T]): R = {
+  def invoke[T, R](target: Any, fieldName: String, parameters: (Class[_], AnyRef)*)(implicit
+    classTag: ClassTag[T]
+  ): R = {
     val parameterClasses = parameters.map(_._1)
     val parameterInstances = parameters.map(_._2)
     val method = classTag.runtimeClass.getDeclaredMethod(fieldName, parameterClasses: _*)

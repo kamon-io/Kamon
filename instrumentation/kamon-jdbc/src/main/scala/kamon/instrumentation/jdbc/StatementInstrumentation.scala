@@ -18,7 +18,6 @@ package kamon.instrumentation.jdbc
 
 import java.sql.PreparedStatement
 import java.util.Properties
-
 import kamon.Kamon
 import kamon.context.Storage.Scope
 import kamon.instrumentation.jdbc.advisor._
@@ -30,6 +29,8 @@ import kanela.agent.libs.net.bytebuddy.asm.Advice
 
 import scala.util.Try
 import kanela.agent.libs.net.bytebuddy.matcher.ElementMatchers._
+
+import scala.annotation.static
 
 class StatementInstrumentation extends InstrumentationBuilder {
 
@@ -67,7 +68,6 @@ class StatementInstrumentation extends InstrumentationBuilder {
     .advise(method("executeQuery"), classOf[PreparedStatementExecuteQueryMethodAdvisor])
     .advise(method("executeUpdate"), classOf[PreparedStatementExecuteUpdateMethodAdvisor])
 
-
   /**
     * We are specifically targeting some of the SQLite Driver classes because due to the way in which inheritance is
     * handled within the Driver these advices were not applied at all. All other drivers tested so far should work just
@@ -89,7 +89,7 @@ class StatementInstrumentation extends InstrumentationBuilder {
     * information in that Statement to have the proper pool information and ensure that the check round trips will be
     * observed appropriately.
     */
-  onType("org.postgresql.jdbc.PgConnection")
+  onTypesMatching(named("org.postgresql.jdbc.PgConnection").and(declaresField(named("checkConnectionQuery"))))
     .bridge(classOf[PgConnectionIsAliveAdvice.PgConnectionPrivateAccess])
     .advise(method("isValid"), PgConnectionIsAliveAdvice)
 
@@ -123,14 +123,19 @@ object HasStatementSQL {
   }
 }
 
+class DriverConnectAdvice
 object DriverConnectAdvice {
 
   @Advice.OnMethodExit
-  def exit(@Advice.Argument(0) url: String, @Advice.Argument(1) properties: Properties, @Advice.Return connection: Any): Unit = {
+  @static def exit(
+    @Advice.Argument(0) url: String,
+    @Advice.Argument(1) properties: Properties,
+    @Advice.Return connection: Any
+  ): Unit = {
 
     // The connection could be null if there is more than one registered driver and the DriverManager is looping
     // through them to figure out which one accepts the URL.
-    if(connection != null) {
+    if (connection != null) {
       connection.asInstanceOf[HasDatabaseTags].setDatabaseTags(createDatabaseTags(url, properties))
     }
   }
@@ -147,38 +152,49 @@ object DriverConnectAdvice {
   }
 }
 
+class CreateStatementAdvice
 object CreateStatementAdvice {
 
   @Advice.OnMethodExit
-  def exit(@Advice.This connection: Any, @Advice.Return statement: Any): Unit = {
+  @static def exit(@Advice.This connection: Any, @Advice.Return statement: Any): Unit = {
     statement.asInstanceOf[HasDatabaseTags].setDatabaseTags(connection.asInstanceOf[HasDatabaseTags].databaseTags())
-    statement.asInstanceOf[HasConnectionPoolTelemetry].setConnectionPoolTelemetry(connection.asInstanceOf[HasConnectionPoolTelemetry].connectionPoolTelemetry)
+    statement.asInstanceOf[HasConnectionPoolTelemetry].setConnectionPoolTelemetry(
+      connection.asInstanceOf[HasConnectionPoolTelemetry].connectionPoolTelemetry
+    )
   }
 }
 
+class CreatePreparedStatementAdvice
 object CreatePreparedStatementAdvice {
 
   @Advice.OnMethodExit
-  def exit(@Advice.This connection: Any, @Advice.Argument(0) sql: String, @Advice.Return statement: Any): Unit = {
+  @static def exit(
+    @Advice.This connection: Any,
+    @Advice.Argument(0) sql: String,
+    @Advice.Return statement: Any
+  ): Unit = {
     statement.asInstanceOf[HasDatabaseTags].setDatabaseTags(connection.asInstanceOf[HasDatabaseTags].databaseTags())
-    statement.asInstanceOf[HasConnectionPoolTelemetry].setConnectionPoolTelemetry(statement.asInstanceOf[HasConnectionPoolTelemetry].connectionPoolTelemetry)
+    statement.asInstanceOf[HasConnectionPoolTelemetry].setConnectionPoolTelemetry(
+      statement.asInstanceOf[HasConnectionPoolTelemetry].connectionPoolTelemetry
+    )
     statement.asInstanceOf[HasStatementSQL].setStatementSQL(sql)
   }
 }
 
+class ConnectionIsValidAdvice
 object ConnectionIsValidAdvice {
   import Hooks.PreStart
 
   @Advice.OnMethodEnter
-  def enter(): Scope =
+  @static def enter(): Scope =
     Kamon.storeContext(Kamon.currentContext().withEntry(PreStart.Key, PreStart.updateOperationName("isValid")))
 
   @Advice.OnMethodExit
-  def exit(@Advice.Enter scope: Scope): Unit =
+  @static def exit(@Advice.Enter scope: Scope): Unit =
     scope.close()
 }
 
-
+class PgConnectionIsAliveAdvice
 object PgConnectionIsAliveAdvice {
 
   trait PgConnectionPrivateAccess {
@@ -188,11 +204,11 @@ object PgConnectionIsAliveAdvice {
   }
 
   @Advice.OnMethodEnter
-  def enter(@Advice.This connection: Any): Unit = {
-    if(connection != null) {
+  @static def enter(@Advice.This connection: Any): Unit = {
+    if (connection != null) {
       val statement = connection.asInstanceOf[PgConnectionPrivateAccess].getCheckConnectionStatement()
 
-      if(statement != null) {
+      if (statement != null) {
         val connectionPoolTelemetry = connection.asInstanceOf[HasConnectionPoolTelemetry].connectionPoolTelemetry
         statement.asInstanceOf[HasConnectionPoolTelemetry].setConnectionPoolTelemetry(connectionPoolTelemetry)
       }

@@ -11,7 +11,6 @@ import akka.http.scaladsl.server.directives.PathDirectives.path
 import akka.http.scaladsl.server.directives.RouteDirectives.complete
 import akka.stream.ActorMaterializer
 import akka.testkit.{ImplicitSender, TestKit}
-import kamino.IngestionV1.{Goodbye, Hello, MetricBatch, SpanBatch}
 import kamon.Kamon
 import kamon.metric.PeriodSnapshot
 import kamon.tag.TagSet
@@ -25,38 +24,40 @@ import java.time.Instant
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
 
-
 class ReporterSpec extends TestKit(ActorSystem("MetricReporterSpec"))
-  with AnyWordSpecLike with Matchers with BeforeAndAfterAll with ImplicitSender with BeforeAndAfterEach with Eventually {
+    with AnyWordSpecLike with Matchers with BeforeAndAfterAll with ImplicitSender with BeforeAndAfterEach
+    with Eventually {
 
   var server: Future[ServerBinding] = null
 
-  private var (helloCount, goodByeCount, ingestCount, tracingCount) = (0,0,0,0)
+  private var (helloCount, goodByeCount, ingestCount, tracingCount) = (0, 0, 0, 0)
 
   override def beforeAll(): Unit = {
     implicit val materializer: ActorMaterializer = ActorMaterializer()
     implicit val executionContext: ExecutionContext = system.dispatcher
 
-
     lazy val routes: Route = entity(as[Array[Byte]]) { buff =>
       post {
-        pathPrefix("v1") {
+        pathPrefix("v2") {
           path("hello") {
-            helloCount+=1
-            testActor ! Hello.parseFrom(buff)
-            if(helloCount > 2) complete("") else complete(StatusCodes.InternalServerError)
-          } ~ path("goodbye") {
-            goodByeCount+=1
-            testActor ! Goodbye.parseFrom(buff)
-            if(goodByeCount > 2) complete("") else complete(StatusCodes.InternalServerError)
-          } ~ path("ingest") {
-            ingestCount+=1
-            testActor ! MetricBatch.parseFrom(buff)
-            if(ingestCount > 2) complete("") else complete(StatusCodes.InternalServerError)
-          } ~ path("tracing" / "ingest")  {
-            tracingCount+=1
-            testActor ! SpanBatch.parseFrom(buff)
-            if(tracingCount > 2) complete("") else complete(StatusCodes.InternalServerError)
+            helloCount += 1
+            testActor ! "hello"
+            if (helloCount > 2) complete("hello") else complete(StatusCodes.InternalServerError)
+          } ~
+          path("goodbye") {
+            goodByeCount += 1
+            testActor ! "goodbye"
+            if (goodByeCount > 2) complete("good") else complete(StatusCodes.InternalServerError)
+          } ~
+          path("metrics") {
+            ingestCount += 1
+            testActor ! "metrics"
+            if (ingestCount > 2) complete("") else complete(StatusCodes.InternalServerError)
+          } ~
+          path("spans") {
+            tracingCount += 1
+            testActor ! "spans"
+            if (tracingCount > 2) complete("") else complete(StatusCodes.InternalServerError)
           }
         }
       }
@@ -74,14 +75,22 @@ class ReporterSpec extends TestKit(ActorSystem("MetricReporterSpec"))
   override def afterAll(): Unit = server.flatMap(_.unbind())(system.dispatcher)
 
   var reporter: KamonApm = null
-  val emptySnapshot = PeriodSnapshot(Instant.EPOCH, Instant.EPOCH.plusSeconds(1), Seq.empty, Seq.empty, Seq.empty, Seq.empty, Seq.empty)
+  val emptySnapshot = PeriodSnapshot(
+    Instant.EPOCH,
+    Instant.EPOCH.plusSeconds(1),
+    Seq.empty,
+    Seq.empty,
+    Seq.empty,
+    Seq.empty,
+    Seq.empty
+  )
 
   "Metric reporter on flaky network" should {
     "retry initial HELLO" in {
-      reporter = new KamonApm()
-      expectMsgType[Hello]
-      expectMsgType[Hello]
-      expectMsgType[Hello]
+      reporter = new KamonApm(ExecutionContext.global)
+      expectMsg("hello")
+      expectMsg("hello")
+      expectMsg("hello")
       expectNoMsg(1 second)
     }
 
@@ -94,29 +103,42 @@ class ReporterSpec extends TestKit(ActorSystem("MetricReporterSpec"))
       reporter.reportPeriodSnapshot(initialSnapshot)
       reporter.reportPeriodSnapshot(nextSnapshot)
 
-      expectMsgType[MetricBatch].getInterval.getFrom should be (initialTimestamp.toEpochMilli)
-      expectMsgType[MetricBatch].getInterval.getFrom should be (initialTimestamp.toEpochMilli)
-      expectMsgType[MetricBatch].getInterval.getFrom should be (initialTimestamp.toEpochMilli)
-      expectMsgType[MetricBatch].getInterval.getFrom should be (nextTimestamp.toEpochMilli)
+      expectMsg("metrics")
+      expectMsg("metrics")
+      expectMsg("metrics")
+      expectMsg("metrics")
       expectNoMsg(1 second)
     }
 
     "retry span ingestion" in {
-      val span = Span.Finished(Identifier.Empty, Trace.Empty, Identifier.Empty, "", false, false,
-        Instant.now(), Instant.now(), Span.Kind.Unknown, Span.Position.Unknown,
-        TagSet.Empty, TagSet.Empty, Seq.empty, Seq.empty)
+      val span = Span.Finished(
+        Identifier.Empty,
+        Trace.Empty,
+        Identifier.Empty,
+        "",
+        false,
+        false,
+        Instant.now(),
+        Instant.now(),
+        Span.Kind.Unknown,
+        Span.Position.Unknown,
+        TagSet.Empty,
+        TagSet.Empty,
+        Seq.empty,
+        Seq.empty
+      )
 
       reporter.reportSpans(Seq(span))
-      expectMsgType[SpanBatch]
-      expectMsgType[SpanBatch]
-      expectMsgType[SpanBatch]
+      expectMsg("spans")
+      expectMsg("spans")
+      expectMsg("spans")
 
       expectNoMsg(1 second)
     }
 
     "don't retry lost Goodbye in order not to hang shutdown of host app" in {
       reporter.stop()
-      expectMsgType[Goodbye]
+      expectMsg("goodbye")
       expectNoMsg(1 second)
     }
   }

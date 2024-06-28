@@ -18,7 +18,13 @@ package kamon.instrumentation.aws.sdk
 
 import kamon.Kamon
 import kamon.trace.Span
-import software.amazon.awssdk.core.interceptor.{Context, ExecutionAttribute, ExecutionAttributes, ExecutionInterceptor, SdkExecutionAttribute}
+import software.amazon.awssdk.core.interceptor.{
+  Context,
+  ExecutionAttribute,
+  ExecutionAttributes,
+  ExecutionInterceptor,
+  SdkExecutionAttribute
+}
 
 /**
   * Execution Interceptor for the AWS Java SDK Version 2.x
@@ -28,31 +34,41 @@ import software.amazon.awssdk.core.interceptor.{Context, ExecutionAttribute, Exe
   * included in the "software/amazon/awssdk/global/handlers/execution.interceptors" file shipped with this module.
   */
 class AwsSdkClientExecutionInterceptor extends ExecutionInterceptor {
-  private val ClientSpanAttribute = new ExecutionAttribute[Span]("SdkClientSpan")
+  import AwsSdkClientExecutionInterceptor.ClientSpanAttribute
 
   override def afterMarshalling(context: Context.AfterMarshalling, executionAttributes: ExecutionAttributes): Unit = {
-    val operationName = executionAttributes.getAttribute(SdkExecutionAttribute.OPERATION_NAME)
-    val serviceName = executionAttributes.getAttribute(SdkExecutionAttribute.SERVICE_NAME)
-    val clientType = executionAttributes.getAttribute(SdkExecutionAttribute.CLIENT_TYPE)
+    if (Kamon.enabled()) {
+      val operationName = executionAttributes.getAttribute(SdkExecutionAttribute.OPERATION_NAME)
+      val serviceName = executionAttributes.getAttribute(SdkExecutionAttribute.SERVICE_NAME)
+      val clientType = executionAttributes.getAttribute(SdkExecutionAttribute.CLIENT_TYPE)
 
-    val clientSpan = Kamon.clientSpanBuilder(operationName, serviceName)
-      .tag("aws.sdk.client_type", clientType.name())
-      .start()
+      val clientSpan = Kamon.clientSpanBuilder(operationName, serviceName)
+        .tag("aws.sdk.client_type", clientType.name())
+        .start()
 
-    executionAttributes.putAttribute(ClientSpanAttribute, clientSpan)
+      executionAttributes.putAttribute(ClientSpanAttribute, clientSpan)
+    }
   }
 
   override def afterExecution(context: Context.AfterExecution, executionAttributes: ExecutionAttributes): Unit = {
-    val kamonSpan = executionAttributes.getAttribute(ClientSpanAttribute)
-    if(kamonSpan != null) {
-      kamonSpan.finish()
+    if (Kamon.enabled()) {
+      val kamonSpan = executionAttributes.getAttribute(ClientSpanAttribute)
+      if (kamonSpan != null) {
+        kamonSpan.finish()
+      }
     }
   }
 
   override def onExecutionFailure(context: Context.FailedExecution, executionAttributes: ExecutionAttributes): Unit = {
-    val kamonSpan = executionAttributes.getAttribute(ClientSpanAttribute)
-    if(kamonSpan != null) {
-      kamonSpan.fail(context.exception()).finish()
+    if (Kamon.enabled()) {
+      val kamonSpan = executionAttributes.getAttribute(ClientSpanAttribute)
+      if (kamonSpan != null) {
+        kamonSpan.fail(context.exception()).finish()
+      }
     }
   }
+}
+
+object AwsSdkClientExecutionInterceptor {
+  private val ClientSpanAttribute = new ExecutionAttribute[Span]("SdkClientSpan")
 }

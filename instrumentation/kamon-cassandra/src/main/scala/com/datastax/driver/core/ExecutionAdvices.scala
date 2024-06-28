@@ -17,7 +17,6 @@
 package com.datastax.driver.core
 
 import java.util.concurrent.atomic.AtomicReference
-
 import com.datastax.driver.core.Message.Response
 import com.datastax.driver.core.RequestHandler.QueryState
 import kamon.Kamon
@@ -31,29 +30,32 @@ import kamon.instrumentation.context.HasContext
 import kamon.trace.Span
 import kanela.agent.libs.net.bytebuddy.asm.Advice
 
+import scala.annotation.static
+
 object QueryOperations {
   val QueryOperationName = "cassandra.query"
   val BatchOperationName = "cassandra.batch"
   val QueryPrepareOperationName: String = QueryOperationName + ".prepare"
-  val ExecutionOperationName:    String = QueryOperationName + ".execution"
+  val ExecutionOperationName: String = QueryOperationName + ".execution"
 }
 
+class QueryExecutionAdvice
 object QueryExecutionAdvice {
   import QueryOperations._
 
   val ParentSpanKey: Context.Key[Span] = Context.key[Span]("__parent-span", Span.Empty)
 
   @Advice.OnMethodEnter
-  def onQueryExec(
-      @Advice.This execution:                         HasContext,
-      @Advice.Argument(0) host:                       Host with HasPoolMetrics,
-      @Advice.FieldValue("position") position:        Int,
-      @Advice.FieldValue("queryStateRef") queryState: AtomicReference[QueryState]
+  @static def onQueryExec(
+    @Advice.This execution: HasContext,
+    @Advice.Argument(0) host: Host with HasPoolMetrics,
+    @Advice.FieldValue("position") position: Int,
+    @Advice.FieldValue("queryStateRef") queryState: AtomicReference[QueryState]
   ): Unit = {
     val nodeMonitor = host.nodeMonitor
 
     val clientSpan = Kamon.currentSpan()
-    val executionSpan = if(CassandraInstrumentation.settings.createRoundTripSpans) {
+    val executionSpan = if (CassandraInstrumentation.settings.createRoundTripSpans) {
       Kamon
         .clientSpanBuilder(ExecutionOperationName, Tags.CassandraDriverComponent)
         .asChildOf(clientSpan)
@@ -84,36 +86,39 @@ object QueryExecutionAdvice {
 /**
   * Transfer context from msg to created result set so it can be used for further page fetches
   */
+class OnResultSetConstruction
 object OnResultSetConstruction {
 
   @Advice.OnMethodExit
-  def onCreateResultSet(
-      @Advice.Return rs:       ArrayBackedResultSet,
-      @Advice.Argument(0) msg: Responses.Result with HasContext
+  @static def onCreateResultSet(
+    @Advice.Return rs: ArrayBackedResultSet,
+    @Advice.Argument(0) msg: Responses.Result with HasContext
   ): Unit = if (rs.isInstanceOf[HasContext]) {
     rs.asInstanceOf[HasContext].setContext(msg.context)
   }
 
 }
 
+class OnFetchMore
 object OnFetchMore {
 
   @Advice.OnMethodEnter
-  def onFetchMore(@Advice.This hasContext: HasContext): Scope = {
+  @static def onFetchMore(@Advice.This hasContext: HasContext): Scope = {
     val clientSpan = hasContext.context.get(QueryExecutionAdvice.ParentSpanKey)
     Kamon.storeContext(Context.of(Span.Key, clientSpan))
   }
 
   @Advice.OnMethodExit
-  def onFetched(@Advice.Enter scope: Scope): Unit = {
+  @static def onFetched(@Advice.Enter scope: Scope): Unit = {
     scope.close()
   }
 }
 
+class QueryWriteAdvice
 object QueryWriteAdvice {
 
   @Advice.OnMethodEnter
-  def onStartWriting(@Advice.This execution: HasContext): Unit = {
+  @static def onStartWriting(@Advice.This execution: HasContext): Unit = {
     execution.context
       .get(Span.Key)
       .mark("cassandra.connection.write-started")
@@ -121,15 +126,16 @@ object QueryWriteAdvice {
 }
 
 //Server timeouts and exceptions
+class OnSetAdvice
 object OnSetAdvice {
   import QueryOperations._
 
   @Advice.OnMethodEnter
-  def onSetResult(
-      @Advice.This execution:                    Connection.ResponseCallback with HasContext,
-      @Advice.Argument(0) connection:            Connection,
-      @Advice.Argument(1) response:              Message.Response,
-      @Advice.FieldValue("current") currentHost: Host with HasPoolMetrics
+  @static def onSetResult(
+    @Advice.This execution: Connection.ResponseCallback with HasContext,
+    @Advice.Argument(0) connection: Connection,
+    @Advice.Argument(1) response: Message.Response,
+    @Advice.FieldValue("current") currentHost: Host with HasPoolMetrics
   ): Unit = {
 
     val executionSpan = execution.context.get(Span.Key)
@@ -150,7 +156,7 @@ object OnSetAdvice {
 
     currentHost.nodeMonitor.executionComplete()
 
-    //In order to correlate paging requests with initial one, carry context with message
+    // In order to correlate paging requests with initial one, carry context with message
     response.asInstanceOf[HasContext].setContext(execution.context)
     executionSpan.finish()
   }
@@ -159,14 +165,15 @@ object OnSetAdvice {
 /**
   * Handling of client exceptions
   */
+class OnExceptionAdvice
 object OnExceptionAdvice {
 
   @Advice.OnMethodEnter
-  def onException(
-      @Advice.This execution:                    HasContext,
-      @Advice.Argument(0) connection:            Connection,
-      @Advice.Argument(1) exception:             Exception,
-      @Advice.FieldValue("current") currentHost: Host with HasPoolMetrics
+  @static def onException(
+    @Advice.This execution: HasContext,
+    @Advice.Argument(0) connection: Connection,
+    @Advice.Argument(1) exception: Exception,
+    @Advice.FieldValue("current") currentHost: Host with HasPoolMetrics
   ): Unit = {
 
     currentHost.nodeMonitor.clientError()
@@ -181,13 +188,14 @@ object OnExceptionAdvice {
 /**
   * Handling of client timeouts
   */
+class OnTimeoutAdvice
 object OnTimeoutAdvice {
 
   @Advice.OnMethodEnter
-  def onTimeout(
-      @Advice.This execution:                    HasContext,
-      @Advice.Argument(0) connection:            Connection,
-      @Advice.FieldValue("current") currentHost: Host with HasPoolMetrics
+  @static def onTimeout(
+    @Advice.This execution: HasContext,
+    @Advice.Argument(0) connection: Connection,
+    @Advice.FieldValue("current") currentHost: Host with HasPoolMetrics
   ): Unit = {
 
     currentHost.nodeMonitor.timeout()
@@ -199,15 +207,16 @@ object OnTimeoutAdvice {
   }
 }
 
+class HostLocationAdvice
 object HostLocationAdvice {
 
   @Advice.OnMethodExit
-  def onHostLocationUpdate(
-      @Advice.This host:                            Host with HasPoolMetrics,
-      @Advice.FieldValue("manager") clusterManager: Any
+  @static def onHostLocationUpdate(
+    @Advice.This host: Host with HasPoolMetrics,
+    @Advice.FieldValue("manager") clusterManager: Any
   ): Unit = {
 
-    val targetHost  = CassandraInstrumentation.createNode(host)
+    val targetHost = CassandraInstrumentation.createNode(host)
     host.setNodeMonitor(new NodeMonitor(targetHost))
   }
 }

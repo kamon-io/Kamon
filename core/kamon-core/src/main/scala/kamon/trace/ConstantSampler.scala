@@ -22,7 +22,7 @@ import kamon.trace.Trace.SamplingDecision
 /**
   * Sampler that always returns the same sampling decision.
   */
-class ConstantSampler private(decision: SamplingDecision) extends Sampler {
+class ConstantSampler private (decision: SamplingDecision) extends Sampler {
   private val _decisionCounter = Sampler.Metrics.samplingDecisions("constant", decision)
 
   override def decide(operation: Sampler.Operation): SamplingDecision = {

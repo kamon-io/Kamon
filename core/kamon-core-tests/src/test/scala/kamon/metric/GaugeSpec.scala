@@ -25,58 +25,55 @@ class GaugeSpec extends AnyWordSpec with Matchers with InstrumentInspection.Synt
   "a Gauge" should {
     "have a starting value of zero" in {
       val gauge = Kamon.gauge("default-value").withoutTags()
-      gauge.value shouldBe 0D
+      gauge.value shouldBe 0d
     }
 
     "retain the last value recorded on it" in {
-      val gauge = Kamon.gauge("retain-value").withoutTags().update(42D)
-      gauge.value shouldBe 42D
-      gauge.value shouldBe 42D
+      val gauge = Kamon.gauge("retain-value").withoutTags().update(42d)
+      gauge.value shouldBe 42d
+      gauge.value shouldBe 42d
 
-      gauge.update(17D)
-      gauge.value shouldBe 17D
-      gauge.value shouldBe 17D
+      gauge.update(17d)
+      gauge.value shouldBe 17d
+      gauge.value shouldBe 17d
     }
 
     "ignore updates with negative values" in {
       val gauge = Kamon.gauge("non-negative-value").withoutTags().update(30)
-      gauge.value shouldBe 30D
-      gauge.update(-20D)
-      gauge.value shouldBe 30D
+      gauge.value shouldBe 30d
+      gauge.update(-20d)
+      gauge.value shouldBe 30d
 
       gauge.decrement(100)
-      gauge.value shouldBe 30D
+      gauge.value shouldBe 30d
 
       gauge.increment(-100)
-      gauge.value shouldBe 30D
+      gauge.value shouldBe 30d
     }
 
     "increment and decrement the current value of the gauge" in {
       val gauge = Kamon.gauge("increment-decrement").withoutTags().update(30)
-      gauge.value shouldBe 30D
-      gauge.increment(10D)
-      gauge.increment(10D)
-      gauge.value shouldBe 50D
+      gauge.value shouldBe 30d
+      gauge.increment(10d)
+      gauge.increment(10d)
+      gauge.value shouldBe 50d
 
       gauge.decrement(15)
-      gauge.decrement(15D)
-      gauge.value shouldBe 20D
+      gauge.decrement(15d)
+      gauge.value shouldBe 20d
     }
 
     "increment and decrement the current value of the gauge with non whole values" in {
       val gauge = Kamon.gauge("increment-decrement").withoutTags().update(30)
-      gauge.value shouldBe 30D
-      gauge.increment(10.5D)
-      gauge.increment(10.5D)
-      gauge.value shouldBe 51D
+      gauge.value shouldBe 30d
+      gauge.increment(10.5d)
+      gauge.increment(10.5d)
+      gauge.value shouldBe 51d
 
-      gauge.decrement(10.5D)
-      gauge.decrement(10.5D)
-      gauge.value shouldBe 30D
+      gauge.decrement(10.5d)
+      gauge.decrement(10.5d)
+      gauge.value shouldBe 30d
     }
-
-
-
 
   }
 }

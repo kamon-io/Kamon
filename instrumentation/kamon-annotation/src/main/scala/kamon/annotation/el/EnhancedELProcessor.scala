@@ -36,9 +36,13 @@ object EnhancedELProcessor {
       eval[String](str) match {
         case Success(value) => value
         case Failure(cause) =>
-          Logger.warn(new Supplier[String] {
-            override def get(): String =  s"${cause.getMessage} -> we will complete the operation with 'unknown' string"
-          }, cause)
+          Logger.warn(
+            new Supplier[String] {
+              override def get(): String =
+                s"${cause.getMessage} -> we will complete the operation with 'unknown' string"
+            },
+            cause
+          )
           "unknown"
       }
     } getOrElse expression
@@ -47,9 +51,12 @@ object EnhancedELProcessor {
       eval[java.util.HashMap[String, String]](s"{$str}") match {
         case Success(value) ⇒ value.asInstanceOf[java.util.HashMap[String, String]].asScala.toMap
         case Failure(cause) ⇒
-          Logger.warn(new Supplier[String] {
-            override def get(): String =  s"${cause.getMessage} -> we will complete the operation with an empty map"
-          }, cause)
+          Logger.warn(
+            new Supplier[String] {
+              override def get(): String = s"${cause.getMessage} -> we will complete the operation with an empty map"
+            },
+            cause
+          )
           Map.empty[String, String]
       }
     } getOrElse Map.empty[String, String]
@@ -58,7 +65,7 @@ object EnhancedELProcessor {
 
     private def extract(expression: String): Option[String] = expression match {
       case Pattern(ex) ⇒ Some(ex)
-      case _           ⇒ None
+      case _ ⇒ None
     }
   }
 }

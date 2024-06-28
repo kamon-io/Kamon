@@ -50,7 +50,6 @@ object HttpOperationNameGenerator {
       Option(request.host).map(h => s"$h:${request.port}")
   }
 
-
   /**
     * Uses the request HTTP Method to assign a name.
     */

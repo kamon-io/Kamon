@@ -72,7 +72,6 @@ trait ModuleManagement { self: Configuration with Utilities with Metrics with Tr
   def registerModule(name: String, description: String, module: Module, configPath: String): Registration =
     _moduleRegistry.register(name, Some(description), module)
 
-
   def addReporter(name: String, reporter: SpanReporter): Registration =
     _moduleRegistry.addReporter(name, None, reporter)
 
@@ -88,7 +87,12 @@ trait ModuleManagement { self: Configuration with Utilities with Metrics with Tr
   def addReporter(name: String, description: String, reporter: MetricReporter, metricFilter: Filter): Registration =
     _moduleRegistry.addReporter(name, Option(description), reporter, Option(metricFilter))
 
-  def addScheduledAction(name: String, description: Option[String], collector: ScheduledAction, interval: Duration): Registration = {
+  def addScheduledAction(
+    name: String,
+    description: Option[String],
+    collector: ScheduledAction,
+    interval: Duration
+  ): Registration = {
     _moduleRegistry.addScheduledAction(name, description, collector, interval)
   }
 

@@ -29,7 +29,8 @@ import java.util.zip.GZIPOutputStream
 import scala.collection.JavaConverters._
 import scala.collection.mutable
 
-class SunEmbeddedHttpServer(hostname: String, port: Int, path: String, scrapeSource: ScrapeSource, config: Config) extends EmbeddedHttpServer(hostname, port, scrapeSource, config) {
+class SunEmbeddedHttpServer(hostname: String, port: Int, path: String, scrapeSource: ScrapeSource, config: Config)
+    extends EmbeddedHttpServer(hostname, port, scrapeSource, config) {
   private val server = {
     val s = HttpServer.create(new InetSocketAddress(InetAddress.getByName(hostname), port), 0)
     s.setExecutor(null)

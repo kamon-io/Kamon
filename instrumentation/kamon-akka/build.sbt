@@ -3,7 +3,7 @@ import Def.Initialize
 
 val `Akka-2.4-version` = "2.4.20"
 val `Akka-2.5-version` = "2.5.32"
-val `Akka-2.6-version` = "2.6.11"
+val `Akka-2.6-version` = "2.6.21"
 
 /**
   * Compile Configurations
@@ -31,7 +31,7 @@ configs(
 // The Common configuration should always depend on the latest version of Akka. All code in the Common configuration
 // should be source compatible with all Akka versions.
 inConfig(Common)(Defaults.compileSettings ++ Seq(
-  crossScalaVersions := Seq("2.12.11", "2.13.1")
+  crossScalaVersions := Seq(`scala_2.12_version`, `scala_2.13_version`, scala_3_version)
 ))
 
 libraryDependencies ++= { if(scalaBinaryVersion.value == "2.11") Seq.empty else Seq(
@@ -50,7 +50,7 @@ libraryDependencies ++= { if(scalaBinaryVersion.value == "2.11") Seq.empty else 
 
 
 inConfig(`Compile-Akka-2.6`)(Defaults.compileSettings ++ Seq(
-  crossScalaVersions := Seq("2.12.11", "2.13.1"),
+  crossScalaVersions := Seq(`scala_2.12_version`, `scala_2.13_version`, scala_3_version),
   sources := joinSources(Common, `Compile-Akka-2.6`).value
 ))
 
@@ -73,7 +73,7 @@ inConfig(`Compile-Akka-2.5`)(Defaults.compileSettings ++ Seq(
   sources := joinSources(Common, `Compile-Akka-2.5`).value
 ))
 
-libraryDependencies ++= Seq(
+libraryDependencies ++= {if (scalaVersion.value startsWith "3") Seq.empty else Seq(
   kanelaAgent % `Compile-Akka-2.5`,
   scalatest % `Test-Akka-2.5`,
   logbackClassic % `Test-Akka-2.5`,
@@ -85,21 +85,28 @@ libraryDependencies ++= Seq(
   "com.typesafe.akka"   %% "akka-cluster-sharding"  % `Akka-2.5-version` % `Compile-Akka-2.5`,
   "com.typesafe.akka"   %% "akka-protobuf"          % `Akka-2.5-version` % `Compile-Akka-2.5`,
   "com.typesafe.akka"   %% "akka-testkit"           % `Akka-2.5-version` % `Test-Akka-2.5`
-)
+)}
 
 // Ensure that the packaged artifact contains the instrumentation for all Akka versions.
 Compile / packageBin / mappings := Def.taskDyn {
-  if(scalaBinaryVersion.value == "2.11")
+  if(scalaBinaryVersion.value == "2.11") {
     Def.task {
       joinProducts((`Compile-Akka-2.5` / products).value) ++
       joinProducts((Common / unmanagedResourceDirectories).value)
     }
-  else
+  } else if (scalaVersion.value startsWith "3") {
+    Def.task {
+      joinProducts((`Compile-Akka-2.6` / products).value) ++ 
+      joinProducts((Common / unmanagedResourceDirectories).value)
+    }
+  } else {
     Def.task {
       joinProducts(
         (`Compile-Akka-2.5` / products).value ++
         (`Compile-Akka-2.6` / products).value
-      ) ++ joinProducts((Common / unmanagedResourceDirectories).value)}
+        ) ++ joinProducts((Common / unmanagedResourceDirectories).value)
+    }
+  }
 }.value
 
 // Ensure that the packaged sources contains the instrumentation for all Akka versions.
@@ -108,26 +115,38 @@ Compile / packageSrc / mappings := Def.taskDyn {
     Def.task {
       (`Compile-Akka-2.5` / packageSrc / mappings).value ++
       (Common / packageSrc / mappings).value
+    } 
+  } else if (scalaVersion.value startsWith "3") {
+    Def.task {
+      (`Compile-Akka-2.6`  / packageSrc / mappings).value ++
+      (Common / packageSrc / mappings).value
     }
-  } else
+  } else {
     Def.task {
       (`Compile-Akka-2.5` / packageSrc / mappings).value ++
       (`Compile-Akka-2.6` / packageSrc / mappings).value ++
       (Common / packageSrc / mappings).value
     }
+  }
   }.value
 
 // Compile will return the compile analysis for the Common configuration but will run on all Akka configurations.
 Compile / compile := Def.taskDyn {
-  if(scalaBinaryVersion.value == "2.11")
+  if(scalaBinaryVersion.value == "2.11") {
     Def.task {
       (`Compile-Akka-2.5` / compile).value
     }
-  else
+  } else if (scalaVersion.value startsWith "3"){
+
+    Def.task {
+      (`Compile-Akka-2.6` / compile).value
+    } 
+  } else {
     Def.task {
       (`Compile-Akka-2.5` / compile).value
       (`Compile-Akka-2.6` / compile).value
     }
+  }
 }.value
 
 exportJars := true
@@ -141,11 +160,11 @@ lazy val baseTestSettings = Seq(
   fork := true,
   parallelExecution := false,
   javaOptions := (Test / javaOptions).value,
-  dependencyClasspath += (Compile / packageBin).value,
+  dependencyClasspath += (Compile / packageBin).value
 )
 
 inConfig(TestCommon)(Defaults.testSettings ++ instrumentationSettings ++ baseTestSettings ++ Seq(
-  crossScalaVersions := Seq("2.12.11", "2.13.1")
+  crossScalaVersions := Seq(`scala_2.12_version`, `scala_2.13_version`, scala_3_version)
 ))
 
 inConfig(`Test-Akka-2.5`)(Defaults.testSettings ++ instrumentationSettings ++ baseTestSettings ++ Seq(
@@ -155,20 +174,26 @@ inConfig(`Test-Akka-2.5`)(Defaults.testSettings ++ instrumentationSettings ++ ba
 ))
 
 inConfig(`Test-Akka-2.6`)(Defaults.testSettings ++ instrumentationSettings ++ baseTestSettings ++ Seq(
-  crossScalaVersions := Seq("2.12.11", "2.13.1"),
+  crossScalaVersions := Seq(`scala_2.12_version`, `scala_2.13_version`, scala_3_version),
   sources := joinSources(TestCommon, `Test-Akka-2.6`).value,
   unmanagedResourceDirectories ++= (Common / unmanagedResourceDirectories).value,
   unmanagedResourceDirectories ++= (TestCommon / unmanagedResourceDirectories).value
 ))
 
 Test / test := Def.taskDyn {
-  if(scalaBinaryVersion.value == "2.11")
+  if(scalaBinaryVersion.value == "2.11") {
     Def.task {
       (`Test-Akka-2.5` / test).value
     }
-  else
+  } else if (scalaVersion.value startsWith "3") {
+    Def.task {
+      (`Test-Akka-2.6` / test).value
+    }
+  }
+  else {
     Def.task {
       (`Test-Akka-2.5` / test).value
       (`Test-Akka-2.6` / test).value
     }
+  }
 }.value

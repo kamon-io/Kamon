@@ -21,6 +21,7 @@ import sttp.tapir.server.akkahttp.AkkaHttpServerInterpreter
 import sttp.tapir.{endpoint, path, plainBody}
 
 import scala.concurrent.Future
+import scala.concurrent.ExecutionContext.Implicits.global
 
 object TestRoutes {
 
@@ -28,7 +29,9 @@ object TestRoutes {
   private val hello = endpoint.get
     .in("hello").in(path[String])
     .out(plainBody[String])
-  private val helloRoute = AkkaHttpServerInterpreter.toRoute(hello)(name => Future.successful(Right(name)))
+  private val helloRoute = AkkaHttpServerInterpreter().toRoute(
+    hello.serverLogic[Future] { name => Future.successful(Right(name)) }
+  )
 
   // hello/{}/with/{}/mixed/{}/types
   private val nested = endpoint.get
@@ -36,7 +39,9 @@ object TestRoutes {
     .in("with").in(path[Int])
     .in("mixed").in(path[Boolean]("other_param"))
     .in("types").out(plainBody[String])
-  private val nestedRoute = AkkaHttpServerInterpreter.toRoute(nested)(x => Future.successful(Right(x.toString())))
+  private val nestedRoute = AkkaHttpServerInterpreter().toRoute(
+    nested.serverLogic[Future] { x => Future.successful(Right[Unit, String](x.toString())) }
+  )
 
   val routes = helloRoute ~ nestedRoute
 }

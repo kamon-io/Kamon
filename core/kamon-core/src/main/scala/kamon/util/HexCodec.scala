@@ -18,6 +18,7 @@ package kamon.util
 
 // Extracted from https://github.com/openzipkin/brave/blob/master/brave/src/main/java/brave/internal/HexCodec.java
 object HexCodec {
+
   /**
     * Parses a 1 to 32 character lower-hex string with no prefix into an unsigned long, tossing any
     * bits higher than 64.

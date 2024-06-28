@@ -177,15 +177,16 @@ class TagSetSpec extends AnyWordSpec with Matchers {
     }
   }
 
-  def matchPair(key: String, value: Any) = { tag: Tag => {
-    tag match {
-      case t: Tag.String  => t.key == key && t.value == value
-      case t: Tag.Long    => t.key == key && t.value == value
-      case t: Tag.Boolean => t.key == key && t.value == value
+  def matchPair(key: String, value: Any) = { tag: Tag =>
+    {
+      tag match {
+        case t: Tag.String  => t.key == key && t.value == value
+        case t: Tag.Long    => t.key == key && t.value == value
+        case t: Tag.Boolean => t.key == key && t.value == value
+      }
+
     }
-
-  }}
-
+  }
 
   val NullString: java.lang.String = null
   val NullBoolean: java.lang.Boolean = null

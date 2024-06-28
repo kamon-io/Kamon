@@ -15,7 +15,8 @@ class InitialConfigLoadingSpec extends AnyWordSpec with Matchers with Eventually
 
   "the initial config loading" should {
     "fallback to using reference configuration only when application.conf files are malformed" in {
-      val process = Runtime.getRuntime.exec(createProcessWithConfig("kamon.KamonWithCustomConfig", "{This is a bad config}"))
+      val process =
+        Runtime.getRuntime.exec(createProcessWithConfig("kamon.KamonWithCustomConfig", "{This is a bad config}"))
       val processOutputReader = new BufferedReader(new InputStreamReader(process.getInputStream()))
 
       eventually(timeout(10 seconds)) {
@@ -23,7 +24,7 @@ class InitialConfigLoadingSpec extends AnyWordSpec with Matchers with Eventually
         outputLine shouldBe "All Good"
       }
 
-      if(process.isAlive) {
+      if (process.isAlive) {
         process.destroyForcibly().waitFor(5, TimeUnit.SECONDS)
       }
     }

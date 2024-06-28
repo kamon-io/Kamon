@@ -24,32 +24,39 @@ import kamon.instrumentation.cassandra.CassandraInstrumentation
 import kamon.util.CallingThreadExecutionContext
 import kanela.agent.libs.net.bytebuddy.asm.Advice
 
+import scala.annotation.static
+
+class PoolConstructorAdvice
 object PoolConstructorAdvice {
 
   @Advice.OnMethodExit
-  def onConstructed(
-      @Advice.This poolWithMetrics:                      HostConnectionPool with HasPoolMetrics,
-      @Advice.FieldValue("host") host:                   Host,
-      @Advice.FieldValue("totalInFlight") totalInflight: AtomicInteger
+  @static def onConstructed(
+    @Advice.This poolWithMetrics: HostConnectionPool with HasPoolMetrics,
+    @Advice.FieldValue("host") host: Host,
+    @Advice.FieldValue("totalInFlight") totalInflight: AtomicInteger
   ): Unit = {
-    val node             = CassandraInstrumentation.createNode(host)
+    val node = CassandraInstrumentation.createNode(host)
     val samplingInterval = CassandraInstrumentation.settings.sampleInterval
 
     poolWithMetrics.setNodeMonitor(new NodeMonitor(node))
 
-    if(poolWithMetrics.nodeMonitor.poolMetricsEnabled) {
-      poolWithMetrics.nodeMonitor.poolMetrics.inFlight.autoUpdate(inFlightTracker => {
-        inFlightTracker.record(totalInflight.longValue())
-        ()
-      }, samplingInterval)
+    if (poolWithMetrics.nodeMonitor.poolMetricsEnabled) {
+      poolWithMetrics.nodeMonitor.poolMetrics.inFlight.autoUpdate(
+        inFlightTracker => {
+          inFlightTracker.record(totalInflight.longValue())
+          ()
+        },
+        samplingInterval
+      )
     }
   }
 }
 
+class PoolCloseAdvice
 object PoolCloseAdvice {
 
   @Advice.OnMethodExit
-  def onClose(@Advice.This poolWithMetrics: HostConnectionPool with HasPoolMetrics): Unit = {
+  @static def onClose(@Advice.This poolWithMetrics: HostConnectionPool with HasPoolMetrics): Unit = {
     poolWithMetrics.nodeMonitor.cleanup()
   }
 }
@@ -62,16 +69,16 @@ class BorrowAdvice
 object BorrowAdvice {
 
   @Advice.OnMethodEnter
-  def startBorrow(@Advice.This poolMetrics: HasPoolMetrics): Long = {
+  @static def startBorrow(@Advice.This poolMetrics: HasPoolMetrics): Long = {
     Kamon.clock().nanos()
   }
 
   @Advice.OnMethodExit(suppress = classOf[Throwable], inline = false)
-  def onBorrowed(
-      @Advice.Return connection:  ListenableFuture[Connection],
-      @Advice.Enter start:        Long,
-      @Advice.This poolMetrics:   HasPoolMetrics,
-      @Advice.FieldValue("totalInFlight") totalInflight: AtomicInteger
+  @static def onBorrowed(
+    @Advice.Return connection: ListenableFuture[Connection],
+    @Advice.Enter start: Long,
+    @Advice.This poolMetrics: HasPoolMetrics,
+    @Advice.FieldValue("totalInFlight") totalInflight: AtomicInteger
   ): Unit = {
 
     GuavaCompatibility.INSTANCE.addCallback(
@@ -91,50 +98,57 @@ object BorrowAdvice {
   * Incremented when new connection requested and decremented either on
   * connection being explicitly trashed or defunct
   */
+class InitPoolAdvice
 object InitPoolAdvice {
 
   @Advice.OnMethodExit
-  def onPoolInited(
-      @Advice.This hasPoolMetrics:                HasPoolMetrics,
-      @Advice.Return done:                        ListenableFuture[_],
-      @Advice.FieldValue("open") openConnections: AtomicInteger
+  @static def onPoolInited(
+    @Advice.This hasPoolMetrics: HasPoolMetrics,
+    @Advice.Return done: ListenableFuture[_],
+    @Advice.FieldValue("open") openConnections: AtomicInteger
   ): Unit = {
 
-    done.addListener(new Runnable {
-      override def run(): Unit = {
-        hasPoolMetrics.nodeMonitor.connectionsOpened(openConnections.get())
-      }
-    }, CallingThreadExecutionContext)
+    done.addListener(
+      new Runnable {
+        override def run(): Unit = {
+          hasPoolMetrics.nodeMonitor.connectionsOpened(openConnections.get())
+        }
+      },
+      CallingThreadExecutionContext
+    )
   }
 }
 
+class CreateConnectionAdvice
 object CreateConnectionAdvice {
 
   @Advice.OnMethodExit
-  def onConnectionCreated(
-      @Advice.This hasPoolMetrics: HasPoolMetrics,
-      @Advice.Return created:      Boolean
+  @static def onConnectionCreated(
+    @Advice.This hasPoolMetrics: HasPoolMetrics,
+    @Advice.Return created: Boolean
   ): Unit =
     if (created) {
       hasPoolMetrics.nodeMonitor.connectionsOpened(1)
     }
 }
 
+class TrashConnectionAdvice
 object TrashConnectionAdvice {
 
   @Advice.OnMethodExit
-  def onConnectionTrashed(
-      @Advice.This hasPoolMetrics:     HasPoolMetrics,
-      @Advice.FieldValue("host") host: Host
+  @static def onConnectionTrashed(
+    @Advice.This hasPoolMetrics: HasPoolMetrics,
+    @Advice.FieldValue("host") host: Host
   ): Unit = {
     hasPoolMetrics.nodeMonitor.connectionTrashed
   }
 }
 
+class ConnectionDefunctAdvice
 object ConnectionDefunctAdvice {
 
   @Advice.OnMethodExit
-  def onConnectionDefunct(@Advice.This hasPoolMetrics: HasPoolMetrics): Unit = {
+  @static def onConnectionDefunct(@Advice.This hasPoolMetrics: HasPoolMetrics): Unit = {
     hasPoolMetrics.nodeMonitor.connectionClosed
   }
 }

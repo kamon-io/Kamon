@@ -18,7 +18,8 @@ import scala.concurrent.ExecutionContext
 class DatadogAPIReporterSpec extends AbstractHttpReporter with Matchers with Reconfigure {
 
   "the DatadogAPIReporter" should {
-    val reporter = new DatadogAPIReporterFactory().create(ModuleFactory.Settings(Kamon.config(), ExecutionContext.global))
+    val reporter =
+      new DatadogAPIReporterFactory().create(ModuleFactory.Settings(Kamon.config(), ExecutionContext.global))
     val now = Instant.ofEpochMilli(1523395554)
 
     "sends metrics - compressed" in {
@@ -47,7 +48,8 @@ class DatadogAPIReporterSpec extends AbstractHttpReporter with Matchers with Rec
 
       val request = server.takeRequest()
 
-      val decompressedBody = Okio.buffer(new InflaterSource(request.getBody.buffer(), new Inflater())).readByteString().utf8()
+      val decompressedBody =
+        Okio.buffer(new InflaterSource(request.getBody.buffer(), new Inflater())).readByteString().utf8()
 
       Json.parse(decompressedBody) shouldEqual Json
         .parse(
@@ -122,7 +124,11 @@ class DatadogAPIReporterSpec extends AbstractHttpReporter with Matchers with Rec
           MetricSnapshot.ofDistributions(
             "test.timer",
             "test",
-            Metric.Settings.ForDistributionInstrument(MeasurementUnit.none, java.time.Duration.ZERO, DynamicRange.Default),
+            Metric.Settings.ForDistributionInstrument(
+              MeasurementUnit.none,
+              java.time.Duration.ZERO,
+              DynamicRange.Default
+            ),
             Instrument.Snapshot.apply(TagSet.Empty, distribution) :: Nil
           ) :: Nil,
           Nil

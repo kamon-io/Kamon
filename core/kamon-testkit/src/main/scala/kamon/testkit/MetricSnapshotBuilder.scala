@@ -43,7 +43,13 @@ object MetricSnapshotBuilder {
   /**
     * Returns a metric snapshot containing a single instrument with a snapshot containing the provided attributes.
     */
-  def counter(name: String, description: String, tags: TagSet, unit: MeasurementUnit, value: Long): MetricSnapshot.Values[Long] = {
+  def counter(
+    name: String,
+    description: String,
+    tags: TagSet,
+    unit: MeasurementUnit,
+    value: Long
+  ): MetricSnapshot.Values[Long] = {
     MetricSnapshot(
       name,
       description,
@@ -67,7 +73,13 @@ object MetricSnapshotBuilder {
   /**
     * Returns a metric snapshot containing a single instrument with a snapshot containing the provided attributes.
     */
-  def gauge(name: String, description: String, tags: TagSet, unit: MeasurementUnit, value: Double): MetricSnapshot.Values[Double] = {
+  def gauge(
+    name: String,
+    description: String,
+    tags: TagSet,
+    unit: MeasurementUnit,
+    value: Double
+  ): MetricSnapshot.Values[Double] = {
     MetricSnapshot(
       name,
       description,
@@ -94,7 +106,12 @@ object MetricSnapshotBuilder {
     * Returns a metric snapshot containing a single instrument with a distribution snapshot containing the provided
     * attributes and values.
     */
-  def histogram(name: String, description: String, tags: TagSet, unit: MeasurementUnit)(values: Long*): MetricSnapshot.Distributions = {
+  def histogram(
+    name: String,
+    description: String,
+    tags: TagSet,
+    unit: MeasurementUnit
+  )(values: Long*): MetricSnapshot.Distributions = {
     val localHistogram = Histogram.Local.get(DynamicRange.Default)
     localHistogram.reset()
 
@@ -107,6 +124,5 @@ object MetricSnapshotBuilder {
       Seq(Instrument.Snapshot(tags, localHistogram.snapshot(true)))
     )
   }
-
 
 }

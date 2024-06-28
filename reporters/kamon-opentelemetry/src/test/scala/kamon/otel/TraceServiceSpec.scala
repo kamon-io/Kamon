@@ -27,7 +27,8 @@ import org.scalatest.wordspec.AnyWordSpec
   * Tests for the [[TraceService]]
   */
 class TraceServiceSpec extends AnyWordSpec with Matchers with ScalaFutures with Utils {
-  private implicit val defaultPatience: PatienceConfig = PatienceConfig(timeout = Span(2, Seconds), interval = Span(15, Millis))
+  private implicit val defaultPatience: PatienceConfig =
+    PatienceConfig(timeout = Span(2, Seconds), interval = Span(15, Millis))
 
   private val resource = Resource.builder()
     .put("service.name", "TestService")
@@ -42,7 +43,7 @@ class TraceServiceSpec extends AnyWordSpec with Matchers with ScalaFutures with 
     "fail in case the remote service is not operable" in {
       val traceService = OtlpTraceService(config)
 
-      //the actual data does not really matter as this will fail due to connection issues
+      // the actual data does not really matter as this will fail due to connection issues
       val resources = SpanConverter.convert(false, resource, kamonVersion)(Seq(finishedSpan()))
       val f = traceService.exportSpans(resources)
       whenReady(f.failed, Timeout(Span.apply(12, Seconds))) { e =>

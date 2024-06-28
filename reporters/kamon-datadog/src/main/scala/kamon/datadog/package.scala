@@ -17,27 +17,34 @@
 package kamon
 
 import java.nio.charset.StandardCharsets
-import java.time.{ Duration, Instant }
+import java.time.{Duration, Instant}
 import java.util.concurrent.TimeUnit
 
 import com.typesafe.config.Config
 import kamon.metric.MeasurementUnit
-import kamon.metric.MeasurementUnit.{ information, time }
+import kamon.metric.MeasurementUnit.{information, time}
 import okhttp3._
 
-import scala.util.{ Failure, Success, Try }
+import scala.util.{Failure, Success, Try}
 
 package object datadog {
 
   implicit class InstantImprovements(val instant: Instant) {
     def getEpochNano: Long = {
       instant.getEpochSecond() * 1000000000 +
-        instant.getNano()
+      instant.getNano()
     }
   }
 
-  private[datadog] case class HttpClient(apiUrl: String, apiKey: Option[String], usingCompression: Boolean, usingAgent: Boolean, connectTimeout: Duration,
-                                         readTimeout: Duration, writeTimeout: Duration) {
+  private[datadog] case class HttpClient(
+    apiUrl: String,
+    apiKey: Option[String],
+    usingCompression: Boolean,
+    usingAgent: Boolean,
+    connectTimeout: Duration,
+    readTimeout: Duration,
+    writeTimeout: Duration
+  ) {
 
     val httpClient: OkHttpClient = createHttpClient()
 
@@ -69,7 +76,9 @@ package object datadog {
           if (response.isSuccessful) {
             Success(responseBody)
           } else {
-            Failure(new Exception(s"Failed to ${method} metrics to Datadog with status code [${response.code()}], Body: [${responseBody}]"))
+            Failure(new Exception(
+              s"Failed to ${method} metrics to Datadog with status code [${response.code()}], Body: [${responseBody}]"
+            ))
           }
         case Failure(f) if f.getCause != null =>
           Failure(f.getCause)
@@ -102,7 +111,7 @@ package object datadog {
         .connectTimeout(connectTimeout.toMillis, TimeUnit.MILLISECONDS)
         .readTimeout(readTimeout.toMillis, TimeUnit.MILLISECONDS)
         .writeTimeout(writeTimeout.toMillis, TimeUnit.MILLISECONDS)
-        .retryOnConnectionFailure(false)
+        .retryOnConnectionFailure(true)
 
       if (usingCompression) builder.addInterceptor(new DeflateInterceptor).build()
       else builder.build()

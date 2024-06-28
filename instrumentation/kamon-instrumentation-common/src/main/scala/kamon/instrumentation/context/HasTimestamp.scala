@@ -75,7 +75,6 @@ object HasTimestamp {
       _timestamp = timestamp
   }
 
-
   /**
     * HasTimestamp implementation that keeps the timestamp in a mutable field and initializes it with the result of
     * calling System.nanoTime() when the instrumented instance is initialized.

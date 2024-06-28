@@ -20,6 +20,8 @@ import kamon.Kamon
 import kanela.agent.api.instrumentation.InstrumentationBuilder
 import kanela.agent.libs.net.bytebuddy.asm.Advice
 
+import scala.annotation.static
+
 class AkkaGrpcServerInstrumentation extends InstrumentationBuilder {
 
   /**
@@ -33,14 +35,18 @@ class AkkaGrpcServerInstrumentation extends InstrumentationBuilder {
     * otherwise the span remains unchanged. Assumes no actual implementation of `akka.grpc.internal.TelemetrySpi` is
     * configured.
     */
-  onType("akka.grpc.internal.NoOpTelemetry$")
-    .advise(method("onRequest"), AkkaGRPCServerRequestHandler)
+  onType("akka.grpc.internal.TelemetrySpi")
+    .advise(method("onRequest"), classOf[AkkaGRPCServerRequestHandler])
+
+  onType("akka.grpc.javadsl.GrpcMarshalling")
+    .advise(method("unmarshal"), classOf[AkkaGRPCUnmarshallingContextPropagation])
 }
 
+class AkkaGRPCServerRequestHandler
 object AkkaGRPCServerRequestHandler {
 
   @Advice.OnMethodEnter()
-  def enter(@Advice.Argument(0) serviceName: String, @Advice.Argument(1) method: String): Unit = {
+  @static def enter(@Advice.Argument(0) serviceName: String, @Advice.Argument(1) method: String): Unit = {
     val fullSpanName = serviceName + "/" + method
     Kamon.currentSpan()
       .name(fullSpanName)

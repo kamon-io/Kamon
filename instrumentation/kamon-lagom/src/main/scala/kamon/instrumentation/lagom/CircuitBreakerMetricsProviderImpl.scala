@@ -30,7 +30,7 @@ object CircuitBreakerMetricsImpl {
 }
 
 class CircuitBreakerMetricsImpl(val breakerId: String, provider: CircuitBreakerMetricsProviderImpl)
-  extends CircuitBreakerMetrics {
+    extends CircuitBreakerMetrics {
   import CircuitBreakerMetricsImpl._
 
   private val log = Logger(getClass)

@@ -23,7 +23,8 @@ import kamon.testkit.{InstrumentInspection, MetricInspection}
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 
-class MetricOverrideReporterSpec extends AnyWordSpec with Matchers with MetricInspection.Syntax with InstrumentInspection.Syntax with KamonTestSnapshotSupport {
+class MetricOverrideReporterSpec extends AnyWordSpec with Matchers with MetricInspection.Syntax
+    with InstrumentInspection.Syntax with KamonTestSnapshotSupport {
 
   "A MetricOverrideReporter" should {
     "apply metric overrides" in {
@@ -82,11 +83,17 @@ class MetricOverrideReporterSpec extends AnyWordSpec with Matchers with MetricIn
 
     "not delete tags with the same name from other metrics" in {
       report(histogram("other-metric-name", Map("unwanted-tag" -> "foo", "keep-me" -> "bar"))) { snapshot =>
-        snapshot.histograms.head.instruments.head.tags shouldBe TagSet.of("unwanted-tag", "foo").withTag("keep-me", "bar")
+        snapshot.histograms.head.instruments.head.tags shouldBe TagSet.of("unwanted-tag", "foo").withTag(
+          "keep-me",
+          "bar"
+        )
       }
 
       report(rangeSampler("other-metric-name", Map("unwanted-tag" -> "foo", "keep-me" -> "bar"))) { snapshot =>
-        snapshot.rangeSamplers.head.instruments.head.tags shouldBe TagSet.of("unwanted-tag", "foo").withTag("keep-me", "bar")
+        snapshot.rangeSamplers.head.instruments.head.tags shouldBe TagSet.of("unwanted-tag", "foo").withTag(
+          "keep-me",
+          "bar"
+        )
       }
 
       report(gauge("other-metric-name", Map("unwanted-tag" -> "foo", "keep-me" -> "bar"))) { snapshot =>
@@ -104,7 +111,10 @@ class MetricOverrideReporterSpec extends AnyWordSpec with Matchers with MetricIn
       }
 
       report(rangeSampler("some-other-metric", Map("old-name" -> "foo", "leave-me" -> "bar"))) { snapshot =>
-        snapshot.rangeSamplers.head.instruments.head.tags shouldBe TagSet.of("new-name", "foo").withTag("leave-me", "bar")
+        snapshot.rangeSamplers.head.instruments.head.tags shouldBe TagSet.of("new-name", "foo").withTag(
+          "leave-me",
+          "bar"
+        )
       }
 
       report(gauge("some-other-metric", Map("old-name" -> "foo", "leave-me" -> "bar"))) { snapshot =>
@@ -152,7 +162,8 @@ class MetricOverrideReporterSpec extends AnyWordSpec with Matchers with MetricIn
       |    }
       |  }
       |}
-    """.stripMargin)
+    """.stripMargin
+  )
 
   val reporter = new DummyMetricReporter
   val wrapper = new MetricOverrideReporter(reporter, config)
@@ -172,6 +183,5 @@ class MetricOverrideReporterSpec extends AnyWordSpec with Matchers with MetricIn
     wrapper.reportPeriodSnapshot(periodSnapshot)
     assertions(reporter.latestSnapshot)
   }
-
 
 }

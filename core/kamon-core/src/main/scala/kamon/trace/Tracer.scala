@@ -32,7 +32,6 @@ import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConverters.collectionAsScalaIterableConverter
 
-
 /**
   * A Tracer assists on the creation of Spans and temporarily holds finished Spans until they are flushed to the
   * available reporters.
@@ -52,20 +51,21 @@ class Tracer(initialConfig: Config, clock: Clock, contextStorage: ContextStorage
   @volatile private var _preStartHooks: Array[Tracer.PreStartHook] = Array.empty
   @volatile private var _preFinishHooks: Array[Tracer.PreFinishHook] = Array.empty
   @volatile private var _delayedSpanReportingDelay: Duration = Duration.ZERO
-  @volatile private var _localTailSamplerSettings: LocalTailSamplerSettings = LocalTailSamplerSettings(false, Int.MaxValue, Long.MaxValue)
+  @volatile private var _localTailSamplerSettings: LocalTailSamplerSettings =
+    LocalTailSamplerSettings(false, Int.MaxValue, Long.MaxValue)
   @volatile private var _scheduler: Option[ScheduledExecutorService] = None
   @volatile private var _includeErrorType: Boolean = false
+  @volatile private var _ignoredOperations: Set[String] = Set.empty
+  @volatile private var _trackMetricsOnIgnoredOperations: Boolean = false
   private val _onSpanFinish: Span.Finished => Unit = _spanBuffer.offer
 
   reconfigure(initialConfig)
-
 
   /**
     * Returns the Identifier Scheme currently used by the tracer.
     */
   def identifierScheme: Identifier.Scheme =
     _identifierScheme
-
 
   /**
     * Creates a new SpanBuilder for a Server Span and applies the provided component name as a metric tag. It is
@@ -75,7 +75,6 @@ class Tracer(initialConfig: Config, clock: Clock, contextStorage: ContextStorage
   def serverSpanBuilder(operationName: String, component: String): SpanBuilder =
     spanBuilder(operationName).kind(Kind.Server).tagMetrics(Span.TagKeys.Component, component)
 
-
   /**
     * Creates a new SpanBuilder for a Client Span and applies the provided component name as a metric tag. It is
     * recommended that all Spans include a "component" metric tag that indicates what library or library section is
@@ -83,7 +82,6 @@ class Tracer(initialConfig: Config, clock: Clock, contextStorage: ContextStorage
     */
   def clientSpanBuilder(operationName: String, component: String): SpanBuilder =
     spanBuilder(operationName).kind(Kind.Client).tagMetrics(Span.TagKeys.Component, component)
-
 
   /**
     * Creates a new SpanBuilder for a Producer Span and applies the provided component name as a metric tag. It is
@@ -93,7 +91,6 @@ class Tracer(initialConfig: Config, clock: Clock, contextStorage: ContextStorage
   def producerSpanBuilder(operationName: String, component: String): SpanBuilder =
     spanBuilder(operationName).kind(Kind.Producer).tagMetrics(Span.TagKeys.Component, component)
 
-
   /**
     * Creates a new SpanBuilder for a Consumer Span and applies the provided component name as a metric tag. It is
     * recommended that all Spans include a "component" metric tag that indicates what library or library section is
@@ -102,7 +99,6 @@ class Tracer(initialConfig: Config, clock: Clock, contextStorage: ContextStorage
   def consumerSpanBuilder(operationName: String, component: String): SpanBuilder =
     spanBuilder(operationName).kind(Kind.Consumer).tagMetrics(Span.TagKeys.Component, component)
 
-
   /**
     * Creates a new SpanBuilder for an Internal Span and applies the provided component name as a metric tag. It is
     * recommended that all Spans include a "component" metric tag that indicates what library or library section is
@@ -110,7 +106,6 @@ class Tracer(initialConfig: Config, clock: Clock, contextStorage: ContextStorage
     */
   def internalSpanBuilder(operationName: String, component: String): SpanBuilder =
     spanBuilder(operationName).kind(Kind.Internal).tagMetrics(Span.TagKeys.Component, component)
-
 
   /**
     * Creates a new raw SpanBuilder instance using the provided operation name.
@@ -140,8 +135,6 @@ class Tracer(initialConfig: Config, clock: Clock, contextStorage: ContextStorage
     _scheduler = None
     _adaptiveSamplerSchedule.foreach(_.cancel(false))
   }
-
-
 
   private class MutableSpanBuilder(initialOperationName: String) extends SpanBuilder {
     private val _spanTags = TagSet.builder()
@@ -299,10 +292,9 @@ class Tracer(initialConfig: Config, clock: Clock, contextStorage: ContextStorage
       // Having a scheduler is a proxy to knowing whether Kamon has been initialized or not. We might consider
       // introducing some sort if "isActive" state if we start having more variables that only need to be defined
       // when Kamon has started.
-      if(_scheduler.isEmpty) {
+      if (_scheduler.isEmpty) {
         Span.Empty
-      }
-      else {
+      } else {
         if (_preStartHooks.nonEmpty) {
           _preStartHooks.foreach(psh => {
             try {
@@ -314,8 +306,7 @@ class Tracer(initialConfig: Config, clock: Clock, contextStorage: ContextStorage
           })
         }
 
-
-      val context = _context.getOrElse(contextStorage.currentContext())
+        val context = _context.getOrElse(contextStorage.currentContext())
         if (_tagWithUpstreamService) {
           context.getTag(option(TagKeys.UpstreamName)).foreach(upstreamName => {
             _metricTags.add(TagKeys.UpstreamName, upstreamName)
@@ -352,9 +343,9 @@ class Tracer(initialConfig: Config, clock: Clock, contextStorage: ContextStorage
             // set on the SpanBuilder.
             if (parent.isRemote && parent.trace.samplingDecision == SamplingDecision.Unknown) {
               suggestedOrSamplerDecision() match {
-                case SamplingDecision.Sample => parent.trace.keep()
+                case SamplingDecision.Sample      => parent.trace.keep()
                 case SamplingDecision.DoNotSample => parent.trace.drop()
-                case SamplingDecision.Unknown => // Nothing to do in this case.
+                case SamplingDecision.Unknown     => // Nothing to do in this case.
               }
             }
 
@@ -362,19 +353,50 @@ class Tracer(initialConfig: Config, clock: Clock, contextStorage: ContextStorage
           }
         }
 
-        new Span.Local(id, parentId, trace, position, _kind, localParent, _name, _spanTags, _metricTags, at, _marks, _links,
-          _trackMetrics, _tagWithParentOperation, _includeErrorStacktrace, isDelayed, clock, _preFinishHooks, _onSpanFinish,
-          _sampler, _scheduler.get, _delayedSpanReportingDelay, _localTailSamplerSettings, _includeErrorType)
+        new Span.Local(
+          id,
+          parentId,
+          trace,
+          position,
+          _kind,
+          localParent,
+          _name,
+          _spanTags,
+          _metricTags,
+          at,
+          _marks,
+          _links,
+          _trackMetrics,
+          _tagWithParentOperation,
+          _includeErrorStacktrace,
+          isDelayed,
+          clock,
+          _preFinishHooks,
+          _onSpanFinish,
+          _sampler,
+          _scheduler.get,
+          _delayedSpanReportingDelay,
+          _localTailSamplerSettings,
+          _includeErrorType,
+          _ignoredOperations,
+          _trackMetricsOnIgnoredOperations
+        )
       }
     }
 
-    private def suggestedOrSamplerDecision(): SamplingDecision =
-      _suggestedSamplingDecision.getOrElse(_sampler.decide(this))
+    private def suggestedOrSamplerDecision(): SamplingDecision = {
+      if (_ignoredOperations.contains(_name)) {
+        if (!_trackMetricsOnIgnoredOperations)
+          doNotTrackMetrics()
+
+        SamplingDecision.DoNotSample
+      } else
+        _suggestedSamplingDecision.getOrElse(_sampler.decide(this))
+    }
 
     private def suggestedOrGeneratedTraceId(): Identifier =
-      if(_suggestedTraceId.isEmpty) identifierScheme.traceIdFactory.generate() else _suggestedTraceId
+      if (_suggestedTraceId.isEmpty) identifierScheme.traceIdFactory.generate() else _suggestedTraceId
   }
-
 
   /**
     * Applies a new configuration to the tracer and its related components.
@@ -383,36 +405,42 @@ class Tracer(initialConfig: Config, clock: Clock, contextStorage: ContextStorage
     try {
       val traceConfig = newConfig.getConfig("kamon.trace")
       val sampler = traceConfig.getString("sampler") match {
-        case "always"     => ConstantSampler.Always
-        case "never"      => ConstantSampler.Never
-        case "random"     => RandomSampler(traceConfig.getDouble("random-sampler.probability"))
-        case "adaptive"   => AdaptiveSampler()
-        case fqcn         =>
-
+        case "always"   => ConstantSampler.Always
+        case "never"    => ConstantSampler.Never
+        case "random"   => RandomSampler(traceConfig.getDouble("random-sampler.probability"))
+        case "adaptive" => AdaptiveSampler()
+        case fqcn       =>
           // We assume that any other value must be a FQCN of a Sampler implementation and try to build an
           // instance from it.
-          try ClassLoading.createInstance[Sampler](fqcn) catch {
+          try ClassLoading.createInstance[Sampler](fqcn)
+          catch {
             case t: Throwable =>
-              _logger.error(s"Failed to create sampler instance from FQCN [$fqcn], falling back to random sampling with 10% probability", t)
-              RandomSampler(0.1D)
+              _logger.error(
+                s"Failed to create sampler instance from FQCN [$fqcn], falling back to random sampling with 10% probability",
+                t
+              )
+              RandomSampler(0.1d)
           }
       }
 
       val identifierScheme = traceConfig.getString("identifier-scheme") match {
         case "single" => Identifier.Scheme.Single
         case "double" => Identifier.Scheme.Double
-        case fqcn =>
-
+        case fqcn     =>
           // We assume that any other value must be a FQCN of an Identifier Scheme implementation and try to build an
           // instance from it.
-          try ClassLoading.createInstance[Identifier.Scheme](fqcn) catch {
+          try ClassLoading.createInstance[Identifier.Scheme](fqcn)
+          catch {
             case t: Throwable =>
-              _logger.error(s"Failed to create identifier scheme instance from FQCN [$fqcn], falling back to the single scheme", t)
+              _logger.error(
+                s"Failed to create identifier scheme instance from FQCN [$fqcn], falling back to the single scheme",
+                t
+              )
               Identifier.Scheme.Single
           }
       }
 
-      if(sampler.isInstanceOf[AdaptiveSampler]) {
+      if (sampler.isInstanceOf[AdaptiveSampler]) {
         schedulerAdaptiveSampling()
       } else {
         _adaptiveSamplerSchedule.foreach(_.cancel(false))
@@ -430,6 +458,8 @@ class Tracer(initialConfig: Config, clock: Clock, contextStorage: ContextStorage
       val tagWithUpstreamService = traceConfig.getBoolean("span-metric-tags.upstream-service")
       val tagWithParentOperation = traceConfig.getBoolean("span-metric-tags.parent-operation")
       val includeErrorStacktrace = traceConfig.getBoolean("include-error-stacktrace")
+      val ignoredOperations = traceConfig.getStringList("ignored-operations").asScala.toSet
+      val trackMetricsOnIgnoredOperations = traceConfig.getBoolean("track-metrics-on-ignored-operations")
       val includeErrorType = traceConfig.getBoolean("include-error-type")
       val delayedSpanReportingDelay = traceConfig.getDuration("span-reporting-delay")
       val localTailSamplerSettings = LocalTailSamplerSettings(
@@ -438,13 +468,14 @@ class Tracer(initialConfig: Config, clock: Clock, contextStorage: ContextStorage
         latencyThresholdNanos = traceConfig.getDuration("local-tail-sampler.latency-threshold").toNanos
       )
 
-      if(localTailSamplerSettings.enabled && delayedSpanReportingDelay.isZero) {
+      if (localTailSamplerSettings.enabled && delayedSpanReportingDelay.isZero) {
         _logger.warn(
           "Enabling local tail sampling without a span-reporting-delay setting will probably lead to incomplete " +
-          "traces. Consider setting span-reporting-delay to a value slightly above your application's requests timeout")
+          "traces. Consider setting span-reporting-delay to a value slightly above your application's requests timeout"
+        )
       }
 
-      if(_traceReporterQueueSize != traceReporterQueueSize) {
+      if (_traceReporterQueueSize != traceReporterQueueSize) {
         // By simply changing the buffer we might be dropping Spans that have not been collected yet by the reporters.
         // Since reconfigures are very unlikely to happen beyond application startup this might not be a problem.
         // If we eventually decide to keep those possible Spans around then we will need to change the queue type to
@@ -457,6 +488,8 @@ class Tracer(initialConfig: Config, clock: Clock, contextStorage: ContextStorage
       _joinRemoteParentsWithSameSpanID = joinRemoteParentsWithSameSpanID
       _includeErrorStacktrace = includeErrorStacktrace
       _includeErrorType = includeErrorType
+      _ignoredOperations = ignoredOperations
+      _trackMetricsOnIgnoredOperations = trackMetricsOnIgnoredOperations
       _tagWithUpstreamService = tagWithUpstreamService
       _tagWithParentOperation = tagWithParentOperation
       _traceReporterQueueSize = traceReporterQueueSize
@@ -471,9 +504,12 @@ class Tracer(initialConfig: Config, clock: Clock, contextStorage: ContextStorage
   }
 
   private def schedulerAdaptiveSampling(): Unit = {
-    if(_sampler.isInstanceOf[AdaptiveSampler] && _adaptiveSamplerSchedule.isEmpty && _scheduler.nonEmpty)
+    if (_sampler.isInstanceOf[AdaptiveSampler] && _adaptiveSamplerSchedule.isEmpty && _scheduler.nonEmpty)
       _adaptiveSamplerSchedule = Some(_scheduler.get.scheduleAtFixedRate(
-        adaptiveSamplerAdaptRunnable(), 1, 1, TimeUnit.SECONDS
+        adaptiveSamplerAdaptRunnable(),
+        1,
+        1,
+        TimeUnit.SECONDS
       ))
   }
 
@@ -481,7 +517,7 @@ class Tracer(initialConfig: Config, clock: Clock, contextStorage: ContextStorage
     override def run(): Unit = {
       _sampler match {
         case adaptiveSampler: AdaptiveSampler => adaptiveSampler.adapt()
-        case _ => // just ignore any other sampler type.
+        case _                                => // just ignore any other sampler type.
       }
     }
   }
@@ -497,7 +533,6 @@ object Tracer {
   trait PreStartHook {
     def beforeStart(builder: SpanBuilder): Unit
   }
-
 
   /**
     * A callback function that is applied to all Span instances right before they are finished and flushed to Span

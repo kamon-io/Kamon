@@ -17,7 +17,6 @@
 package kamon.instrumentation.akka.instrumentations.akka_26
 
 import java.util.concurrent.{AbstractExecutorService, Callable, ExecutorService, ThreadFactory, TimeUnit}
-
 import akka.dispatch.{DefaultExecutorServiceConfigurator, DispatcherPrerequisites, Dispatchers, ExecutorServiceFactory, ExecutorServiceFactoryProvider, ForkJoinExecutorConfigurator, PinnedDispatcherConfigurator, ThreadPoolExecutorConfigurator}
 import kamon.instrumentation.akka.instrumentations.VersionFiltering
 import kamon.Kamon
@@ -29,9 +28,11 @@ import kanela.agent.api.instrumentation.InstrumentationBuilder
 import kanela.agent.libs.net.bytebuddy.asm.Advice
 import kanela.agent.libs.net.bytebuddy.implementation.bind.annotation.{Argument, SuperCall, This}
 
+import scala.annotation.static
+
 class DispatcherInstrumentation extends InstrumentationBuilder with VersionFiltering  {
 
-  onAkka("2.6") {
+  onAkka("2.6", "2.7") {
 
     /**
       * This is where the actual ExecutorService instances are being created, but at this point we don't have access to
@@ -41,7 +42,7 @@ class DispatcherInstrumentation extends InstrumentationBuilder with VersionFilte
     onSubTypesOf("akka.dispatch.ExecutorServiceFactory")
       .mixin(classOf[HasDispatcherPrerequisites.Mixin])
       .mixin(classOf[HasDispatcherName.Mixin])
-      .intercept(method("createExecutorService"), InstrumentNewExecutorServiceOnAkka26)
+      .intercept(method("createExecutorService"), classOf[InstrumentNewExecutorServiceOnAkka26])
 
     /**
       * First step on getting the Actor System name is to read it from the prerequisites instance passed to the
@@ -77,10 +78,11 @@ class DispatcherInstrumentation extends InstrumentationBuilder with VersionFilte
 
 }
 
+class CaptureDispatcherPrerequisitesOnExecutorConfigurator
 object CaptureDispatcherPrerequisitesOnExecutorConfigurator {
 
   @Advice.OnMethodExit(suppress = classOf[Throwable])
-  def exit(@Advice.This configurator: Any, @Advice.Argument(1) prerequisites: DispatcherPrerequisites): Unit = {
+  @static def exit(@Advice.This configurator: Any, @Advice.Argument(1) prerequisites: DispatcherPrerequisites): Unit = {
     configurator match {
       case fjec: ForkJoinExecutorConfigurator => fjec.asInstanceOf[HasDispatcherPrerequisites].setDispatcherPrerequisites(prerequisites)
       case tpec: ThreadPoolExecutorConfigurator => tpec.threadPoolConfig.asInstanceOf[HasDispatcherPrerequisites].setDispatcherPrerequisites(prerequisites)
@@ -91,19 +93,21 @@ object CaptureDispatcherPrerequisitesOnExecutorConfigurator {
   }
 }
 
+class CopyDispatcherInfoToExecutorServiceFactory
 object CopyDispatcherInfoToExecutorServiceFactory {
 
   @Advice.OnMethodExit
-  def exit(@Advice.This poolConfig: HasDispatcherPrerequisites, @Advice.Argument(0) dispatcherName: String, @Advice.Return factory: Any): Unit = {
+  @static def exit(@Advice.This poolConfig: HasDispatcherPrerequisites, @Advice.Argument(0) dispatcherName: String, @Advice.Return factory: Any): Unit = {
     val factoryWithMixins = factory.asInstanceOf[HasDispatcherName with HasDispatcherPrerequisites]
     factoryWithMixins.setDispatcherPrerequisites(poolConfig.dispatcherPrerequisites)
     factoryWithMixins.setDispatcherName(dispatcherName)
   }
 }
 
+class InstrumentNewExecutorServiceOnAkka26
 object InstrumentNewExecutorServiceOnAkka26 {
 
-  def around(@This factory: HasDispatcherPrerequisites with HasDispatcherName, @SuperCall callable: Callable[ExecutorService]): ExecutorService = {
+  @static def around(@This factory: HasDispatcherPrerequisites with HasDispatcherName, @SuperCall callable: Callable[ExecutorService]): ExecutorService = {
     val executor = callable.call()
     val actorSystemName = factory.dispatcherPrerequisites.settings.name
     val dispatcherName = factory.dispatcherName
@@ -123,10 +127,11 @@ object InstrumentNewExecutorServiceOnAkka26 {
   }
 }
 
+class ThreadPoolConfigCopyAdvice
 object ThreadPoolConfigCopyAdvice {
 
   @Advice.OnMethodExit
-  def exit(@Advice.This original: Any, @Advice.Return copy: Any): Unit = {
+  @static def exit(@Advice.This original: Any, @Advice.Return copy: Any): Unit = {
     copy.asInstanceOf[HasDispatcherPrerequisites].setDispatcherPrerequisites(original.asInstanceOf[HasDispatcherPrerequisites].dispatcherPrerequisites)
     copy.asInstanceOf[HasDispatcherName].setDispatcherName(original.asInstanceOf[HasDispatcherName].dispatcherName)
   }

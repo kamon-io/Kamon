@@ -43,7 +43,6 @@ class TagSetLookupBenchmark {
     .withTag("userID", "abcdef")
     .withTag("correlationID", "0123456")
 
-
   val builderLeft = builderTags()
   val builderRight = builderTags()
   val keyByKeyLeft = keyByKeyTags()

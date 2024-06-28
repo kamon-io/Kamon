@@ -27,7 +27,8 @@ import org.scalatest.wordspec.AnyWordSpec
 
 import java.util.concurrent.Executors
 
-class FutureInstrumentationSpec extends AnyWordSpec with Matchers with ScalaFutures with PatienceConfiguration with OptionValues {
+class FutureInstrumentationSpec extends AnyWordSpec with Matchers with ScalaFutures with PatienceConfiguration
+    with OptionValues {
 
   // NOTE: We have this test just to ensure that the Context propagation is working, but starting with Kamon 2.0 there
   //       is no need to have explicit Runnable/Callable instrumentation because the instrumentation brought by the
@@ -63,4 +64,3 @@ class FutureInstrumentationSpec extends AnyWordSpec with Matchers with ScalaFutu
     }
   }
 }
-

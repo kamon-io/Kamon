@@ -24,8 +24,8 @@ import org.scalatest.matchers.should.Matchers
 import org.scalatest.time.SpanSugar
 import org.scalatest.wordspec.AnyWordSpec
 
-
-class SpanReportingDelaySpec extends AnyWordSpec with Matchers with OptionValues with SpanInspection.Syntax with Eventually
+class SpanReportingDelaySpec extends AnyWordSpec with Matchers with OptionValues with SpanInspection.Syntax
+    with Eventually
     with SpanSugar with TestSpanReporter with Reconfigure with InitAndStopKamonAfterAll {
 
   "the Kamon tracer" when {

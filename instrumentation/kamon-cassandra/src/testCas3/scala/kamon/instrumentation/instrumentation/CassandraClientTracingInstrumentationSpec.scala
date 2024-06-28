@@ -105,7 +105,7 @@ class CassandraClientTracingInstrumentationSpec
 
       session.execute(query).iterator().asScala.foreach(_ => ())
 
-      eventually(timeout(10 seconds)) {
+      eventually(timeout(20 seconds)) {
         val spans          = testSpanReporter().spans()
         val clientSpan     = spans.find(span => span.operationName == QueryOperations.QueryOperationName)
         val executionSpans = spans.filter(span => span.operationName == QueryOperations.ExecutionOperationName)

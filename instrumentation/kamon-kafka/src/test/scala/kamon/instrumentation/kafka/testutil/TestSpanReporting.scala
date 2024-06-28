@@ -17,9 +17,9 @@ package kamon.instrumentation.kafka.testutil
 import kamon.Kamon
 import kamon.module.Module.Registration
 import kamon.testkit.{Reconfigure, TestSpanReporter}
-import org.scalatest.{BeforeAndAfter, BeforeAndAfterAll}
+import org.scalatest.{BeforeAndAfter, Suite}
 
-trait TestSpanReporting extends Reconfigure { _: BeforeAndAfter =>
+trait TestSpanReporting extends Reconfigure { this: BeforeAndAfter with Suite =>
   var registration: Registration = _
   val reporter = new TestSpanReporter.BufferingSpanReporter
 

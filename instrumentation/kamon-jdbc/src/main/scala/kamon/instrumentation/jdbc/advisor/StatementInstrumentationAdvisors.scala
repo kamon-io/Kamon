@@ -17,11 +17,12 @@
 package kamon.instrumentation.jdbc.advisor
 
 import java.sql.{PreparedStatement, Statement}
-
 import kamon.instrumentation.jdbc.{HasStatementSQL, StatementMonitor}
 import kamon.instrumentation.jdbc.StatementMonitor.{Invocation, StatementTypes}
 import kanela.agent.libs.net.bytebuddy.asm.Advice
 import kanela.agent.libs.net.bytebuddy.asm.Advice.Thrown
+
+import scala.annotation.static
 
 /**
   * Advisor for java.sql.Statement::execute
@@ -29,12 +30,12 @@ import kanela.agent.libs.net.bytebuddy.asm.Advice.Thrown
 class StatementExecuteMethodAdvisor
 object StatementExecuteMethodAdvisor {
   @Advice.OnMethodEnter(suppress = classOf[Throwable])
-  def executeStart(@Advice.This statement: Any, @Advice.Argument(0) sql: String): Option[Invocation] = {
+  @static def executeStart(@Advice.This statement: Any, @Advice.Argument(0) sql: String): Option[Invocation] = {
     StatementMonitor.start(statement, sql, StatementTypes.GenericExecute)
   }
 
   @Advice.OnMethodExit(onThrowable = classOf[Throwable], suppress = classOf[Throwable])
-  def executeEnd(@Advice.Enter invocation: Option[Invocation], @Thrown throwable: Throwable): Unit = {
+  @static def executeEnd(@Advice.Enter invocation: Option[Invocation], @Thrown throwable: Throwable): Unit = {
     invocation.foreach(_.close(throwable))
   }
 }
@@ -45,29 +46,28 @@ object StatementExecuteMethodAdvisor {
 class PreparedStatementExecuteMethodAdvisor
 object PreparedStatementExecuteMethodAdvisor {
   @Advice.OnMethodEnter(suppress = classOf[Throwable])
-  def executeStart(@Advice.This statement: HasStatementSQL): Option[Invocation] = {
+  @static def executeStart(@Advice.This statement: HasStatementSQL): Option[Invocation] = {
     StatementMonitor.start(statement, statement.capturedStatementSQL(), StatementTypes.GenericExecute)
   }
 
   @Advice.OnMethodExit(onThrowable = classOf[Throwable], suppress = classOf[Throwable])
-  def executeEnd(@Advice.Enter invocation: Option[Invocation], @Thrown throwable: Throwable): Unit = {
+  @static def executeEnd(@Advice.Enter invocation: Option[Invocation], @Thrown throwable: Throwable): Unit = {
     invocation.foreach(_.close(throwable))
   }
 }
-
 
 /**
   * Advisor for java.sql.Statement::executeQuery
   */
 class StatementExecuteQueryMethodAdvisor
-object StatementExecuteQueryMethodAdvisor  {
+object StatementExecuteQueryMethodAdvisor {
   @Advice.OnMethodEnter(suppress = classOf[Throwable])
-  def executeStart(@Advice.This statement: Any, @Advice.Argument(0) sql: String): Option[Invocation] = {
+  @static def executeStart(@Advice.This statement: Any, @Advice.Argument(0) sql: String): Option[Invocation] = {
     StatementMonitor.start(statement, sql, StatementTypes.Query)
   }
 
   @Advice.OnMethodExit(onThrowable = classOf[Throwable], suppress = classOf[Throwable])
-  def executeEnd(@Advice.Enter invocation: Option[Invocation], @Thrown throwable: Throwable): Unit = {
+  @static def executeEnd(@Advice.Enter invocation: Option[Invocation], @Thrown throwable: Throwable): Unit = {
     invocation.foreach(_.close(throwable))
   }
 }
@@ -78,12 +78,12 @@ object StatementExecuteQueryMethodAdvisor  {
 class PreparedStatementExecuteQueryMethodAdvisor
 object PreparedStatementExecuteQueryMethodAdvisor {
   @Advice.OnMethodEnter(suppress = classOf[Throwable])
-  def executeStart(@Advice.This statement: HasStatementSQL): Option[Invocation] = {
+  @static def executeStart(@Advice.This statement: HasStatementSQL): Option[Invocation] = {
     StatementMonitor.start(statement, statement.capturedStatementSQL(), StatementTypes.Query)
   }
 
   @Advice.OnMethodExit(onThrowable = classOf[Throwable], suppress = classOf[Throwable])
-  def executeEnd(@Advice.Enter invocation: Option[Invocation], @Thrown throwable: Throwable): Unit = {
+  @static def executeEnd(@Advice.Enter invocation: Option[Invocation], @Thrown throwable: Throwable): Unit = {
     invocation.foreach(_.close(throwable))
   }
 }
@@ -92,14 +92,14 @@ object PreparedStatementExecuteQueryMethodAdvisor {
   * Advisor for java.sql.Statement::executeUpdate
   */
 class StatementExecuteUpdateMethodAdvisor
-object StatementExecuteUpdateMethodAdvisor  {
+object StatementExecuteUpdateMethodAdvisor {
   @Advice.OnMethodEnter(suppress = classOf[Throwable])
-  def executeStart(@Advice.This statement: Any, @Advice.Argument(0) sql: String): Option[Invocation] = {
+  @static def executeStart(@Advice.This statement: Any, @Advice.Argument(0) sql: String): Option[Invocation] = {
     StatementMonitor.start(statement, sql, StatementTypes.Update)
   }
 
   @Advice.OnMethodExit(onThrowable = classOf[Throwable], suppress = classOf[Throwable])
-  def executeEnd(@Advice.Enter invocation: Option[Invocation], @Thrown throwable: Throwable): Unit = {
+  @static def executeEnd(@Advice.Enter invocation: Option[Invocation], @Thrown throwable: Throwable): Unit = {
     invocation.foreach(_.close(throwable))
   }
 }
@@ -110,12 +110,12 @@ object StatementExecuteUpdateMethodAdvisor  {
 class PreparedStatementExecuteUpdateMethodAdvisor
 object PreparedStatementExecuteUpdateMethodAdvisor {
   @Advice.OnMethodEnter(suppress = classOf[Throwable])
-  def executeStart(@Advice.This statement: HasStatementSQL): Option[Invocation] = {
+  @static def executeStart(@Advice.This statement: HasStatementSQL): Option[Invocation] = {
     StatementMonitor.start(statement, statement.capturedStatementSQL(), StatementTypes.Update)
   }
 
   @Advice.OnMethodExit(onThrowable = classOf[Throwable], suppress = classOf[Throwable])
-  def executeEnd(@Advice.Enter invocation: Option[Invocation], @Thrown throwable: Throwable): Unit = {
+  @static def executeEnd(@Advice.Enter invocation: Option[Invocation], @Thrown throwable: Throwable): Unit = {
     invocation.foreach(_.close(throwable))
   }
 }
@@ -125,20 +125,20 @@ object PreparedStatementExecuteUpdateMethodAdvisor {
   * Advisor for java.sql.Statement+::executeLargeBatch
   */
 class StatementExecuteBatchMethodAdvisor
-object StatementExecuteBatchMethodAdvisor  {
+object StatementExecuteBatchMethodAdvisor {
   // inline
   @Advice.OnMethodEnter(suppress = classOf[Throwable])
-  def executeStart(@Advice.This statement: Any): Option[Invocation] = {
+  @static def executeStart(@Advice.This statement: Any): Option[Invocation] = {
     val statementSQL = statement match {
       case hSQL: HasStatementSQL => hSQL.capturedStatementSQL()
-      case _ => statement.toString
+      case _                     => statement.toString
     }
 
     StatementMonitor.start(statement, statementSQL, StatementTypes.Batch)
   }
 
   @Advice.OnMethodExit(onThrowable = classOf[Throwable], suppress = classOf[Throwable])
-  def executeEnd(@Advice.Enter invocation: Option[Invocation], @Thrown throwable: Throwable): Unit = {
+  @static def executeEnd(@Advice.Enter invocation: Option[Invocation], @Thrown throwable: Throwable): Unit = {
     invocation.foreach(_.close(throwable))
   }
 }

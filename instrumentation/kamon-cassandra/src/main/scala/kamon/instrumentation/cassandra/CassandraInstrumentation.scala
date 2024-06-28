@@ -44,33 +44,33 @@ object CassandraInstrumentation {
     val createRoundTripSpans = enableTracing && cassandraConfig.getBoolean("tracing.create-round-trip-spans")
 
     Settings(
-      sampleInterval                 = cassandraConfig.getDuration("metrics.sample-interval"),
+      sampleInterval = cassandraConfig.getDuration("metrics.sample-interval"),
       trackNodeConnectionPoolMetrics = cassandraConfig.getBoolean("metrics.track-node-connection-pools"),
-      nodeTagMode                    = TagMode.from(cassandraConfig.getString("tracing.tags.node")),
-      rackTagMode                    = TagMode.from(cassandraConfig.getString("tracing.tags.rack")),
-      dcTagMode                      = TagMode.from(cassandraConfig.getString("tracing.tags.dc")),
-      enableTracing                  = enableTracing,
-      createRoundTripSpans           = createRoundTripSpans
+      nodeTagMode = TagMode.from(cassandraConfig.getString("tracing.tags.node")),
+      rackTagMode = TagMode.from(cassandraConfig.getString("tracing.tags.rack")),
+      dcTagMode = TagMode.from(cassandraConfig.getString("tracing.tags.dc")),
+      enableTracing = enableTracing,
+      createRoundTripSpans = createRoundTripSpans
     )
   }
 
   case class Node(address: String, dc: String, rack: String)
 
   case class Settings(
-      sampleInterval:                 Duration,
-      trackNodeConnectionPoolMetrics: Boolean,
-      nodeTagMode:                    TagMode,
-      rackTagMode:                    TagMode,
-      dcTagMode:                      TagMode,
-      enableTracing:                  Boolean,
-      createRoundTripSpans:           Boolean
+    sampleInterval: Duration,
+    trackNodeConnectionPoolMetrics: Boolean,
+    nodeTagMode: TagMode,
+    rackTagMode: TagMode,
+    dcTagMode: TagMode,
+    enableTracing: Boolean,
+    createRoundTripSpans: Boolean
   )
 
   object Tags {
-    val ErrorSource              = "source"
-    val DC                       = "cassandra.dc"
-    val Node                     = "cassandra.node"
-    val Rack                     = "cassandra.rack"
+    val ErrorSource = "source"
+    val DC = "cassandra.dc"
+    val Node = "cassandra.node"
+    val Rack = "cassandra.rack"
     val CassandraDriverComponent = "cassandra.driver"
   }
 }

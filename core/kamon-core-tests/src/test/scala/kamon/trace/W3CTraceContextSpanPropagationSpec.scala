@@ -39,13 +39,14 @@ class W3CTraceContextSpanPropagationSpec extends AnyWordSpec with Matchers with 
     }
   }
 
-  def headerWriterFromMap(map: mutable.Map[String, String]): HttpPropagation.HeaderWriter = new HttpPropagation.HeaderWriter {
-    override def write(header: String, value: String): Unit = map.put(header, value)
-  }
+  def headerWriterFromMap(map: mutable.Map[String, String]): HttpPropagation.HeaderWriter =
+    new HttpPropagation.HeaderWriter {
+      override def write(header: String, value: String): Unit = map.put(header, value)
+    }
 
   def headerReaderFromMap(map: Map[String, String]): HttpPropagation.HeaderReader = new HttpPropagation.HeaderReader {
     override def read(header: String): Option[String] = {
-      if(map.contains("fail"))
+      if (map.contains("fail"))
         sys.error("failing on purpose")
 
       map.get(header)
@@ -55,22 +56,28 @@ class W3CTraceContextSpanPropagationSpec extends AnyWordSpec with Matchers with 
   }
 
   def testContext(): Context =
-    Context.of(Span.Key, Span.Remote(
-      id = Identifier("4321", Array[Byte](4, 3, 2, 1)),
-      parentId = Identifier("2222", Array[Byte](2, 2, 2, 2)),
-      trace = Trace(
-        id = Identifier("1234", Array[Byte](1, 2, 3, 4)),
-        samplingDecision = SamplingDecision.Sample
+    Context.of(
+      Span.Key,
+      Span.Remote(
+        id = Identifier("4321", Array[Byte](4, 3, 2, 1)),
+        parentId = Identifier("2222", Array[Byte](2, 2, 2, 2)),
+        trace = Trace(
+          id = Identifier("1234", Array[Byte](1, 2, 3, 4)),
+          samplingDecision = SamplingDecision.Sample
+        )
       )
-    ))
+    )
 
   def testContextWithoutParent(): Context =
-    Context.of(Span.Key, Span.Remote(
-      id = Identifier("4321", Array[Byte](4, 3, 2, 1)),
-      parentId = Identifier.Empty,
-      trace = Trace(
-        id = Identifier("1234", Array[Byte](1, 2, 3, 4)),
-        samplingDecision = SamplingDecision.Sample
+    Context.of(
+      Span.Key,
+      Span.Remote(
+        id = Identifier("4321", Array[Byte](4, 3, 2, 1)),
+        parentId = Identifier.Empty,
+        trace = Trace(
+          id = Identifier("1234", Array[Byte](1, 2, 3, 4)),
+          samplingDecision = SamplingDecision.Sample
+        )
       )
-    ))
+    )
 }

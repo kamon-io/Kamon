@@ -84,7 +84,8 @@ object AkkaInstrumentation {
     autoGrouping: Boolean,
     allowDoomsdayWildcards: Boolean,
     safeActorTrackFilter: Filter,
-    safeActorStartTraceFilter: Filter
+    safeActorStartTraceFilter: Filter,
+    exposeClusterMetrics: Boolean
   )
 
   object Settings {
@@ -92,6 +93,7 @@ object AkkaInstrumentation {
     def from(config: Config): Settings = {
       val akkaConfig = config.getConfig("kamon.instrumentation.akka")
       val allowDoomsdayWildcards = akkaConfig.getBoolean("filters.actors.doomsday-wildcard")
+      val exposeClusterMetrics = akkaConfig.getBoolean("cluster.track-cluster-metrics")
 
       val askPatternWarning = akkaConfig.getString("ask-pattern-timeout-warning") match {
         case "off"          => Off
@@ -105,7 +107,8 @@ object AkkaInstrumentation {
         akkaConfig.getBoolean("auto-grouping"),
         allowDoomsdayWildcards,
         safeFilter(config.getConfig(TrackActorFilterName), allowDoomsdayWildcards),
-        safeFilter(config.getConfig(StartTraceActorFilterName), allowDoomsdayWildcards)
+        safeFilter(config.getConfig(StartTraceActorFilterName), allowDoomsdayWildcards),
+        exposeClusterMetrics
       )
     }
 

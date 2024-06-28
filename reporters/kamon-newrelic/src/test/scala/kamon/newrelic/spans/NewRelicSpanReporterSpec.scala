@@ -46,9 +46,10 @@ class NewRelicSpanReporterSpec extends AnyWordSpec with Matchers {
       when(builder.build(any[Config])).thenReturn(sender)
 
       val reporter = new NewRelicSpanReporter(builder)
-      //change the service name attribute and tags and make sure that we reconfigure with it!
+      // change the service name attribute and tags and make sure that we reconfigure with it!
       val tagDetails = ConfigValueFactory.fromMap(Map("testTag" -> "testThing").asJava)
-      val configObject: ConfigValue = ConfigValueFactory.fromMap(Map("service" -> "cheese-whiz", "host" -> "thing", "tags" -> tagDetails).asJava)
+      val configObject: ConfigValue =
+        ConfigValueFactory.fromMap(Map("service" -> "cheese-whiz", "host" -> "thing", "tags" -> tagDetails).asJava)
       val config: Config = Kamon.config().withValue("kamon.environment", configObject)
       reporter.reconfigure(config, Environment("thing", "cheese-whiz", null, null, TagSet.of("testTag", "testThing")))
 
@@ -61,7 +62,11 @@ class NewRelicSpanReporterSpec extends AnyWordSpec with Matchers {
     }
   }
 
-  private def buildExpectedBatch(serviceName: String = "kamon-application", hostName : String = InetAddress.getLocalHost.getHostName, tagValue: String = "testValue" ) = {
+  private def buildExpectedBatch(
+    serviceName: String = "kamon-application",
+    hostName: String = InetAddress.getLocalHost.getHostName,
+    tagValue: String = "testValue"
+  ) = {
     val expectedAttributes = new Attributes()
       .put("xx", TestSpanHelper.now)
       .put("span.kind", "client")

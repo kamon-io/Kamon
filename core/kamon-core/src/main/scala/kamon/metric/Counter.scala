@@ -22,7 +22,6 @@ import kamon.metric.Metric.{BaseMetric, BaseMetricAutoUpdate}
 import kamon.tag.TagSet
 import org.slf4j.LoggerFactory
 
-
 /**
   * Instrument that tracks a monotonically increasing value.
   */
@@ -38,7 +37,6 @@ trait Counter extends Instrument[Counter, Metric.Settings.ForValueInstrument] {
     */
   def increment(times: Long): Counter
 }
-
 
 object Counter {
 
@@ -65,22 +63,23 @@ object Counter {
       val diff = currentValue - _previousValue
       _previousValue = currentValue
 
-      if(diff >= 0)
+      if (diff >= 0)
         counter.increment(diff)
       else
-        _logger.warn(s"Ignoring negative delta [$diff] when trying to update counter [${counter.metric.name},${counter.tags}]")
+        _logger.warn(
+          s"Ignoring negative delta [$diff] when trying to update counter [${counter.metric.name},${counter.tags}]"
+        )
     }
   }
-
 
   /**
     * LongAdder-based counter implementation. LongAdder counters are safe to share across threads and provide superior
     * write performance over Atomic values in cases where the writes largely outweigh the reads, which is the common
     * case in Kamon counters (writing every time something needs to be tracked, reading roughly once per minute).
     */
-  class LongAdder(val metric: BaseMetric[Counter, Metric.Settings.ForValueInstrument,Long], val tags: TagSet)
+  class LongAdder(val metric: BaseMetric[Counter, Metric.Settings.ForValueInstrument, Long], val tags: TagSet)
       extends Counter with Instrument.Snapshotting[Long]
-      with BaseMetricAutoUpdate[Counter, Metric.Settings.ForValueInstrument,Long] {
+      with BaseMetricAutoUpdate[Counter, Metric.Settings.ForValueInstrument, Long] {
 
     private val _adder = new kamon.jsr166.LongAdder()
 
@@ -90,7 +89,7 @@ object Counter {
     }
 
     override def increment(times: Long): Counter = {
-      if(times >= 0)
+      if (times >= 0)
         _adder.add(times)
       else
         _logger.warn(s"Ignoring an attempt to decrease a counter by [$times] on [${metric.name},${tags}]")
@@ -99,12 +98,12 @@ object Counter {
     }
 
     override def snapshot(resetState: Boolean): Long =
-      if(resetState)
-       _adder.sumAndReset()
+      if (resetState)
+        _adder.sumAndReset()
       else
-       _adder.sum()
+        _adder.sum()
 
-    override def baseMetric: BaseMetric[Counter, Metric.Settings.ForValueInstrument,Long] =
+    override def baseMetric: BaseMetric[Counter, Metric.Settings.ForValueInstrument, Long] =
       metric
   }
 }

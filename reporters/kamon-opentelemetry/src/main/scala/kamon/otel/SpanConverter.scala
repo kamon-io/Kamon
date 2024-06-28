@@ -32,22 +32,31 @@ import kamon.trace.Span.{Kind, TagKeys}
 import kamon.trace.Trace.SamplingDecision.Sample
 import kamon.trace.{Identifier, Span}
 
-
-class SpanWrapper(includeErrorEvent: Boolean, resource: Resource, kamonVersion: String, span: Span.Finished) extends SpanData {
+class SpanWrapper(includeErrorEvent: Boolean, resource: Resource, kamonVersion: String, span: Span.Finished)
+    extends SpanData {
   private val instrumentationScopeInfo: InstrumentationScopeInfo =
-    InstrumentationScopeInfo.create(span.metricTags.get(Lookups.option(Span.TagKeys.Component)) getOrElse "kamon-instrumentation", kamonVersion, null)
+    InstrumentationScopeInfo.create(
+      span.metricTags.get(Lookups.option(Span.TagKeys.Component)) getOrElse "kamon-instrumentation",
+      kamonVersion,
+      null
+    )
   private val sampled: Boolean = span.trace.samplingDecision == Sample
   private val attachErrorEvent: Boolean = includeErrorEvent && span.hasError
 
   private def getErrorEvent: Seq[EventData] =
     if (attachErrorEvent) {
       val builder = Attributes.builder()
-      span.tags.get(Lookups.option(TagKeys.ErrorMessage)).foreach(msg => builder.put(AttributeKey.stringKey("exception.message"), msg))
-      span.tags.get(Lookups.option(TagKeys.ErrorStacktrace)).foreach(st => builder.put(AttributeKey.stringKey("exception.stacktrace"), st))
-      span.tags.get(Lookups.option(TagKeys.ErrorType)).foreach(st => builder.put(AttributeKey.stringKey("exception.type"), st))
+      span.tags.get(Lookups.option(TagKeys.ErrorMessage)).foreach(msg =>
+        builder.put(AttributeKey.stringKey("exception.message"), msg)
+      )
+      span.tags.get(Lookups.option(TagKeys.ErrorStacktrace)).foreach(st =>
+        builder.put(AttributeKey.stringKey("exception.stacktrace"), st)
+      )
+      span.tags.get(Lookups.option(TagKeys.ErrorType)).foreach(st =>
+        builder.put(AttributeKey.stringKey("exception.type"), st)
+      )
       Seq(EventData.create(SpanConverter.toEpocNano(span.from), "exception", builder.build))
-    }
-    else Nil
+    } else Nil
 
   override def getName: String = span.operationName
 
@@ -56,7 +65,8 @@ class SpanWrapper(includeErrorEvent: Boolean, resource: Resource, kamonVersion: 
   override val getSpanContext: SpanContext = SpanConverter.mkSpanContext(sampled, span.trace.id, span.id)
 
   override val getParentSpanContext: SpanContext =
-    if (span.parentId.isEmpty) SpanContext.getInvalid else SpanConverter.mkSpanContext(sampled, span.trace.id, span.parentId)
+    if (span.parentId.isEmpty) SpanContext.getInvalid
+    else SpanConverter.mkSpanContext(sampled, span.trace.id, span.parentId)
 
   override val getStatus: StatusData = SpanConverter.getStatus(span)
 
@@ -94,12 +104,12 @@ private[otel] object SpanConverter {
     TimeUnit.NANOSECONDS.convert(instant.getEpochSecond, TimeUnit.SECONDS) + instant.getNano
 
   private[otel] def toKind(kind: Span.Kind): SpanKind = kind match {
-    case Kind.Client => SpanKind.CLIENT
+    case Kind.Client   => SpanKind.CLIENT
     case Kind.Consumer => SpanKind.CONSUMER
     case Kind.Internal => SpanKind.INTERNAL
     case Kind.Producer => SpanKind.PRODUCER
-    case Kind.Server => SpanKind.SERVER
-    case _ => SpanKind.INTERNAL // Default value
+    case Kind.Server   => SpanKind.SERVER
+    case _             => SpanKind.INTERNAL // Default value
   }
 
   private[otel] def getTraceFlags(sample: Boolean): TraceFlags =
@@ -125,9 +135,9 @@ private[otel] object SpanConverter {
   private[otel] def toAttributes(tags: TagSet): Attributes = {
     val builder = Attributes.builder()
     tags.iterator().foreach {
-      case t: Tag.String => builder.put(t.key, t.value)
+      case t: Tag.String  => builder.put(t.key, t.value)
       case t: Tag.Boolean => builder.put(t.key, t.value)
-      case t: Tag.Long => builder.put(t.key, t.value)
+      case t: Tag.Long    => builder.put(t.key, t.value)
     }
     builder.build()
   }
@@ -135,6 +145,10 @@ private[otel] object SpanConverter {
   def convertSpan(includeErrorEvent: Boolean, resource: Resource, kamonVersion: String)(span: Span.Finished): SpanData =
     new SpanWrapper(includeErrorEvent, resource, kamonVersion, span)
 
-  def convert(includeErrorEvent: Boolean, resource: Resource, kamonVersion: String)(spans: Seq[Span.Finished]): JCollection[SpanData] =
+  def convert(
+    includeErrorEvent: Boolean,
+    resource: Resource,
+    kamonVersion: String
+  )(spans: Seq[Span.Finished]): JCollection[SpanData] =
     spans.map(convertSpan(includeErrorEvent, resource, kamonVersion)).asJava
 }

@@ -16,9 +16,6 @@
 
 package kamon.newrelic.metrics
 
-import java.net.{URI, URL}
-import java.time.Duration
-
 import com.newrelic.telemetry.{OkHttpPoster, SenderConfiguration}
 import com.newrelic.telemetry.metrics.{MetricBatch, MetricBatchSender}
 import com.typesafe.config.Config
@@ -26,13 +23,14 @@ import kamon.Kamon
 import kamon.metric.PeriodSnapshot
 import kamon.module.{MetricReporter, Module, ModuleFactory}
 import kamon.newrelic.AttributeBuddy.buildCommonAttributes
-import kamon.newrelic.LibraryVersion
+import kamon.newrelic.NewRelicConfig
 import kamon.status.Environment
 import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConverters._
 
-class NewRelicMetricsReporter(senderBuilder: () => MetricBatchSender = () => NewRelicMetricsReporter.buildSender()) extends MetricReporter {
+class NewRelicMetricsReporter(senderBuilder: () => MetricBatchSender = () => NewRelicMetricsReporter.buildSender())
+    extends MetricReporter {
 
   private val logger = LoggerFactory.getLogger(classOf[NewRelicMetricsReporter])
   @volatile private var commonAttributes = buildCommonAttributes(Kamon.environment)
@@ -71,7 +69,7 @@ class NewRelicMetricsReporter(senderBuilder: () => MetricBatchSender = () => New
     reconfigure(Kamon.environment)
   }
 
-  //exposed for testing
+  // exposed for testing
   def reconfigure(environment: Environment): Unit = {
     commonAttributes = buildCommonAttributes(environment)
     sender = senderBuilder()
@@ -92,22 +90,14 @@ object NewRelicMetricsReporter {
   }
 
   def buildSenderConfig(config: Config): SenderConfiguration = {
-    val nrConfig = config.getConfig("kamon.newrelic")
-    val nrInsightsInsertKey = nrConfig.getString("nr-insights-insert-key")
-    val enableAuditLogging = nrConfig.getBoolean("enable-audit-logging")
-    val userAgent = s"newrelic-kamon-reporter/${LibraryVersion.version}"
-    val callTimeout = Duration.ofSeconds(5)
-
+    val nrConfig = NewRelicConfig.fromConfig(config)
     val senderConfig = MetricBatchSender.configurationBuilder()
-      .apiKey(nrInsightsInsertKey)
-      .httpPoster(new OkHttpPoster(callTimeout))
-      .auditLoggingEnabled(enableAuditLogging)
-      .secondaryUserAgent(userAgent)
-
-    if (nrConfig.hasPath("metric-ingest-uri")) {
-      val uriOverride = nrConfig.getString("metric-ingest-uri")
-      senderConfig.endpoint(new URL(uriOverride))
-    }
+      .apiKey(nrConfig.apiKey.value)
+      .useLicenseKey(nrConfig.apiKey.isLicenseKey)
+      .httpPoster(new OkHttpPoster(nrConfig.callTimeout))
+      .auditLoggingEnabled(nrConfig.enableAuditLogging)
+      .secondaryUserAgent(nrConfig.userAgent)
+    nrConfig.metricIngestUri.foreach(senderConfig.endpoint)
     senderConfig.build()
   }
 }

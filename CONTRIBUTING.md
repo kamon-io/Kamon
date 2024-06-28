@@ -25,8 +25,9 @@ If you want to make a code contribution to the project
 ------------------------------------------------------
 
 Awesome! First, please note that we try to follow the [commit message conventions] used by the Spray guys and we need
-you to electronically fill our [CLA] before accepting your contribution. Also, if your PR contains various commits,
-please squash them into a single commit. Let the PR rain begin!
+you to electronically fill our [CLA] before accepting your contribution. This project uses scalafmt for style, so
+remember to apply scalafmtAll to your commit. Also, if your PR contains various commits, please squash them into a
+single commit. Let the PR rain begin!
 
 
 [open an issue]: https://github.com/kamon-io/Kamon/issues/new

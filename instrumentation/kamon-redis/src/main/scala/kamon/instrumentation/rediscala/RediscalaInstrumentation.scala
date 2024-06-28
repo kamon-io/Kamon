@@ -6,12 +6,19 @@ import kamon.util.CallingThreadExecutionContext
 import kanela.agent.api.instrumentation.InstrumentationBuilder
 import kanela.agent.libs.net.bytebuddy.asm.Advice
 
+import scala.annotation.static
 import scala.concurrent.Future
 import scala.util.{Failure, Success}
 
 class RediscalaInstrumentation extends InstrumentationBuilder {
-  onTypes("redis.Request", "redis.ActorRequest", "redis.BufferedRequest",
-    "redis.commands.BLists", "redis.RoundRobinPoolRequest", "ActorRequest")
+  onTypes(
+    "redis.Request",
+    "redis.ActorRequest",
+    "redis.BufferedRequest",
+    "redis.commands.BLists",
+    "redis.RoundRobinPoolRequest",
+    "ActorRequest"
+  )
     .advise(method("send").and(takesArguments(1)), classOf[RequestInstrumentation])
 
   onTypes("redis.ActorRequest$class")
@@ -22,7 +29,7 @@ class RediscalaInstrumentation extends InstrumentationBuilder {
 class RequestInstrumentation
 object RequestInstrumentation {
   @Advice.OnMethodEnter()
-  def enter(@Advice.Argument(0) command: Any): Span = {
+  @static def enter(@Advice.Argument(0) command: Any): Span = {
     val spanName = s"redis.command.${command.getClass.getSimpleName}"
 
     Kamon.clientSpanBuilder(spanName, "redis.client.rediscala")
@@ -30,9 +37,7 @@ object RequestInstrumentation {
   }
 
   @Advice.OnMethodExit(onThrowable = classOf[Throwable], suppress = classOf[Throwable])
-  def exit(@Advice.Enter span: Span,
-           @Advice.Thrown t: Throwable,
-           @Advice.Return future: Future[_]) = {
+  @static def exit(@Advice.Enter span: Span, @Advice.Thrown t: Throwable, @Advice.Return future: Future[_]) = {
     if (t != null) {
       span.fail(t);
     }
@@ -53,7 +58,7 @@ class RoundRobinRequestInstrumentation
 
 object RoundRobinRequestInstrumentation {
   @Advice.OnMethodEnter()
-  def enter(@Advice.Argument(1) command: Any): Span = {
+  @static def enter(@Advice.Argument(1) command: Any): Span = {
     println("Entering round robin")
     val spanName = s"redis.command.${command.getClass.getSimpleName}"
     Kamon.clientSpanBuilder(spanName, "redis.client.rediscala")
@@ -61,9 +66,7 @@ object RoundRobinRequestInstrumentation {
   }
 
   @Advice.OnMethodExit(onThrowable = classOf[Throwable], suppress = classOf[Throwable])
-  def exit(@Advice.Enter span: Span,
-           @Advice.Thrown t: Throwable,
-           @Advice.Return future: Future[_]) = {
+  @static def exit(@Advice.Enter span: Span, @Advice.Thrown t: Throwable, @Advice.Return future: Future[_]) = {
     println("Exiting round robin")
     if (t != null) {
       span.fail(t);
@@ -84,16 +87,14 @@ object RoundRobinRequestInstrumentation {
 class ActorRequestAdvice
 object ActorRequestAdvice {
   @Advice.OnMethodEnter()
-  def enter(@Advice.Argument(1) command: Any): Span = {
+  @static def enter(@Advice.Argument(1) command: Any): Span = {
     val spanName = s"redis.command.${command.getClass.getSimpleName}"
     Kamon.clientSpanBuilder(spanName, "redis.client.rediscala")
       .start()
   }
 
   @Advice.OnMethodExit(onThrowable = classOf[Throwable], suppress = classOf[Throwable])
-  def exit(@Advice.Enter span: Span,
-           @Advice.Thrown t: Throwable,
-           @Advice.Return future: Future[_]) = {
+  @static def exit(@Advice.Enter span: Span, @Advice.Thrown t: Throwable, @Advice.Return future: Future[_]) = {
     if (t != null) {
       span.fail(t);
     }

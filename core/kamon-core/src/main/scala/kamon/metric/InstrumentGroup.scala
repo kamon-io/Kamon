@@ -41,32 +41,48 @@ abstract class InstrumentGroup(val commonTags: TagSet) {
     * Registers and returns an instrument of the provided metric with the common tags and the additionally provided
     * key/value pair.
     */
-  def register[Inst <: Instrument[Inst, Sett], Sett <: Metric.Settings](metric: Metric[Inst, Sett], key: String, value: String): Inst =
+  def register[Inst <: Instrument[Inst, Sett], Sett <: Metric.Settings](
+    metric: Metric[Inst, Sett],
+    key: String,
+    value: String
+  ): Inst =
     registerInstrument(metric, commonTags.withTag(key, value))
 
   /**
     * Registers and returns an instrument of the provided metric with the common tags and the additionally provided
     * key/value pair.
     */
-  def register[Inst <: Instrument[Inst, Sett], Sett <: Metric.Settings](metric: Metric[Inst, Sett], key: String, value: Long): Inst =
+  def register[Inst <: Instrument[Inst, Sett], Sett <: Metric.Settings](
+    metric: Metric[Inst, Sett],
+    key: String,
+    value: Long
+  ): Inst =
     registerInstrument(metric, commonTags.withTag(key, value))
 
   /**
     * Registers and returns an instrument of the provided metric with the common tags and the additionally provided
     * key/value pair.
     */
-  def register[Inst <: Instrument[Inst, Sett], Sett <: Metric.Settings](metric: Metric[Inst, Sett], key: String, value: Boolean): Inst =
+  def register[Inst <: Instrument[Inst, Sett], Sett <: Metric.Settings](
+    metric: Metric[Inst, Sett],
+    key: String,
+    value: Boolean
+  ): Inst =
     registerInstrument(metric, commonTags.withTag(key, value))
 
   /**
     * Registers and returns an instrument of the provided metric with the common tags and the additionally provided tags.
     */
-  def register[Inst <: Instrument[Inst, Sett], Sett <: Metric.Settings](metric: Metric[Inst, Sett], extraTags: TagSet): Inst =
+  def register[Inst <: Instrument[Inst, Sett], Sett <: Metric.Settings](
+    metric: Metric[Inst, Sett],
+    extraTags: TagSet
+  ): Inst =
     registerInstrument(metric, commonTags.withTags(extraTags))
 
-
-  private def registerInstrument[Inst <: Instrument[Inst, Sett], Sett <: Metric.Settings](metric: Metric[Inst, Sett],
-      tags: TagSet): Inst = synchronized {
+  private def registerInstrument[Inst <: Instrument[Inst, Sett], Sett <: Metric.Settings](
+    metric: Metric[Inst, Sett],
+    tags: TagSet
+  ): Inst = synchronized {
     val instrument = metric.withTags(tags)
     _groupInstruments = instrument :: _groupInstruments
     instrument
@@ -76,6 +92,6 @@ abstract class InstrumentGroup(val commonTags: TagSet) {
     * Removes all instruments that were registered by this group.
     */
   def remove(): Unit = synchronized {
-    _groupInstruments foreach(_.remove())
+    _groupInstruments foreach (_.remove())
   }
 }

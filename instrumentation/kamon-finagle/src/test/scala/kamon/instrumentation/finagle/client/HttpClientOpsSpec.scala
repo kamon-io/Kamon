@@ -21,7 +21,8 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future, Promise}
 
-class HttpClientOpsSpec extends AnyWordSpecLike with Matchers with Reconfigure with InitAndStopKamonAfterAll with BeforeAndAfterAll {
+class HttpClientOpsSpec extends AnyWordSpecLike with Matchers with Reconfigure with InitAndStopKamonAfterAll
+    with BeforeAndAfterAll {
   override protected def beforeAll(): Unit = {
     super.beforeAll()
     applyConfig(HttpClientOpsSpec.Config)
@@ -50,7 +51,7 @@ class HttpClientOpsSpec extends AnyWordSpecLike with Matchers with Reconfigure w
       }
 
       "set marks for standard finagle annotations" in {
-        span.marks.map(_.key) should contain allOf("wire/recv", "wire/send", "client/send")
+        span.marks.map(_.key) should contain allOf ("wire/recv", "wire/send", "client/send")
       }
 
       "add trace propagation headers to the request" in {
@@ -112,17 +113,17 @@ object HttpClientOpsSpec {
       // TraceInitializerFilter will clear b3 headers before we can check them in the test.
       .withStack(_.remove(TraceInitializerFilter.role))
       .serve(
-      ":*",
-      new Service[Request, Response] {
-        def apply(request: Request): twitterutil.Future[Response] = {
-          requestReceived.success(request)
-          request.path match {
-            case "/ok" => twitterutil.Future.value(Response())
-            case "/oops" => twitterutil.Future.value(Response().statusCode(400))
+        ":*",
+        new Service[Request, Response] {
+          def apply(request: Request): twitterutil.Future[Response] = {
+            requestReceived.success(request)
+            request.path match {
+              case "/ok"   => twitterutil.Future.value(Response())
+              case "/oops" => twitterutil.Future.value(Response().statusCode(400))
+            }
           }
         }
-      }
-    )
+      )
     val port: Int = server.boundAddress.asInstanceOf[InetSocketAddress].getPort
     def close(): Future[Unit] = server.close().as[Future[Unit]]
   }
@@ -167,5 +168,3 @@ object HttpClientOpsSpec {
     }
   }
 }
-
-

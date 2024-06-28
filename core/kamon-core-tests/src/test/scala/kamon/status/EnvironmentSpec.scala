@@ -48,7 +48,8 @@ class EnvironmentSpec extends AnyWordSpec with Matchers {
           |  host = spec-host
           |  instance = spec-instance
           |}
-        """.stripMargin)
+        """.stripMargin
+      )
 
       val env = Environment.from(customConfig.withFallback(baseConfig))
 
@@ -64,11 +65,12 @@ class EnvironmentSpec extends AnyWordSpec with Matchers {
           |  custom1 = "test1"
           |  env = staging
           |}
-        """.stripMargin)
+        """.stripMargin
+      )
 
       val env = Environment.from(customConfig.withFallback(baseConfig))
 
-      env.tags.toMap should contain allOf(
+      env.tags.toMap should contain allOf (
         ("custom1" -> "test1"),
         ("env" -> "staging")
       )

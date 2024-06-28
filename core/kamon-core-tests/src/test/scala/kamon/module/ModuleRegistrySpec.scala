@@ -29,7 +29,7 @@ import org.scalatest.wordspec.AnyWordSpec
 import scala.concurrent.Await
 import scala.concurrent.duration._
 
-class ModuleRegistrySpec extends AnyWordSpec with Matchers with Reconfigure with Eventually with BeforeAndAfterAll  {
+class ModuleRegistrySpec extends AnyWordSpec with Matchers with Reconfigure with Eventually with BeforeAndAfterAll {
   "The ModuleRegistry" when {
     "working with metrics reporters" should {
       "report all metrics if no filters are applied" in {
@@ -42,7 +42,7 @@ class ModuleRegistrySpec extends AnyWordSpec with Matchers with Reconfigure with
 
         eventually {
           reporter.snapshotCount() should be >= 1
-          reporter.metrics() should contain allOf(
+          reporter.metrics() should contain allOf (
             "test.hello",
             "test.world",
             "other.hello"
@@ -58,7 +58,8 @@ class ModuleRegistrySpec extends AnyWordSpec with Matchers with Reconfigure with
         Kamon.counter("other.hello").withoutTags().increment()
 
         val originalReporter = new SeenMetricsReporter()
-        val reporter = MetricReporter.withTransformations(originalReporter, MetricReporter.filterMetrics("does-not-exist"))
+        val reporter =
+          MetricReporter.withTransformations(originalReporter, MetricReporter.filterMetrics("does-not-exist"))
         val subscription = Kamon.registerModule("reporter-registry-spec", reporter)
 
         eventually {
@@ -75,13 +76,13 @@ class ModuleRegistrySpec extends AnyWordSpec with Matchers with Reconfigure with
         Kamon.counter("other.hello").withoutTags().increment()
 
         val originalReporter = new SeenMetricsReporter()
-        val reporter = MetricReporter.withTransformations(originalReporter, MetricReporter.filterMetrics("test-metric-filter"))
+        val reporter =
+          MetricReporter.withTransformations(originalReporter, MetricReporter.filterMetrics("test-metric-filter"))
         val subscription = Kamon.registerModule("reporter-registry-spec", reporter)
-
 
         eventually {
           originalReporter.snapshotCount() should be >= 1
-          originalReporter.metrics() should contain allOf(
+          originalReporter.metrics() should contain allOf (
             "test.hello",
             "test.world"
           )
@@ -102,7 +103,6 @@ class ModuleRegistrySpec extends AnyWordSpec with Matchers with Reconfigure with
     }
   }
 
-
   override protected def beforeAll(): Unit = {
     Kamon.init()
 
@@ -116,7 +116,6 @@ class ModuleRegistrySpec extends AnyWordSpec with Matchers with Reconfigure with
     """.stripMargin
     )
   }
-
 
   override protected def afterAll(): Unit = {
     reset()

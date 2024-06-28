@@ -32,10 +32,16 @@ class GuiceModule extends Module {
 object GuiceModule {
 
   @Singleton
-  class KamonLoader @Inject() (lifecycle: ApplicationLifecycle, environment: Environment, configuration: Configuration) {
+  class KamonLoader @Inject() (
+    lifecycle: ApplicationLifecycle,
+    environment: Environment,
+    configuration: Configuration
+  ) {
     Logger(classOf[KamonLoader]).info("Reconfiguring Kamon with Play's Config")
     Logger(classOf[KamonLoader]).info(configuration.underlying.getString("play.server.provider"))
     Logger(classOf[KamonLoader]).info(configuration.underlying.getString("kamon.trace.tick-interval"))
+
+    kamon.ClassLoading.changeClassLoader(environment.classLoader)
     Kamon.initWithoutAttaching(configuration.underlying)
 
     lifecycle.addStopHook { () =>

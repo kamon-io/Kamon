@@ -27,9 +27,13 @@ class GraphiteReporterSpec extends AnyWordSpec with Matchers with BeforeAndAfter
     val to = Instant.ofEpochSecond(1517000993)
 
     val periodSnapshot = PeriodSnapshot.apply(
-      from, to,
+      from,
+      to,
       counters = List(MetricSnapshotBuilder.counter("custom.user.counter", TagSet.of("tag.1", "value.1.2"), 42)),
-      gauges = List.empty, histograms = List.empty, timers = List.empty, rangeSamplers = List.empty
+      gauges = List.empty,
+      histograms = List.empty,
+      timers = List.empty,
+      rangeSamplers = List.empty
     )
 
     val lines = graphite.lineListener(1)
@@ -38,7 +42,9 @@ class GraphiteReporterSpec extends AnyWordSpec with Matchers with BeforeAndAfter
     "send counter metrics to a server socket" in {
       reporter.reportPeriodSnapshot(periodSnapshot)
 
-      lines.awaitLines() shouldBe List("kamon-graphite.custom_user_counter.count;special-shouldsee-tag=bla;service=kamon-application;tag.1=value.1.2 42 1517000993")
+      lines.awaitLines() shouldBe List(
+        "kamon-graphite.custom_user_counter.count;special-shouldsee-tag=bla;service=kamon-application;tag.1=value.1.2 42 1517000993"
+      )
     }
 
     reporter.stop()
@@ -65,7 +71,8 @@ class GraphiteServer {
   }
 }
 
-class GraphiteTcpSocketListener(port: Int, listeners: java.util.List[LineListener], started: CountDownLatch) extends Thread {
+class GraphiteTcpSocketListener(port: Int, listeners: java.util.List[LineListener], started: CountDownLatch)
+    extends Thread {
   private val log = LoggerFactory.getLogger(classOf[GraphiteTcpSocketListener])
   private val ss = new CopyOnWriteArrayList[InputStream]
   private val serverSocket = new ServerSocket()
@@ -83,8 +90,7 @@ class GraphiteTcpSocketListener(port: Int, listeners: java.util.List[LineListene
         val line = lineReader.nextLine()
         listeners.asScala.foreach(_.putLine(line))
       }
-    }
-    finally {
+    } finally {
       log.debug("stopping graphite simulator")
       serverSocket.close()
     }
@@ -93,8 +99,7 @@ class GraphiteTcpSocketListener(port: Int, listeners: java.util.List[LineListene
   def close(): Unit = {
     try {
       ss.asScala.foreach(_.close())
-    }
-    finally {
+    } finally {
       serverSocket.close()
     }
   }

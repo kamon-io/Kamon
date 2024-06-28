@@ -11,21 +11,27 @@ import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
 
+import scala.concurrent.ExecutionContextExecutor
+
 class ServerFlowWrapperSpec extends AnyWordSpecLike with Matchers with ScalaFutures with InitAndStopKamonAfterAll {
 
-  implicit private val system = ActorSystem("http-client-instrumentation-spec")
-  implicit private val executor = system.dispatcher
-  implicit private val materializer = ActorMaterializer()
+  implicit private val system: ActorSystem = ActorSystem("http-client-instrumentation-spec")
+  implicit private val executor: ExecutionContextExecutor = system.dispatcher
+  implicit private val materializer: ActorMaterializer = ActorMaterializer()
 
   private val okReturningFlow = Flow[HttpRequest].map { _ =>
     HttpResponse(status = StatusCodes.OK, entity = HttpEntity("OK"))
   }
 
   private val defaultReturningFlow = Flow[HttpRequest].map { _ =>
-    HttpResponse(status = StatusCodes.OK, entity = HttpEntity.Default(
-      ContentTypes.`text/plain(UTF-8)`,
-      2,
-      Source.single(ByteString.apply("OK"))))
+    HttpResponse(
+      status = StatusCodes.OK,
+      entity = HttpEntity.Default(
+        ContentTypes.`text/plain(UTF-8)`,
+        2,
+        Source.single(ByteString.apply("OK"))
+      )
+    )
   }
 
   "the server flow wrapper" should {

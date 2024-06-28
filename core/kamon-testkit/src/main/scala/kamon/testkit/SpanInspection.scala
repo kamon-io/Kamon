@@ -22,7 +22,6 @@ import java.time.Instant
 import kamon.tag.TagSet
 import kamon.trace.Span
 
-
 /**
   * Utility functions to extract information that is not exposed on the Span interface.
   */
@@ -32,29 +31,26 @@ trait SpanInspection {
   def inspect(span: Span): Inspector =
     new Inspector(span)
 
-
   class Inspector(span: Span) {
 
     /**
       * Returns a TagSet with all Span tags added on the Span.
       */
     def spanTags(): TagSet =
-      if(span.isInstanceOf[Span.Local])
+      if (span.isInstanceOf[Span.Local])
         Reflection.getField[Span.Local, TagSet.Builder](span.asInstanceOf[Span.Local], "_spanTags").build()
       else
         TagSet.Empty
-
 
     /**
       * Returns a TagSet with all Span metric tags added to the Span and the additional tags that are added by default
       * like the "error", "operation" and possibly "parentOperation" tags.
       */
     def metricTags(): TagSet =
-      if(span.isInstanceOf[Span.Local])
+      if (span.isInstanceOf[Span.Local])
         Reflection.invoke[Span.Local, TagSet](span.asInstanceOf[Span.Local], "createMetricTags")
       else
         TagSet.Empty
-
 
     /**
       * Returns a combination of all tags (span and metric tags) on the Span.
@@ -62,12 +58,11 @@ trait SpanInspection {
     def tags(): TagSet =
       spanTags() withTags metricTags()
 
-
     /**
       * Returns all marks on the Span.
       */
     def marks(): Seq[Span.Mark] =
-      if(span.isInstanceOf[Span.Local])
+      if (span.isInstanceOf[Span.Local])
         Reflection.getField[Span.Local, Seq[Span.Mark]](span.asInstanceOf[Span.Local], "_marks")
       else
         Seq.empty
@@ -76,21 +71,19 @@ trait SpanInspection {
       * Returns true if the Span has been marked as failed.
       */
     def isFailed(): Boolean =
-      if(span.isInstanceOf[Span.Local])
+      if (span.isInstanceOf[Span.Local])
         Reflection.getField[Span.Local, Boolean](span.asInstanceOf[Span.Local], "_hasError")
       else
         false
-
 
     /**
       * Returns true if the Span is set to track metrics once it is finished.
       */
     def isTrackingMetrics(): Boolean =
-      if(span.isInstanceOf[Span.Local])
+      if (span.isInstanceOf[Span.Local])
         Reflection.getField[Span.Local, Boolean](span.asInstanceOf[Span.Local], "_trackMetrics")
       else
         false
-
 
     /**
       * Returns the Span.Finished instance that would be sent to the SpanReporters if the Span's trace is sampled.
@@ -98,14 +91,17 @@ trait SpanInspection {
     def toFinished(): Span.Finished =
       toFinished(Kamon.clock().instant())
 
-
     /**
       * Returns the Span.Finished instance that would be sent to the SpanReporters if the Span's trace is sampled.
       */
     def toFinished(at: Instant): Span.Finished =
-      if(span.isInstanceOf[Span.Local])
-        Reflection.invoke[Span.Local, Span.Finished](span.asInstanceOf[Span.Local], "toFinishedSpan",
-          (classOf[Instant], at), (classOf[TagSet], metricTags()))
+      if (span.isInstanceOf[Span.Local])
+        Reflection.invoke[Span.Local, Span.Finished](
+          span.asInstanceOf[Span.Local],
+          "toFinishedSpan",
+          (classOf[Instant], at),
+          (classOf[TagSet], metricTags())
+        )
       else
         sys.error("Cannot finish an Empty/Remote Span")
 

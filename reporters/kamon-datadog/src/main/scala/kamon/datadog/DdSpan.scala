@@ -21,17 +21,18 @@ import java.time.Duration
 import com.grack.nanojson.JsonObject
 
 case class DdSpan(
-  traceId:  BigInt,
-  spanId:   BigInt,
+  traceId: BigInt,
+  spanId: BigInt,
   parentId: Option[BigInt],
-  name:     String,
+  name: String,
   resource: String,
-  service:  String,
+  service: String,
   spanType: String,
-  start:    Long,
+  start: Long,
   duration: Duration,
-  meta:     Map[String, String],
-  error:    Boolean) {
+  meta: Map[String, String],
+  error: Boolean
+) {
 
   def toJson(): JsonObject = {
     val metaBuilder = JsonObject.builder
@@ -52,10 +53,10 @@ case class DdSpan(
       .`object`("meta", metaObj)
       .value("error", if (error) 1 else 0)
       .`object`("metrics")
-        // This tells the datadog agent to keep the trace. We've already determined sampling here or we wouldn't
-        // be in this method. Keep in mind this DOES NOT respect sampling rates in the datadog agent
-        // https://docs.datadoghq.com/tracing/guide/trace_sampling_and_storage/#client-implementation
-        .value("_sampling_priority_v1", 1)
+      // This tells the datadog agent to keep the trace. We've already determined sampling here or we wouldn't
+      // be in this method. Keep in mind this DOES NOT respect sampling rates in the datadog agent
+      // https://docs.datadoghq.com/tracing/guide/trace_sampling_and_storage/#client-implementation
+      .value("_sampling_priority_v1", 1)
       .end
 
     if (parentId.nonEmpty) {

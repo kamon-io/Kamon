@@ -17,17 +17,18 @@
 package kamon
 package instrumentation
 package context
-
+import scala.annotation.static
 import kanela.agent.libs.net.bytebuddy.asm.Advice
 
 /**
   * Advise that copies the current Context from Kamon into a HasContext instance when the advised method starts
   * executing.
   */
+class CaptureCurrentContextOnEnter private ()
 object CaptureCurrentContextOnEnter {
 
   @Advice.OnMethodEnter
-  def enter(@Advice.This hasContext: HasContext): Unit =
+  @static def enter(@Advice.This hasContext: HasContext): Unit =
     hasContext.setContext(Kamon.currentContext())
 
 }
@@ -36,10 +37,11 @@ object CaptureCurrentContextOnEnter {
   * Advise that copies the current Context from Kamon into a HasContext instance when the advised method finishes
   * executing.
   */
+class CaptureCurrentContextOnExit
 object CaptureCurrentContextOnExit {
 
   @Advice.OnMethodExit
-  def exit(@Advice.This hasContext: HasContext): Unit =
+  @static def exit(@Advice.This hasContext: HasContext): Unit =
     hasContext.setContext(Kamon.currentContext())
 
 }

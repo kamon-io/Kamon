@@ -33,7 +33,7 @@ class FutureInstrumentationSpec extends AnyWordSpec with Matchers with ScalaFutu
   //       is no need to have explicit Runnable/Callable instrumentation because the instrumentation brought by the
   //       kamon-executors module should take care of all non-JDK Runnable/Callable implementations.
 
-  implicit val execContext = ExecutionContext.Implicits.global
+  implicit val execContext: ExecutionContext = ExecutionContext.Implicits.global
 
   "a Scala Future created when instrumentation is active" should {
     "capture the Context available when created" which {
@@ -62,4 +62,3 @@ class FutureInstrumentationSpec extends AnyWordSpec with Matchers with ScalaFutu
     }
   }
 }
-

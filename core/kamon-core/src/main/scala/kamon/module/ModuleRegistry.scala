@@ -18,7 +18,14 @@ package kamon
 package module
 
 import java.time.{Duration, Instant}
-import java.util.concurrent.{CountDownLatch, Executors, ForkJoinPool, ScheduledExecutorService, ScheduledFuture, TimeUnit}
+import java.util.concurrent.{
+  CountDownLatch,
+  Executors,
+  ForkJoinPool,
+  ScheduledExecutorService,
+  ScheduledFuture,
+  TimeUnit
+}
 import java.util.concurrent.atomic.AtomicReference
 import com.typesafe.config.Config
 import kamon.module.Module.Registration
@@ -58,10 +65,10 @@ class ModuleRegistry(configuration: Configuration, clock: Clock, metricRegistry:
   }
 
   def shutdown(): Unit = synchronized {
-    if(_metricsTickerSchedule.get() != null)
+    if (_metricsTickerSchedule.get() != null)
       _metricsTickerSchedule.get().cancel(true)
 
-    if(_spansTickerSchedule.get() != null)
+    if (_spansTickerSchedule.get() != null)
       _spansTickerSchedule.get().cancel(true)
 
     _tickerExecutor.foreach(_.shutdown())
@@ -72,11 +79,21 @@ class ModuleRegistry(configuration: Configuration, clock: Clock, metricRegistry:
     register(name, description, reporter)
   }
 
-  def addReporter(name: String, description: Option[String], reporter: MetricReporter, metricFilter: Option[Filter]): Registration = {
+  def addReporter(
+    name: String,
+    description: Option[String],
+    reporter: MetricReporter,
+    metricFilter: Option[Filter]
+  ): Registration = {
     register(name, description, reporter, metricFilter, None)
   }
 
-  def addScheduledAction(name: String, description: Option[String], collector: ScheduledAction, interval: Duration): Registration = {
+  def addScheduledAction(
+    name: String,
+    description: Option[String],
+    collector: ScheduledAction,
+    interval: Duration
+  ): Registration = {
     register(name, description, collector, None, Some(interval))
   }
 
@@ -85,10 +102,15 @@ class ModuleRegistry(configuration: Configuration, clock: Clock, metricRegistry:
     * registration will fail. If the registered module is a MetricReporter and/or SpanReporter it will also be
     * registered to receive the metrics and/or spans data upon every tick.
     */
-  def register(name: String, description: Option[String], module: Module, metricFilter: Option[Filter] = None,
-      interval: Option[Duration] = None): Registration = synchronized {
+  def register(
+    name: String,
+    description: Option[String],
+    module: Module,
+    metricFilter: Option[Filter] = None,
+    interval: Option[Duration] = None
+  ): Registration = synchronized {
 
-    if(_registeredModules.get(name).isEmpty) {
+    if (_registeredModules.get(name).isEmpty) {
       val inferredSettings = Module.Settings(
         name,
         description.getOrElse(module.getClass.getName),
@@ -98,7 +120,8 @@ class ModuleRegistry(configuration: Configuration, clock: Clock, metricRegistry:
         interval
       )
 
-      val moduleEntry = Entry(name, createExecutor(inferredSettings), true, inferredSettings, new AtomicReference(), module)
+      val moduleEntry =
+        Entry(name, createExecutor(inferredSettings), true, inferredSettings, new AtomicReference(), module)
       registerModule(moduleEntry)
       registration(moduleEntry)
 
@@ -114,19 +137,21 @@ class ModuleRegistry(configuration: Configuration, clock: Clock, metricRegistry:
     */
   def load(config: Config): Unit = synchronized {
     val configuredModules = readModuleSettings(config, true)
-    val automaticallyRegisteredModules = _registeredModules.filterNot { case (_, module) => module.programmaticallyAdded }
+    val automaticallyRegisteredModules = _registeredModules.filterNot { case (_, module) =>
+      module.programmaticallyAdded
+    }
 
     // Start, reconfigure and stop modules that are still present but disabled.
     configuredModules.foreach { moduleSettings =>
       automaticallyRegisteredModules.get(moduleSettings.name).fold {
         // The module does not exist in the registry, the only possible action is starting it, if enabled.
-        if(moduleSettings.enabled) {
+        if (moduleSettings.enabled) {
           createModule(moduleSettings, false).foreach(entry => registerModule(entry))
         }
 
       } { existentModuleSettings =>
         // When a module already exists it can either need to be stopped, or to be reconfigured.
-        if(moduleSettings.enabled) {
+        if (moduleSettings.enabled) {
           reconfigureModule(existentModuleSettings, config)
         } else {
           stopModule(existentModuleSettings)
@@ -135,7 +160,8 @@ class ModuleRegistry(configuration: Configuration, clock: Clock, metricRegistry:
     }
 
     // Remove all modules that no longer exist in the configuration.
-    val missingModules = automaticallyRegisteredModules.filterKeys(moduleName => !configuredModules.exists(_.name == moduleName))
+    val missingModules =
+      automaticallyRegisteredModules.filterKeys(moduleName => !configuredModules.exists(_.name == moduleName))
     missingModules.foreach {
       case (_, entry) => stopModule(entry)
     }
@@ -170,7 +196,6 @@ class ModuleRegistry(configuration: Configuration, clock: Clock, metricRegistry:
     Future.sequence(stoppedSignals).map(_ => ())
   }
 
-
   /**
     * (Re)Schedules the metrics ticker that periodically takes snapshots from the metric registry and sends them to
     * all available metric reporting modules. If a ticker was already scheduled then that scheduled job will be
@@ -178,12 +203,12 @@ class ModuleRegistry(configuration: Configuration, clock: Clock, metricRegistry:
     */
   private def scheduleMetricsTicker(scheduler: ScheduledExecutorService): Unit = {
     val currentMetricsTicker = _metricsTickerSchedule.get()
-    if(currentMetricsTicker != null)
+    if (currentMetricsTicker != null)
       currentMetricsTicker.cancel(false)
 
     _metricsTickerSchedule.set {
       val interval = _registrySettings.metricTickInterval.toMillis
-      val initialDelay = if(_registrySettings.optimisticMetricTickAlignment) {
+      val initialDelay = if (_registrySettings.optimisticMetricTickAlignment) {
         val now = clock.instant()
         val nextTick = Clock.nextAlignedInstant(now, _registrySettings.metricTickInterval)
         Duration.between(now, nextTick).toMillis
@@ -192,15 +217,16 @@ class ModuleRegistry(configuration: Configuration, clock: Clock, metricRegistry:
       val ticker = new Runnable {
         var lastInstant = Instant.now(clock)
 
-        override def run(): Unit = try {
-          val currentInstant = Instant.now(clock)
-          val periodSnapshot = metricRegistry.snapshot(resetState = true)
+        override def run(): Unit =
+          try {
+            val currentInstant = Instant.now(clock)
+            val periodSnapshot = metricRegistry.snapshot(resetState = true)
 
-          metricReporterModules().foreach(entry => scheduleMetricsTick(entry, periodSnapshot))
-          lastInstant = currentInstant
-        } catch {
-          case NonFatal(t) => _logger.error("Failed to run a metrics tick", t)
-        }
+            metricReporterModules().foreach(entry => scheduleMetricsTick(entry, periodSnapshot))
+            lastInstant = currentInstant
+          } catch {
+            case NonFatal(t) => _logger.error("Failed to run a metrics tick", t)
+          }
       }
 
       scheduler.scheduleAtFixedRate(ticker, initialDelay, interval, TimeUnit.MILLISECONDS)
@@ -214,20 +240,21 @@ class ModuleRegistry(configuration: Configuration, clock: Clock, metricRegistry:
     */
   private def scheduleSpansTicker(scheduler: ScheduledExecutorService): Unit = {
     val currentSpansTicker = _spansTickerSchedule.get()
-    if(currentSpansTicker != null)
+    if (currentSpansTicker != null)
       currentSpansTicker.cancel(false)
 
     _spansTickerSchedule.set {
       val interval = _registrySettings.traceTickInterval.toMillis
 
       val ticker = new Runnable {
-        override def run(): Unit = try {
-          val spanBatch = tracer.spans()
-          spanReporterModules().foreach(entry => scheduleSpansBatch(entry, spanBatch))
+        override def run(): Unit =
+          try {
+            val spanBatch = tracer.spans()
+            spanReporterModules().foreach(entry => scheduleSpansBatch(entry, spanBatch))
 
-        } catch {
-          case NonFatal(t) => _logger.error("Failed to run a spans tick", t)
-        }
+          } catch {
+            case NonFatal(t) => _logger.error("Failed to run a spans tick", t)
+          }
       }
 
       scheduler.scheduleAtFixedRate(ticker, interval, interval, TimeUnit.MILLISECONDS)
@@ -243,7 +270,7 @@ class ModuleRegistry(configuration: Configuration, clock: Clock, metricRegistry:
   private def scheduleAction(entry: Entry[ScheduledAction], scheduler: ScheduledExecutorService): Unit = {
     val intervalMills = entry.settings.collectInterval.get.toMillis
 
-    val scheduledFuture =  scheduler.scheduleAtFixedRate(
+    val scheduledFuture = scheduler.scheduleAtFixedRate(
       collectorScheduleRunnable(entry),
       intervalMills,
       intervalMills,
@@ -261,16 +288,19 @@ class ModuleRegistry(configuration: Configuration, clock: Clock, metricRegistry:
           .getOrElse(periodSnapshot)
 
         entry.module.reportPeriodSnapshot(filteredSnapshot)
-      } catch { case error: Throwable =>
-        _logger.error(s"Reporter [${entry.name}] failed to process a metrics tick.", error)
+      } catch {
+        case error: Throwable =>
+          _logger.error(s"Reporter [${entry.name}] failed to process a metrics tick.", error)
       }
     }(entry.executionContext)
   }
 
   private def scheduleSpansBatch(entry: Entry[SpanReporter], spanBatch: Seq[Span.Finished]): Unit = {
     Future {
-      try entry.module.reportSpans(spanBatch) catch { case error: Throwable =>
-        _logger.error(s"Reporter [${entry.name}] failed to process a spans tick.", error)
+      try entry.module.reportSpans(spanBatch)
+      catch {
+        case error: Throwable =>
+          _logger.error(s"Reporter [${entry.name}] failed to process a spans tick.", error)
       }
     }(entry.executionContext)
   }
@@ -295,11 +325,11 @@ class ModuleRegistry(configuration: Configuration, clock: Clock, metricRegistry:
 
   private def stopReporterTickers(): Unit = {
     val currentMetricsTicker = _metricsTickerSchedule.get()
-    if(currentMetricsTicker != null)
+    if (currentMetricsTicker != null)
       currentMetricsTicker.cancel(false)
 
     val currentSpansTicker = _spansTickerSchedule.get()
-    if(currentSpansTicker != null)
+    if (currentSpansTicker != null)
       currentSpansTicker.cancel(false)
   }
 
@@ -330,7 +360,7 @@ class ModuleRegistry(configuration: Configuration, clock: Clock, metricRegistry:
           )
         }
 
-        if(emitConfigurationWarnings) {
+        if (emitConfigurationWarnings) {
           moduleSettings.failed.foreach { t =>
             _logger.warn(s"Failed to read configuration for module [$modulePath]", t)
 
@@ -340,14 +370,16 @@ class ModuleRegistry(configuration: Configuration, clock: Clock, metricRegistry:
               moduleConfig.hasPath("extension-class")
 
             if (hasLegacySettings) {
-              _logger.warn(s"Module [$modulePath] contains legacy configuration settings, please ensure that no legacy configuration")
+              _logger.warn(
+                s"Module [$modulePath] contains legacy configuration settings, please ensure that no legacy configuration"
+              )
             }
           }
         }
 
         moduleSettings
 
-    } filter(_.isSuccess) map(_.get) toSeq
+    } filter (_.isSuccess) map (_.get) toSeq
   }
 
   /**
@@ -386,11 +418,11 @@ class ModuleRegistry(configuration: Configuration, clock: Clock, metricRegistry:
     val isMetricReporter = classOf[MetricReporter].isAssignableFrom(clazz)
     val isSpanReporter = classOf[SpanReporter].isAssignableFrom(clazz)
 
-    if(isSpanReporter && isMetricReporter)
+    if (isSpanReporter && isMetricReporter)
       Module.Kind.CombinedReporter
-    else if(isMetricReporter)
+    else if (isMetricReporter)
       Module.Kind.MetricsReporter
-    else if(isSpanReporter)
+    else if (isSpanReporter)
       Module.Kind.SpansReporter
     else
       Module.Kind.ScheduledAction
@@ -413,7 +445,8 @@ class ModuleRegistry(configuration: Configuration, clock: Clock, metricRegistry:
         moduleKind,
         programmaticallyRegistered = false,
         moduleSettings.enabled,
-        isActive)
+        isActive
+      )
     })
 
     val programmaticallyAddedModules = _registeredModules
@@ -435,13 +468,13 @@ class ModuleRegistry(configuration: Configuration, clock: Clock, metricRegistry:
   private def registerModule(entry: Entry[Module]): Unit = {
     _registeredModules = _registeredModules + (entry.name -> entry)
 
-    if(entry.module.isInstanceOf[MetricReporter])
+    if (entry.module.isInstanceOf[MetricReporter])
       _metricReporterModules = _metricReporterModules + (entry.name -> entry.asInstanceOf[Entry[MetricReporter]])
 
-    if(entry.module.isInstanceOf[SpanReporter])
+    if (entry.module.isInstanceOf[SpanReporter])
       _spanReporterModules = _spanReporterModules + (entry.name -> entry.asInstanceOf[Entry[SpanReporter]])
 
-    if(entry.module.isInstanceOf[ScheduledAction] && _tickerExecutor.nonEmpty)
+    if (entry.module.isInstanceOf[ScheduledAction] && _tickerExecutor.nonEmpty)
       scheduleAction(entry.asInstanceOf[Entry[ScheduledAction]], _tickerExecutor.get)
 
   }
@@ -451,7 +484,7 @@ class ModuleRegistry(configuration: Configuration, clock: Clock, metricRegistry:
     * context. The returned future completes when the module finishes its stop procedure.
     */
   private def stopModule(entry: Entry[Module]): Future[Unit] = synchronized {
-    if(_registeredModules.get(entry.name).nonEmpty) {
+    if (_registeredModules.get(entry.name).nonEmpty) {
 
       // Remove the module from all registries
       _registeredModules = _registeredModules - entry.name
@@ -464,7 +497,6 @@ class ModuleRegistry(configuration: Configuration, clock: Clock, metricRegistry:
         _spanReporterModules = _spanReporterModules - entry.name
         scheduleSpansBatch(entry.asInstanceOf[Entry[SpanReporter]], tracer.spans())
       }
-
 
       // Schedule a call to stop on the module
       val stopPromise = Promise[Unit]()
@@ -528,4 +560,3 @@ class ModuleRegistry(configuration: Configuration, clock: Clock, metricRegistry:
     module: T
   )
 }
-

@@ -13,7 +13,6 @@
  * =========================================================================================
  */
 
-
 package kamon.instrumentation.executor
 
 import com.google.common.util.concurrent.MoreExecutors
@@ -27,7 +26,8 @@ import org.scalatest.wordspec.AnyWordSpec
 import java.util.concurrent.{Callable, CountDownLatch, TimeUnit, Executors => JavaExecutors}
 import scala.collection.mutable.ListBuffer
 
-class CaptureContextOnSubmitInstrumentationSpec extends AnyWordSpec with Matchers with ContextTesting with Eventually with OptionValues {
+class CaptureContextOnSubmitInstrumentationSpec extends AnyWordSpec with Matchers with ContextTesting with Eventually
+    with OptionValues {
 
   "the CaptureContextOnSubmitInstrumentation" should {
     "capture the context when call execute(Runnable) in DirectExecutor" in {
@@ -38,7 +38,7 @@ class CaptureContextOnSubmitInstrumentationSpec extends AnyWordSpec with Matcher
         runnable.ctx
       }
 
-      ctx.value should be ("in-runnable-body")
+      ctx.value should be("in-runnable-body")
     }
 
     "capture the context when call execute(Runnable) in ThreadPool" in {
@@ -50,7 +50,7 @@ class CaptureContextOnSubmitInstrumentationSpec extends AnyWordSpec with Matcher
         runnable.ctx
       }
 
-      ctx.value should be ("in-runnable-body")
+      ctx.value should be("in-runnable-body")
     }
 
     "capture the context when call submit(Runnable) in ThreadPool" in {
@@ -62,7 +62,7 @@ class CaptureContextOnSubmitInstrumentationSpec extends AnyWordSpec with Matcher
         runnable.ctx
       }
 
-      ctx.value should be ("in-runnable-body")
+      ctx.value should be("in-runnable-body")
     }
 
     "capture the context when call execute(Runnable) in ForkJoinPool" in {
@@ -75,7 +75,7 @@ class CaptureContextOnSubmitInstrumentationSpec extends AnyWordSpec with Matcher
         runnable.ctx
       }
 
-      ctx.value should be ("in-runnable-body")
+      ctx.value should be("in-runnable-body")
     }
 
     "capture the context when call submit(Runnable) in ForkJoinPool" in {
@@ -88,7 +88,7 @@ class CaptureContextOnSubmitInstrumentationSpec extends AnyWordSpec with Matcher
         runnable.ctx
       }
 
-      ctx.value should be ("in-runnable-body")
+      ctx.value should be("in-runnable-body")
     }
 
     "capture the context when call execute(Runnable) in ScheduledThreadPool" in {
@@ -101,7 +101,7 @@ class CaptureContextOnSubmitInstrumentationSpec extends AnyWordSpec with Matcher
         runnable.ctx
       }
 
-      ctx.value should be ("in-runnable-body")
+      ctx.value should be("in-runnable-body")
     }
 
     "capture the context when call submit(Runnable) in ScheduledThreadPool" in {
@@ -114,7 +114,7 @@ class CaptureContextOnSubmitInstrumentationSpec extends AnyWordSpec with Matcher
         runnable.ctx
       }
 
-      ctx.value should be ("in-runnable-body")
+      ctx.value should be("in-runnable-body")
     }
 
     "capture the context when call schedule(Runnable,long,TimeUnit) in ScheduledThreadPool" in {
@@ -127,7 +127,7 @@ class CaptureContextOnSubmitInstrumentationSpec extends AnyWordSpec with Matcher
         runnable.ctx
       }
 
-      ctx.value should be ("in-runnable-body")
+      ctx.value should be("in-runnable-body")
     }
 
     "capture the context when call submit(Callable) in ThreadPool" in {
@@ -139,7 +139,7 @@ class CaptureContextOnSubmitInstrumentationSpec extends AnyWordSpec with Matcher
         callable.ctx
       }
 
-      ctx.value should be ("in-callable-body")
+      ctx.value should be("in-callable-body")
     }
 
     "capture the context when call submit(Callable) in ScheduledThreadPool" in {
@@ -151,7 +151,7 @@ class CaptureContextOnSubmitInstrumentationSpec extends AnyWordSpec with Matcher
         callable.ctx
       }
 
-      ctx.value should be ("in-callable-body")
+      ctx.value should be("in-callable-body")
     }
 
     "capture the context when call schedule(Callable,long,TimeUnit) in ScheduledThreadPool" in {
@@ -164,7 +164,7 @@ class CaptureContextOnSubmitInstrumentationSpec extends AnyWordSpec with Matcher
         callable.ctx
       }
 
-      ctx.value should be ("in-callable-body")
+      ctx.value should be("in-callable-body")
     }
 
     "capture the context when call submit(Callable) in ForkJoinPool" in {
@@ -177,17 +177,20 @@ class CaptureContextOnSubmitInstrumentationSpec extends AnyWordSpec with Matcher
         callable.ctx
       }
 
-      ctx.value should be ("in-callable-body")
+      ctx.value should be("in-callable-body")
     }
 
     "capture the context when call invokeAll(Colection<Callables>) in ExecutorService" in {
       import scala.collection.JavaConverters._
 
       val values = Kamon.runWithContext(testContext("all-callables-should-see-this-key")) {
-        val callables = new CallableWithContext("A") :: new CallableWithContext( "B") :: new CallableWithContext("C") :: Nil
-        JavaExecutors.newCachedThreadPool().invokeAll(callables.asJava).asScala.foldLeft(ListBuffer.empty[String]) { (acc, f) => acc += f.get() }
+        val callables =
+          new CallableWithContext("A") :: new CallableWithContext("B") :: new CallableWithContext("C") :: Nil
+        JavaExecutors.newCachedThreadPool().invokeAll(callables.asJava).asScala.foldLeft(ListBuffer.empty[String]) {
+          (acc, f) => acc += f.get()
+        }
       }
-      values should contain allOf("all-callables-should-see-this-key-A", "all-callables-should-see-this-key-B", "all-callables-should-see-this-key-C")
+      values should contain allOf ("all-callables-should-see-this-key-A", "all-callables-should-see-this-key-B", "all-callables-should-see-this-key-C")
     }
   }
 }
@@ -213,7 +216,7 @@ class SimpleCallable extends Callable[Option[String]] with ContextTesting {
   }
 }
 
-class CallableWithContext[A](value:String) extends Callable[String] with ContextTesting {
+class CallableWithContext[A](value: String) extends Callable[String] with ContextTesting {
   override def call(): String =
     Kamon.currentContext().getTag(Lookups.option(TestKey)).map(_ + s"-$value").getOrElse("undefined")
 }

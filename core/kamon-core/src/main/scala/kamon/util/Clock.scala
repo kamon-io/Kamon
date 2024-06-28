@@ -62,16 +62,16 @@ object Clock {
       var nanos = System.nanoTime()
       var isCandidate = false
 
-      while(calibrationIterations > 0) {
+      while (calibrationIterations > 0) {
         val currentMillis = System.currentTimeMillis()
         val currentNanos = System.nanoTime()
 
-        if(isCandidate && millis != currentMillis) {
+        if (isCandidate && millis != currentMillis) {
           millis = currentMillis
           nanos = currentNanos
           calibrationIterations = 0
         } else {
-          if(millis == currentMillis) {
+          if (millis == currentMillis) {
             isCandidate = true
           } else {
             millis = currentMillis
@@ -86,7 +86,8 @@ object Clock {
     }
 
     private val _startSecondTime = Math.floorDiv(_startTimeMillis, _millisInSecond)
-    private val _startSecondNanoOffset = Math.multiplyExact(Math.floorMod(_startTimeMillis, _millisInSecond), _microsInSecond)
+    private val _startSecondNanoOffset =
+      Math.multiplyExact(Math.floorMod(_startTimeMillis, _millisInSecond), _microsInSecond)
 
     override def nanos(): Long =
       System.nanoTime()

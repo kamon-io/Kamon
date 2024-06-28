@@ -7,7 +7,13 @@ import ch.qos.logback.classic.spi.{ILoggingEvent, LoggingEvent}
 import ch.qos.logback.classic.{AsyncAppender, Level, LoggerContext}
 import ch.qos.logback.core.Appender
 import ch.qos.logback.core.util.OptionHelper
-import kamon.instrumentation.logback.tools.{ContextEntryConverter, ContextTagConverter, SpanIDConverter, SpanOperationNameConverter, TraceIDConverter}
+import kamon.instrumentation.logback.tools.{
+  ContextEntryConverter,
+  ContextTagConverter,
+  SpanIDConverter,
+  SpanOperationNameConverter,
+  TraceIDConverter
+}
 import kamon.logback.util.LogbackConfigurator
 import org.slf4j.impl.StaticLoggerBinder
 
@@ -21,7 +27,8 @@ package object logback {
   configurator.conversionRule("contextTag", classOf[ContextTagConverter])
   configurator.conversionRule("contextEntry", classOf[ContextEntryConverter])
 
-  def buildMemoryAppender(config: LogbackConfigurator): LogbackMemoryAppender = buildMemoryAppender(config,"%traceID %spanID %spanOperationName")
+  def buildMemoryAppender(config: LogbackConfigurator): LogbackMemoryAppender =
+    buildMemoryAppender(config, "%traceID %spanID %spanOperationName")
 
   def buildMemoryAppender(config: LogbackConfigurator, logPattern: String): LogbackMemoryAppender = {
     val appender = new LogbackMemoryAppender()
@@ -49,6 +56,9 @@ package object logback {
     new LoggingEvent(this.getClass.getName, loggerContext.getLogger("ROOT"), level, "test message", null, null)
   }
 
-  def logMany(times: Int, level: Level)(implicit appender: Appender[ILoggingEvent], loggerContext: LoggerContext): Unit =
-    for(_ <- 1 to times) { appender.doAppend(createLoggingEvent(context, level)) }
+  def logMany(times: Int, level: Level)(implicit
+    appender: Appender[ILoggingEvent],
+    loggerContext: LoggerContext
+  ): Unit =
+    for (_ <- 1 to times) { appender.doAppend(createLoggingEvent(context, level)) }
 }

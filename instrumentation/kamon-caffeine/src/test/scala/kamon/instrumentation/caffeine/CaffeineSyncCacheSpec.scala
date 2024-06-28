@@ -12,7 +12,7 @@ import scala.collection.JavaConverters._
 import scala.concurrent.duration.DurationInt
 
 class CaffeineSyncCacheSpec
-  extends AnyWordSpec
+    extends AnyWordSpec
     with Matchers
     with InitAndStopKamonAfterAll
     with TestSpanReporter {
@@ -30,9 +30,12 @@ class CaffeineSyncCacheSpec
     }
 
     "create a span when accessing an existing key" in {
-      cache.get("a", new java.util.function.Function[String, String] {
-        override def apply(a: String): String = "value"
-      })
+      cache.get(
+        "a",
+        new java.util.function.Function[String, String] {
+          override def apply(a: String): String = "value"
+        }
+      )
       eventually(timeout(2.seconds)) {
         val span = testSpanReporter().nextSpan().value
         span.operationName shouldBe "caffeine.computeIfAbsent"

@@ -12,7 +12,7 @@ import java.util.concurrent.CompletableFuture
 import scala.concurrent.duration.DurationInt
 
 class CaffeineAsyncCacheSpec
-  extends AnyWordSpec
+    extends AnyWordSpec
     with Matchers
     with BeforeAndAfterAll
     with TestSpanReporter {
@@ -28,9 +28,12 @@ class CaffeineAsyncCacheSpec
     }
 
     "not create a span when using get" in {
-      cache.get("a", new java.util.function.Function[String, String] {
-        override def apply(a: String): String = "value"
-      })
+      cache.get(
+        "a",
+        new java.util.function.Function[String, String] {
+          override def apply(a: String): String = "value"
+        }
+      )
       eventually(timeout(2.seconds)) {
         testSpanReporter().spans() shouldBe empty
       }
