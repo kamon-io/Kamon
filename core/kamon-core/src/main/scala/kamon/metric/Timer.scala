@@ -26,11 +26,14 @@ import kamon.util.Clock
 import org.HdrHistogram.BaseAtomicHdrHistogram
 import org.slf4j.LoggerFactory
 
+import scala.concurrent.{ExecutionContext, Future}
+import scala.util.control.NonFatal
+
 /**
   * Instrument that tracks the distribution of latency values within a configured range and precision. Timers are just a
   * special case of histograms that provide special APIs dedicated to recording latency measurements.
   */
-trait Timer extends Instrument[Timer, Metric.Settings.ForDistributionInstrument] {
+trait Timer extends Instrument[Timer, Metric.Settings.ForDistributionInstrument] { self =>
 
   /**
     * Starts counting elapsed time from the instant this method is called and until the returned Timer.Started instance
@@ -59,6 +62,49 @@ trait Timer extends Instrument[Timer, Metric.Settings.ForDistributionInstrument]
     */
   def record(elapsed: Long, unit: TimeUnit): Timer
 
+  /**
+    * Starts recording elapsed time for the provided function. Once the function returns, the Timer stops.
+    */
+  final def timed[A](f: => A): A = {
+    val startedTimer = self.start()
+    try {
+      f
+    } finally {
+      startedTimer.stop()
+    }
+  }
+
+  /**
+    * Starts recording elapsed time for the future. Once the future completes, the Timer stops.
+    */
+  final def timedF[A](future: => Future[A])(implicit ec: ExecutionContext): Future[A] = {
+    val startedTimer = self.start()
+    val f = try {
+      future
+    } catch {
+      case NonFatal(ex) =>
+        startedTimer.stop()
+        throw ex
+    }
+    f.onComplete(_ => startedTimer.stop())
+    f
+  }
+
+  /**
+    * Starts recording elapsed time for the partial function.
+    */
+  final def timedPF[A, B](pf: PartialFunction[A, B]): PartialFunction[A, B] = new PartialFunction[A, B] {
+    def apply(a: A): B = {
+      val startedTimer = self.start()
+      try {
+        pf.apply(a)
+      } finally {
+        startedTimer.stop()
+      }
+    }
+
+    def isDefinedAt(a: A): Boolean = pf.isDefinedAt(a)
+  }
 }
 
 object Timer {
