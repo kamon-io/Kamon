@@ -29,9 +29,9 @@ import java.util.concurrent.{
   TimeUnit,
   ForkJoinPool => JavaForkJoinPool
 }
+import java.util.concurrent.atomic.LongAdder
 import com.typesafe.config.Config
 import kamon.Kamon
-import kamon.jsr166.LongAdder
 import kamon.metric.Counter
 import kamon.module.ScheduledAction
 import kamon.tag.TagSet

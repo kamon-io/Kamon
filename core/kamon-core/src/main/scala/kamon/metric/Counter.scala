@@ -81,7 +81,7 @@ object Counter {
       extends Counter with Instrument.Snapshotting[Long]
       with BaseMetricAutoUpdate[Counter, Metric.Settings.ForValueInstrument, Long] {
 
-    private val _adder = new kamon.jsr166.LongAdder()
+    private val _adder = new java.util.concurrent.atomic.LongAdder()
 
     override def increment(): Counter = {
       _adder.increment()
@@ -99,7 +99,7 @@ object Counter {
 
     override def snapshot(resetState: Boolean): Long =
       if (resetState)
-        _adder.sumAndReset()
+        _adder.sumThenReset()
       else
         _adder.sum()
 
