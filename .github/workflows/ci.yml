@@ -23,6 +23,7 @@ jobs:
     steps:
       - uses: actions/checkout@v1
       - uses: coursier/cache-action@v6
+      - uses: coursier/setup-action@v1
       - name: Test
         run: sbt -v "+scalafmtCheckAll"
 
