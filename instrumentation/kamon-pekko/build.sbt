@@ -4,7 +4,7 @@ inConfig(Compile)(Defaults.compileSettings ++ Seq(
   crossScalaVersions := Seq(`scala_2.12_version`, `scala_2.13_version`, scala_3_version)
 ))
 
-val pekkoVersion = "1.0.3"
+val pekkoVersion = "1.1.0-M1"
 libraryDependencies ++= { if(scalaBinaryVersion.value == "2.11") Seq.empty else Seq(
   kanelaAgent % "provided",
   scalatest % Test,

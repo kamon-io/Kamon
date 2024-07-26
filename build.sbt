@@ -542,8 +542,8 @@ lazy val `kamon-akka-http` = (project in file("instrumentation/kamon-akka-http")
   .dependsOn(`kamon-akka`, `kamon-testkit` % "test")
 
 
-lazy val pekkoVersion = "1.0.3"
-lazy val pekkoHttpVersion = "1.0.1"
+lazy val pekkoVersion = "1.1.0-M1"
+lazy val pekkoHttpVersion = "1.1.0-M1"
 
 lazy val `kamon-pekko` = (project in file("instrumentation/kamon-pekko"))
   .enablePlugins(JavaAgent)
