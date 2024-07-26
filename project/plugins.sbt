@@ -1,3 +1,6 @@
+// needed due to dependency convergence issues
+libraryDependencySchemes += "org.scala-lang.modules" %% "scala-xml" % VersionScheme.Always
+
 addSbtPlugin("ch.epfl.scala" % "sbt-scalafix" % "0.9.31")
 addSbtPlugin("com.eed3si9n" % "sbt-buildinfo" % "0.9.0")
 addSbtPlugin("com.eed3si9n" % "sbt-assembly" % "0.14.10")
