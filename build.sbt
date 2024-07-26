@@ -594,9 +594,9 @@ lazy val `kamon-pekko-grpc` = (project in file("instrumentation/kamon-pekko-grpc
       "org.apache.pekko" %% "pekko-stream" % pekkoVersion % "provided",
       "org.apache.pekko" %% "pekko-discovery"% pekkoVersion % "provided",
 
-      "com.thesamet.scalapb"    %% "scalapb-runtime"   % "0.11.8" % "provided",
-      "org.apache.pekko"        %% "pekko-grpc-runtime" % "1.0.2" % "provided",
-      "io.grpc"                 %  "grpc-stub"         % "1.43.2" % "provided",
+      "com.thesamet.scalapb"    %% "scalapb-runtime"   % "0.11.17" % "provided",
+      "org.apache.pekko"        %% "pekko-grpc-runtime" % "1.0.2"  % "provided",
+      "io.grpc"                 %  "grpc-stub"         % "1.65.1"  % "provided",
 
 
       scalatest % "test",
