@@ -436,6 +436,7 @@ lazy val `kamon-spring` = (project in file("instrumentation/kamon-spring"))
 
       okHttp % "test",
       "com.h2database" % "h2" % "1.4.200" % "test",
+      "javax.xml.bind" % "jaxb-api" % "2.3.1" % "test",
       "org.springframework.boot" % "spring-boot-starter-data-jpa" % "2.4.2" % "test",
       scalatest % "test",
       logbackClassic % "test",
@@ -855,6 +856,7 @@ lazy val `kamon-apache-cxf` = (project in file("instrumentation/kamon-apache-cxf
       "org.mock-server" % "mockserver-client-java" % "5.13.2" % "test",
       "com.dimafeng" %% "testcontainers-scala" % "0.41.0" % "test",
       "com.dimafeng" %% "testcontainers-scala-mockserver" % "0.41.0" % "test",
+      "javax.xml.bind" % "jaxb-api" % "2.3.1" % "test",
       "org.apache.cxf" % "cxf-rt-frontend-jaxws" % "3.3.6" % "test",
       "org.apache.cxf" % "cxf-rt-transports-http" % "3.3.6" % "test",
     )
