@@ -31,6 +31,7 @@ import kamon.{module, Kamon}
 import kamon.datadog.DatadogAPIReporter.Configuration
 import kamon.module.{MetricReporter, ModuleFactory}
 import org.slf4j.LoggerFactory
+import org.slf4j.event.Level
 
 import scala.util.{Failure, Success}
 
@@ -68,7 +69,7 @@ class DatadogAPIReporter(
   override def reportPeriodSnapshot(snapshot: PeriodSnapshot): Unit = {
     httpClient.doPost("application/json; charset=utf-8", buildRequestBody(snapshot)) match {
       case Failure(e) =>
-        logger.error(e.getMessage)
+        logger.logAtLevel(configuration.failureLogLevel, e.getMessage)
       case Success(response) =>
         logger.trace(response)
     }
@@ -166,7 +167,8 @@ private object DatadogAPIReporter {
     timeUnit: MeasurementUnit,
     informationUnit: MeasurementUnit,
     extraTags: Seq[(String, String)],
-    tagFilter: Filter
+    tagFilter: Filter,
+    failureLogLevel: Level
   )
 
   implicit class QuoteInterp(val sc: StringContext) extends AnyVal {
@@ -175,15 +177,22 @@ private object DatadogAPIReporter {
 
   def readConfiguration(config: Config): Configuration = {
     val datadogConfig = config.getConfig("kamon.datadog")
+
+    // Remove the "host" tag since it gets added to the datadog payload separately
+    val extraTags = EnvironmentTags
+      .from(Kamon.environment, datadogConfig.getConfig("environment-tags"))
+      .without("host")
+      .all()
+      .map(p => p.key -> Tag.unwrapValue(p).toString)
+
     Configuration(
       datadogConfig.getConfig("api"),
       timeUnit = readTimeUnit(datadogConfig.getString("time-unit")),
       informationUnit = readInformationUnit(datadogConfig.getString("information-unit")),
       // Remove the "host" tag since it gets added to the datadog payload separately
-      EnvironmentTags.from(Kamon.environment, datadogConfig.getConfig("environment-tags")).without("host").all().map(
-        p => p.key -> Tag.unwrapValue(p).toString
-      ),
-      Kamon.filter("kamon.datadog.environment-tags.filter")
+      extraTags = extraTags,
+      tagFilter = Kamon.filter("kamon.datadog.environment-tags.filter"),
+      failureLogLevel = readLogLevel(datadogConfig.getString("failure-log-level"))
     )
   }
 }

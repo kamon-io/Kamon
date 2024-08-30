@@ -24,6 +24,8 @@ import com.typesafe.config.Config
 import kamon.metric.MeasurementUnit
 import kamon.metric.MeasurementUnit.{information, time}
 import okhttp3._
+import org.slf4j.Logger
+import org.slf4j.event.Level
 
 import scala.util.{Failure, Success, Try}
 
@@ -33,6 +35,23 @@ package object datadog {
     def getEpochNano: Long = {
       instant.getEpochSecond() * 1000000000 +
       instant.getNano()
+    }
+  }
+
+  implicit class LoggerExtras(val logger: Logger) extends AnyVal {
+    def logAtLevel(level: Level, msg: String): Unit = {
+      level match {
+        case Level.TRACE =>
+          logger.trace(msg)
+        case Level.DEBUG =>
+          logger.debug(msg)
+        case Level.INFO =>
+          logger.info(msg)
+        case Level.WARN =>
+          logger.warn(msg)
+        case Level.ERROR =>
+          logger.error(msg)
+      }
     }
   }
 
@@ -132,5 +151,15 @@ package object datadog {
     case "mb"  => information.megabytes
     case "gb"  => information.gigabytes
     case other => sys.error(s"Invalid time unit setting [$other], the possible values are [b, kb, mb, gb]")
+  }
+
+  def readLogLevel(level: String): Level = level match {
+    case "trace" => Level.TRACE
+    case "debug" => Level.DEBUG
+    case "info"  => Level.INFO
+    case "warn"  => Level.WARN
+    case "error" => Level.ERROR
+    case other =>
+      sys.error(s"Invalid log level setting [$other], the possible values are [trace, debug, info, warn, error]")
   }
 }
