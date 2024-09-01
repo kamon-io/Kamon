@@ -22,6 +22,10 @@ abstract class AbstractHttpReporter extends AnyWordSpec with BeforeAndAfterAll {
     server.url(path).toString
   }
 
+  protected def mockResponse(response: MockResponse): Unit = {
+    server.enqueue(response)
+  }
+
   override protected def afterAll(): Unit = {
     super.afterAll()
     server.shutdown()

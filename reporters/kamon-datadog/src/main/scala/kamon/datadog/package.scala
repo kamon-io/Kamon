@@ -19,12 +19,12 @@ package kamon
 import java.nio.charset.StandardCharsets
 import java.time.{Duration, Instant}
 import java.util.concurrent.TimeUnit
-
 import com.typesafe.config.Config
 import kamon.metric.MeasurementUnit
 import kamon.metric.MeasurementUnit.{information, time}
 import okhttp3._
 
+import scala.annotation.tailrec
 import scala.util.{Failure, Success, Try}
 
 package object datadog {
@@ -43,10 +43,13 @@ package object datadog {
     usingAgent: Boolean,
     connectTimeout: Duration,
     readTimeout: Duration,
-    writeTimeout: Duration
+    writeTimeout: Duration,
+    retries: Int,
+    initRetryDelay: Duration
   ) {
 
-    val httpClient: OkHttpClient = createHttpClient()
+    private val httpClient: OkHttpClient = createHttpClient()
+    private val retryableStatusCodes: Set[Int] = Set(408, 429, 502, 503, 504)
 
     def this(config: Config, usingAgent: Boolean) = {
       this(
@@ -56,12 +59,33 @@ package object datadog {
         usingAgent,
         config.getDuration("connect-timeout"),
         config.getDuration("read-timeout"),
-        config.getDuration("write-timeout")
+        config.getDuration("write-timeout"),
+        config.getInt("retries"),
+        config.getDuration("init-retry-delay")
       )
     }
 
-    private def doRequest(request: Request): Try[Response] = {
-      Try(httpClient.newCall(request).execute())
+    @tailrec
+    private def doRequestWithRetries(request: Request, attempt: Int = 0): Try[Response] = {
+      // Try executing the request
+      val responseAttempt = Try(httpClient.newCall(request).execute())
+
+      if (attempt >= retries - 1) {
+        responseAttempt
+      } else {
+        responseAttempt match {
+          // If the request succeeded but with a retryable HTTP status code.
+          case Success(response) if retryableStatusCodes.contains(response.code) =>
+            response.close()
+            Thread.sleep(initRetryDelay.toMillis * Math.pow(2, attempt).toLong)
+            doRequestWithRetries(request, attempt + 1)
+
+          // Either the request succeeded with an HTTP status not included in `retryableStatusCodes`
+          // or we have an unknown failure
+          case _ =>
+            responseAttempt
+        }
+      }
     }
 
     def doMethodWithBody(method: String, contentType: String, contentBody: Array[Byte]): Try[String] = {
@@ -69,7 +93,7 @@ package object datadog {
       val url = apiUrl + apiKey.map(key => "?api_key=" + key).getOrElse("")
       val request = new Request.Builder().url(url).method(method, body).build
 
-      doRequest(request) match {
+      doRequestWithRetries(request) match {
         case Success(response) =>
           val responseBody = response.body().string()
           response.close()
