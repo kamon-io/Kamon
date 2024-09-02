@@ -77,24 +77,6 @@ class CassandraClientTracingInstrumentationSpec
       }
     }
 
-    "not swallow exceptions" in {
-      val query = QueryBuilder
-        .select("name")
-        .from("illegaltablename")
-        .where(QueryBuilder.eq("name", "kamon"))
-        .allowFiltering()
-        .setFetchSize(5)
-
-      assertThrows[DriverException] {
-        session.execute(query)
-      }
-
-      eventually(timeout(10 seconds)) {
-        val span = testSpanReporter().nextSpan()
-        span should not be empty
-      }
-    }
-
     "trace individual page executions" in {
       val query = QueryBuilder
         .select("name")
@@ -116,6 +98,24 @@ class CassandraClientTracingInstrumentationSpec
         clientSpan.get.tags.get(plainLong("cassandra.driver.rs.fetch-size")) should equal(5L)
         clientSpan.get.tags.get(plainLong("cassandra.driver.rs.fetched")) should equal(5L)
         clientSpan.get.tags.get(plainBoolean("cassandra.driver.rs.has-more")) shouldBe true
+      }
+    }
+
+    "not swallow exceptions" in {
+      val query = QueryBuilder
+        .select("name")
+        .from("illegaltablename")
+        .where(QueryBuilder.eq("name", "kamon"))
+        .allowFiltering()
+        .setFetchSize(5)
+
+      assertThrows[DriverException] {
+        session.execute(query)
+      }
+
+      eventually(timeout(10 seconds)) {
+        val span = testSpanReporter().nextSpan()
+        span should not be empty
       }
     }
   }
