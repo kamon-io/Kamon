@@ -543,6 +543,8 @@ lazy val `kamon-akka-http` = (project in file("instrumentation/kamon-akka-http")
   .dependsOn(`kamon-akka`, `kamon-testkit` % "test")
 
 
+lazy val pekkoVersion = "1.0.3"
+lazy val pekkoHttpVersion = "1.0.1"
 
 lazy val `kamon-pekko` = (project in file("instrumentation/kamon-pekko"))
   .enablePlugins(JavaAgent)
@@ -551,15 +553,13 @@ lazy val `kamon-pekko` = (project in file("instrumentation/kamon-pekko"))
   .settings(Seq(
     crossScalaVersions := Seq(`scala_2.12_version`, `scala_2.13_version`, scala_3_version),
     libraryDependencies ++= Seq(
-      "org.apache.pekko" %% "pekko-actor" % "1.0.1" % "provided"
+      "org.apache.pekko" %% "pekko-actor" % pekkoVersion % "provided"
     )
   ))
   .dependsOn(
     `kamon-scala-future` % "compile",
     `kamon-testkit` % "test"
   )
-
-lazy val pekkoHttpVersion = "1.0.0"
 
 lazy val `kamon-pekko-http` = (project in file("instrumentation/kamon-pekko-http"))
   .enablePlugins(JavaAgent)
@@ -570,7 +570,7 @@ lazy val `kamon-pekko-http` = (project in file("instrumentation/kamon-pekko-http
     libraryDependencies ++= Seq(
       kanelaAgent % "provided",
       "org.apache.pekko" %% "pekko-http"          % pekkoHttpVersion % "provided",
-      "org.apache.pekko" %% "pekko-stream"        % "1.0.1" % "provided",
+      "org.apache.pekko" %% "pekko-stream"        % pekkoVersion % "provided",
       scalatest % "test",
       slf4jApi % "test",
       slf4jnop % "test",
@@ -592,11 +592,11 @@ lazy val `kamon-pekko-grpc` = (project in file("instrumentation/kamon-pekko-grpc
       kanelaAgent % "provided",
 
       "org.apache.pekko" %% "pekko-http" % pekkoHttpVersion % "provided",
-      "org.apache.pekko" %% "pekko-stream" % "1.0.1" % "provided",
-      "org.apache.pekko" %% "pekko-discovery"% "1.0.0" % "provided",
+      "org.apache.pekko" %% "pekko-stream" % pekkoVersion % "provided",
+      "org.apache.pekko" %% "pekko-discovery"% pekkoVersion % "provided",
 
       "com.thesamet.scalapb"    %% "scalapb-runtime"   % "0.11.8" % "provided",
-      "org.apache.pekko"        %% "pekko-grpc-runtime" % "1.0.0" % "provided",
+      "org.apache.pekko"        %% "pekko-grpc-runtime" % "1.0.2" % "provided",
       "io.grpc"                 %  "grpc-stub"         % "1.43.2" % "provided",
 
 
