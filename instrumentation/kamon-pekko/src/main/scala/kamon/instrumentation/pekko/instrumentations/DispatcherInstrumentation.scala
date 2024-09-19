@@ -127,16 +127,16 @@ object InstrumentNewExecutorServiceOnPekko {
     @SuperCall callable: Callable[ExecutorService]
   ): ExecutorService = {
     val executor = callable.call()
-    val actorSystemName = if (factory.dispatcherPrerequisites != null) {
-      factory.dispatcherPrerequisites.settings.name
-    } else {
-      "unknown"
-    }
     val dispatcherName = factory.dispatcherName
-    val scheduledActionName = actorSystemName + "/" + dispatcherName
-    val systemTags = TagSet.of("pekko.system", actorSystemName)
 
     if (Kamon.filter(PekkoInstrumentation.TrackDispatcherFilterName).accept(dispatcherName)) {
+      val actorSystemName = if (factory.dispatcherPrerequisites != null) {
+        factory.dispatcherPrerequisites.settings.name
+      } else {
+        "unknown"
+      }
+      val scheduledActionName = actorSystemName + "/" + dispatcherName
+      val systemTags = TagSet.of("pekko.system", actorSystemName)
       val defaultEcOption = Option(factory.dispatcherPrerequisites)
         .flatMap(_.defaultExecutionContext)
 
