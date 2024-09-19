@@ -167,9 +167,10 @@ object ThreadPoolConfigCopyAdvice {
 
   @Advice.OnMethodExit
   @static def exit(@Advice.This original: Any, @Advice.Return copy: Any): Unit = {
-    copy.asInstanceOf[HasDispatcherPrerequisites].setDispatcherPrerequisites(
-      original.asInstanceOf[HasDispatcherPrerequisites].dispatcherPrerequisites
-    )
+    val prereqs = original.asInstanceOf[HasDispatcherPrerequisites].dispatcherPrerequisites
+    if (prereqs != null) {
+      copy.asInstanceOf[HasDispatcherPrerequisites].setDispatcherPrerequisites(prereqs)
+    }
     copy.asInstanceOf[HasDispatcherName].setDispatcherName(original.asInstanceOf[HasDispatcherName].dispatcherName)
   }
 }
