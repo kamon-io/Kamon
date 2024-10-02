@@ -6,8 +6,9 @@ inConfig(Compile)(Defaults.compileSettings ++ Seq(
 lazy val Pekko1_0Test = config("test-pekko-1.0") extend (Test)
 lazy val Pekko1_1Test = config("test-pekko-1.1") extend (Test)
 
-val pekko1_0_Version = "1.0.3"
-val pekko1_1_Version = "1.1.1"
+val pekko1_0_Version = "1.1.1+26-bc32e04b-SNAPSHOT"
+val pekko1_1_Version = "1.0.3"
+resolvers += "Apache Pekko Snapshots" at "https://repository.apache.org/content/groups/snapshots"
 libraryDependencies ++= {
   if (scalaBinaryVersion.value == "2.11") Seq.empty
   else Seq(
