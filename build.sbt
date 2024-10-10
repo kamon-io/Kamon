@@ -559,7 +559,7 @@ lazy val `kamon-pekko` = (project in file("instrumentation/kamon-pekko"))
     `kamon-testkit` % "test"
   )
 
-lazy val pekkoHttpVersion = "1.0.0"
+lazy val pekkoHttpVersion = "1.1.0"
 
 lazy val `kamon-pekko-http` = (project in file("instrumentation/kamon-pekko-http"))
   .enablePlugins(JavaAgent)
@@ -570,13 +570,13 @@ lazy val `kamon-pekko-http` = (project in file("instrumentation/kamon-pekko-http
     libraryDependencies ++= Seq(
       kanelaAgent % "provided",
       "org.apache.pekko" %% "pekko-http"          % pekkoHttpVersion % "provided",
-      "org.apache.pekko" %% "pekko-stream"        % "1.0.1" % "provided",
+      "org.apache.pekko" %% "pekko-stream"        % "1.1.2" % "provided",
       scalatest % "test",
       slf4jApi % "test",
       slf4jnop % "test",
       okHttp % "test",
       "org.apache.pekko" %% "pekko-http-testkit"    % pekkoHttpVersion % "test",
-      "com.github.pjfanning" %% "pekko-http-json4s" % "2.0.0" % "test",
+      "com.github.pjfanning" %% "pekko-http-json4s" % "3.0.0" % "test",
       "org.json4s"        %% "json4s-native"        % "4.0.6" % "test",
     ),
   )).dependsOn(`kamon-pekko`, `kamon-testkit` % "test")
@@ -592,12 +592,12 @@ lazy val `kamon-pekko-grpc` = (project in file("instrumentation/kamon-pekko-grpc
       kanelaAgent % "provided",
 
       "org.apache.pekko" %% "pekko-http" % pekkoHttpVersion % "provided",
-      "org.apache.pekko" %% "pekko-stream" % "1.0.1" % "provided",
-      "org.apache.pekko" %% "pekko-discovery"% "1.0.0" % "provided",
+      "org.apache.pekko" %% "pekko-stream" % "1.1.2" % "provided",
+      "org.apache.pekko" %% "pekko-discovery"% "1.1.2" % "provided",
 
-      "com.thesamet.scalapb"    %% "scalapb-runtime"   % "0.11.8" % "provided",
-      "org.apache.pekko"        %% "pekko-grpc-runtime" % "1.0.0" % "provided",
-      "io.grpc"                 %  "grpc-stub"         % "1.43.2" % "provided",
+      "com.thesamet.scalapb"    %% "scalapb-runtime"   % "0.11.17" % "provided",
+      "org.apache.pekko"        %% "pekko-grpc-runtime" % "1.1.0-M1" % "provided",
+      "io.grpc"                 %  "grpc-stub"         % "1.68.0" % "provided",
 
 
       scalatest % "test",
