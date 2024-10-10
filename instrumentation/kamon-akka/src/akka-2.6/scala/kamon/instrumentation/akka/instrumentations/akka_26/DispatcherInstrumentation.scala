@@ -109,12 +109,12 @@ object InstrumentNewExecutorServiceOnAkka26 {
 
   @static def around(@This factory: HasDispatcherPrerequisites with HasDispatcherName, @SuperCall callable: Callable[ExecutorService]): ExecutorService = {
     val executor = callable.call()
-    val actorSystemName = factory.dispatcherPrerequisites.settings.name
     val dispatcherName = factory.dispatcherName
-    val scheduledActionName = actorSystemName + "/" + dispatcherName
-    val systemTags = TagSet.of("akka.system", actorSystemName)
 
     if(Kamon.filter(AkkaInstrumentation.TrackDispatcherFilterName).accept(dispatcherName)) {
+      val actorSystemName = factory.dispatcherPrerequisites.settings.name
+      val scheduledActionName = actorSystemName + "/" + dispatcherName
+      val systemTags = TagSet.of("akka.system", actorSystemName)
       val defaultEcOption = factory.dispatcherPrerequisites.defaultExecutionContext
 
       if(dispatcherName == Dispatchers.DefaultDispatcherId && defaultEcOption.isDefined) {
