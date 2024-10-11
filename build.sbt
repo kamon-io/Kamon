@@ -559,24 +559,25 @@ lazy val `kamon-pekko` = (project in file("instrumentation/kamon-pekko"))
     `kamon-testkit` % "test"
   )
 
-lazy val pekkoHttpVersion = "1.0.0"
+lazy val pekkoHttpVersion = "1.1.0+9-5427d0ca-SNAPSHOT"
 
 lazy val `kamon-pekko-http` = (project in file("instrumentation/kamon-pekko-http"))
   .enablePlugins(JavaAgent)
   .disablePlugins(AssemblyPlugin)
   .settings(instrumentationSettings)
   .settings(Seq(
+    resolvers += "Apache Pekko Snapshots" at "https://repository.apache.org/content/groups/snapshots",
     crossScalaVersions := Seq(`scala_2.12_version`, `scala_2.13_version`, scala_3_version),
     libraryDependencies ++= Seq(
       kanelaAgent % "provided",
       "org.apache.pekko" %% "pekko-http"          % pekkoHttpVersion % "provided",
-      "org.apache.pekko" %% "pekko-stream"        % "1.0.1" % "provided",
+      "org.apache.pekko" %% "pekko-stream"        % "1.1.2" % "provided",
       scalatest % "test",
       slf4jApi % "test",
       slf4jnop % "test",
       okHttp % "test",
       "org.apache.pekko" %% "pekko-http-testkit"    % pekkoHttpVersion % "test",
-      "com.github.pjfanning" %% "pekko-http-json4s" % "2.0.0" % "test",
+      "com.github.pjfanning" %% "pekko-http-json4s" % "3.0.0" % "test",
       "org.json4s"        %% "json4s-native"        % "4.0.6" % "test",
     ),
   )).dependsOn(`kamon-pekko`, `kamon-testkit` % "test")
@@ -586,18 +587,19 @@ lazy val `kamon-pekko-grpc` = (project in file("instrumentation/kamon-pekko-grpc
   .disablePlugins(AssemblyPlugin)
   .settings(instrumentationSettings)
   .settings(Seq(
+    resolvers += "Apache Pekko Snapshots" at "https://repository.apache.org/content/groups/snapshots",
     PB.additionalDependencies := Seq.empty,
     crossScalaVersions := Seq(`scala_2.12_version`, `scala_2.13_version`, scala_3_version),
     libraryDependencies ++= Seq(
       kanelaAgent % "provided",
 
       "org.apache.pekko" %% "pekko-http" % pekkoHttpVersion % "provided",
-      "org.apache.pekko" %% "pekko-stream" % "1.0.1" % "provided",
-      "org.apache.pekko" %% "pekko-discovery"% "1.0.0" % "provided",
+      "org.apache.pekko" %% "pekko-stream" % "1.1.2" % "provided",
+      "org.apache.pekko" %% "pekko-discovery"% "1.1.2" % "provided",
 
-      "com.thesamet.scalapb"    %% "scalapb-runtime"   % "0.11.8" % "provided",
-      "org.apache.pekko"        %% "pekko-grpc-runtime" % "1.0.0" % "provided",
-      "io.grpc"                 %  "grpc-stub"         % "1.43.2" % "provided",
+      "com.thesamet.scalapb"    %% "scalapb-runtime"   % "0.11.17" % "provided",
+      "org.apache.pekko"        %% "pekko-grpc-runtime" % "1.1.0-M1" % "provided",
+      "io.grpc"                 %  "grpc-stub"         % "1.68.0" % "provided",
 
 
       scalatest % "test",
