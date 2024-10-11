@@ -55,9 +55,10 @@ class PekkoHttpServerInstrumentation extends InstrumentationBuilder {
     * The rest of these sections are just about making sure that we can generate an appropriate operation name (i.e. free
     * of variables) and take a Sampling Decision in case none has been taken so far.
     */
-  onType("org.apache.pekko.http.scaladsl.server.RequestContextImpl")
-    .mixin(classOf[HasMatchingContext.Mixin])
-    .intercept(method("copy"), RequestContextCopyInterceptor)
+  Try(Class.forName("org.apache.pekko.http.scaladsl.server.RequestContext")).toOption
+    .foldLeft(
+      onType("org.apache.pekko.http.scaladsl.server.RequestContextImpl").mixin(classOf[HasMatchingContext.Mixin])
+    )((advice, klass) => advice.intercept(withReturnTypes(klass), RequestContextCopyInterceptor))
 
   onType("org.apache.pekko.http.scaladsl.server.directives.PathDirectives")
     .intercept(method("rawPathPrefix"), classOf[PathDirectivesRawPathPrefixInterceptor])
@@ -262,7 +263,7 @@ object RequestContextCopyInterceptor {
   @RuntimeType
   def copy(@This context: RequestContext, @SuperCall copyCall: Callable[RequestContext]): RequestContext = {
     val copiedRequestContext = copyCall.call()
-    copiedRequestContext.asInstanceOf[HasMatchingContext].setMatchingContext(
+    if (copiedRequestContext ne context) copiedRequestContext.asInstanceOf[HasMatchingContext].setMatchingContext(
       context.asInstanceOf[HasMatchingContext].matchingContext
     )
     copiedRequestContext

@@ -414,6 +414,7 @@ lazy val `kamon-spring` = (project in file("instrumentation/kamon-spring"))
       "org.springframework.boot" % "spring-boot-starter-webflux" % "2.4.2" % "provided",
       okHttp % "test",
       "com.h2database" % "h2" % "1.4.200" % "test",
+      "javax.xml.bind" % "jaxb-api" % "2.3.1" % "test",
       "org.springframework.boot" % "spring-boot-starter-data-jpa" % "2.4.2" % "test",
       scalatest % "test",
       logbackClassic % "test"
@@ -574,6 +575,21 @@ lazy val `kamon-pekko-grpc` = (project in file("instrumentation/kamon-pekko-grpc
       logbackClassic % "test"
     )
   )).dependsOn(`kamon-pekko-http`, `kamon-testkit` % "test")
+
+lazy val `kamon-pekko-connectors-kafka` = (project in file("instrumentation/kamon-pekko-connectors-kafka"))
+  .disablePlugins(AssemblyPlugin)
+  .enablePlugins(JavaAgent)
+  .settings(instrumentationSettings)
+  .settings(
+    crossScalaVersions := Seq(`scala_2.12_version`, `scala_2.13_version`, scala_3_version),
+    libraryDependencies ++= Seq(
+      kanelaAgent % "provided",
+      "org.apache.pekko" %% "pekko-connectors-kafka" % "1.0.0" % "provided",
+      "org.apache.pekko" %% "pekko-stream" % "1.0.1" % "provided",
+      scalatest % "test",
+      logbackClassic % "test"
+    )
+  ).dependsOn(`kamon-core`, `kamon-pekko`, `kamon-testkit` % "test")
 
 lazy val `kamon-akka-grpc` = (project in file("instrumentation/kamon-akka-grpc"))
   .enablePlugins(JavaAgent, AkkaGrpcPlugin)
@@ -821,6 +837,7 @@ lazy val `kamon-apache-cxf` = (project in file("instrumentation/kamon-apache-cxf
       "org.mock-server" % "mockserver-client-java" % "5.13.2" % "test",
       "com.dimafeng" %% "testcontainers-scala" % "0.41.0" % "test",
       "com.dimafeng" %% "testcontainers-scala-mockserver" % "0.41.0" % "test",
+      "javax.xml.bind" % "jaxb-api" % "2.3.1" % "test",
       "org.apache.cxf" % "cxf-rt-frontend-jaxws" % "3.3.6" % "test",
       "org.apache.cxf" % "cxf-rt-transports-http" % "3.3.6" % "test"
     )
@@ -1106,6 +1123,7 @@ lazy val `kamon-bundle-dependencies-2-12-and-up` = (project in file("bundle/kamo
     `kamon-pekko`,
     `kamon-pekko-http`,
     `kamon-pekko-grpc`,
+    `kamon-pekko-connectors-kafka`,
     `kamon-tapir`,
     `kamon-alpakka-kafka`
   )

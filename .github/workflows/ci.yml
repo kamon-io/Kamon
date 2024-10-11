@@ -1,15 +1,14 @@
 name: Test all the things
-
 on: [ push, pull_request ]
+env:
+  JAVA_OPTS: -Xms5120M -Xmx5120M -Xss6M -XX:ReservedCodeCacheSize=256M -Dfile.encoding=UTF-8
+  JVM_OPTS: -Xms5120M -Xmx5120M -Xss6M -XX:ReservedCodeCacheSize=256M -Dfile.encoding=UTF-8
 
 jobs:
   ci:
-    runs-on: ubuntu-latest
-    env:
-      JAVA_OPTS: -Xms5120M -Xmx5120M -Xss6M -XX:ReservedCodeCacheSize=256M -Dfile.encoding=UTF-8
-      JVM_OPTS: -Xms5120M -Xmx5120M -Xss6M -XX:ReservedCodeCacheSize=256M -Dfile.encoding=UTF-8
+    runs-on: self-hosted
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v4
       - run: git fetch -f --depth=1 origin '+refs/tags/*:refs/tags/*'
       - uses: coursier/cache-action@v6
       - uses: coursier/setup-action@v1
@@ -19,9 +18,13 @@ jobs:
       - name: Test
         run: sbt -v ";+core/test;+instrumentation/test;+reporters/test"
   lint:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v4
       - uses: coursier/cache-action@v6
+      - uses: coursier/setup-action@v1
+        with:
+          jvm: adopt:8
+          apps: sbt
       - name: Test
         run: sbt -v "+scalafmtCheckAll;scalafmtSbtCheck"

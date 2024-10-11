@@ -21,17 +21,17 @@ import java.nio.charset.StandardCharsets
 import java.text.{DecimalFormat, DecimalFormatSymbols}
 import java.time.Duration
 import java.util.Locale
-
 import com.typesafe.config.Config
 import kamon.metric.MeasurementUnit.Dimension.{Information, Time}
 import kamon.metric.{MeasurementUnit, MetricSnapshot, PeriodSnapshot}
 import kamon.tag.{Tag, TagSet}
 import kamon.util.{EnvironmentTags, Filter}
-import kamon.{module, Kamon}
+import kamon.{Kamon, module}
 import kamon.datadog.DatadogAPIReporter.Configuration
 import kamon.module.{MetricReporter, ModuleFactory}
 import org.slf4j.LoggerFactory
-
+import org.slf4j.event.Level
+import scala.collection.JavaConverters._
 import scala.util.{Failure, Success}
 
 class DatadogAPIReporterFactory extends ModuleFactory {
@@ -68,7 +68,7 @@ class DatadogAPIReporter(
   override def reportPeriodSnapshot(snapshot: PeriodSnapshot): Unit = {
     httpClient.doPost("application/json; charset=utf-8", buildRequestBody(snapshot)) match {
       case Failure(e) =>
-        logger.error(e.getMessage)
+        logger.logAtLevel(configuration.failureLogLevel, e.getMessage)
       case Success(response) =>
         logger.trace(response)
     }
@@ -81,6 +81,12 @@ class DatadogAPIReporter(
     val interval = Math.round(Duration.between(snapshot.from, snapshot.to).toMillis() / 1000d)
     val seriesBuilder = new StringBuilder()
 
+    @inline
+    def doubleToPercentileString(double: Double) = {
+      if (double == double.toLong) f"${double.toLong}%d"
+      else f"$double%s"
+    }
+
     def addDistribution(metric: MetricSnapshot.Distributions): Unit = {
       val unit = metric.settings.unit
       metric.instruments.foreach { d =>
@@ -90,12 +96,14 @@ class DatadogAPIReporter(
         addMetric(metric.name + ".avg", valueFormat.format(scale(average, unit)), gauge, d.tags)
         addMetric(metric.name + ".count", valueFormat.format(dist.count), count, d.tags)
         addMetric(metric.name + ".median", valueFormat.format(scale(dist.percentile(50d).value, unit)), gauge, d.tags)
-        addMetric(
-          metric.name + ".95percentile",
-          valueFormat.format(scale(dist.percentile(95d).value, unit)),
-          gauge,
-          d.tags
-        )
+        configuration.percentiles.foreach { p =>
+          addMetric(
+            metric.name + s".${doubleToPercentileString(p)}percentile",
+            valueFormat.format(scale(dist.percentile(p).value, unit)),
+            gauge,
+            d.tags
+          )
+        }
         addMetric(metric.name + ".max", valueFormat.format(scale(dist.max, unit)), gauge, d.tags)
         addMetric(metric.name + ".min", valueFormat.format(scale(dist.min, unit)), gauge, d.tags)
       }
@@ -163,10 +171,12 @@ private object DatadogAPIReporter {
 
   case class Configuration(
     httpConfig: Config,
+    percentiles: Set[Double],
     timeUnit: MeasurementUnit,
     informationUnit: MeasurementUnit,
     extraTags: Seq[(String, String)],
-    tagFilter: Filter
+    tagFilter: Filter,
+    failureLogLevel: Level
   )
 
   implicit class QuoteInterp(val sc: StringContext) extends AnyVal {
@@ -175,15 +185,23 @@ private object DatadogAPIReporter {
 
   def readConfiguration(config: Config): Configuration = {
     val datadogConfig = config.getConfig("kamon.datadog")
+
+    // Remove the "host" tag since it gets added to the datadog payload separately
+    val extraTags = EnvironmentTags
+      .from(Kamon.environment, datadogConfig.getConfig("environment-tags"))
+      .without("host")
+      .all()
+      .map(p => p.key -> Tag.unwrapValue(p).toString)
+
     Configuration(
       datadogConfig.getConfig("api"),
+      percentiles = datadogConfig.getDoubleList("percentiles").asScala.toList.map(_.toDouble).toSet,
       timeUnit = readTimeUnit(datadogConfig.getString("time-unit")),
       informationUnit = readInformationUnit(datadogConfig.getString("information-unit")),
       // Remove the "host" tag since it gets added to the datadog payload separately
-      EnvironmentTags.from(Kamon.environment, datadogConfig.getConfig("environment-tags")).without("host").all().map(
-        p => p.key -> Tag.unwrapValue(p).toString
-      ),
-      Kamon.filter("kamon.datadog.environment-tags.filter")
+      extraTags = extraTags,
+      tagFilter = Kamon.filter("kamon.datadog.environment-tags.filter"),
+      failureLogLevel = readLogLevel(datadogConfig.getString("failure-log-level"))
     )
   }
 }

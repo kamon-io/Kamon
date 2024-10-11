@@ -20,7 +20,7 @@ package trace
 import java.util.concurrent.ThreadLocalRandom
 
 import com.typesafe.config.Config
-import kamon.jsr166.LongAdder
+import java.util.concurrent.atomic.LongAdder
 import kamon.trace.AdaptiveSampler.{Allocation, OperationSampler, Settings}
 import kamon.trace.Trace.SamplingDecision
 import kamon.util.EWMA
@@ -363,7 +363,7 @@ object AdaptiveSampler {
         * special logic is used to smooth the process during startup of each individual operation.
         */
       private def decisionHistory(): Long = {
-        val decisions = _decisions.sumAndReset()
+        val decisions = _decisions.sumThenReset()
         _decisionsPerTickPos = if (_decisionsPerTickPos == (_decisionsHistorySize - 1)) 0 else _decisionsPerTickPos + 1
         _decisionsPerTick.update(_decisionsPerTickPos, decisions)
         _tickCount += 1

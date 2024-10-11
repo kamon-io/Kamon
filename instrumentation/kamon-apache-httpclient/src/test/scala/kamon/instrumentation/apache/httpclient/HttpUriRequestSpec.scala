@@ -156,7 +156,8 @@ class HttpUriRequestSpec
   }
 
   override val container: MockServerContainer = MockServerContainer()
-  lazy val clientExpectation: MockServerExpectations = new MockServerExpectations("localhost", container.serverPort)
+  lazy val clientExpectation: MockServerExpectations =
+    new MockServerExpectations(container.container.getHost, container.serverPort)
 
   override protected def beforeAll(): Unit = {
     super.beforeAll()
