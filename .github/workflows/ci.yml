@@ -27,5 +27,4 @@ jobs:
           jvm: adopt:8
           apps: sbt
       - name: Test
-        run: sbt -v "+scalafmtCheckAll"
-
+        run: sbt -v "+scalafmtCheckAll;scalafmtSbtCheck"

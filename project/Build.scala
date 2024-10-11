@@ -3,7 +3,15 @@ import Keys._
 import sbt.librarymanagement.{Configuration, Configurations}
 import Configurations.Compile
 import sbtassembly.AssemblyPlugin
-import sbtassembly.AssemblyPlugin.autoImport.{MergeStrategy, assembleArtifact, assembly, assemblyExcludedJars, assemblyMergeStrategy, assemblyOption, assemblyPackageScala}
+import sbtassembly.AssemblyPlugin.autoImport.{
+  MergeStrategy,
+  assembleArtifact,
+  assembly,
+  assemblyExcludedJars,
+  assemblyMergeStrategy,
+  assemblyOption,
+  assemblyPackageScala
+}
 import java.util.Calendar
 
 import Def.Initialize
@@ -26,17 +34,16 @@ object BaseProject extends AutoPlugin {
     /** Marker configuration for dependencies that will be shaded into their module's jar.  */
     lazy val Shaded = config("shaded").hide
 
-    val kanelaAgent       = "io.kamon"              %  "kanela-agent"    % "1.0.18"
-    val slf4jApi          = "org.slf4j"             %  "slf4j-api"       % "1.7.36"
-    val slf4jnop          = "org.slf4j"             %  "slf4j-nop"       % "1.7.36"
-    val logbackClassic    = "ch.qos.logback"        %  "logback-classic" % "1.2.12"
-    val scalatest         = "org.scalatest"         %% "scalatest"       % "3.2.9"
-    val hdrHistogram      = "org.hdrhistogram"      %  "HdrHistogram"    % "2.1.10"
-    val okHttp            = "com.squareup.okhttp3"  %  "okhttp"          % "4.12.0"
-    val okHttpMockServer  = "com.squareup.okhttp3"  %  "mockwebserver"   % "4.10.0"
-    val jsqlparser        = "com.github.jsqlparser" % "jsqlparser"       % "4.1"
-    val oshiCore          = "com.github.oshi"       %  "oshi-core"       % "6.4.13"
-
+    val kanelaAgent = "io.kamon" % "kanela-agent" % "1.0.18"
+    val slf4jApi = "org.slf4j" % "slf4j-api" % "1.7.36"
+    val slf4jnop = "org.slf4j" % "slf4j-nop" % "1.7.36"
+    val logbackClassic = "ch.qos.logback" % "logback-classic" % "1.2.12"
+    val scalatest = "org.scalatest" %% "scalatest" % "3.2.9"
+    val hdrHistogram = "org.hdrhistogram" % "HdrHistogram" % "2.1.10"
+    val okHttp = "com.squareup.okhttp3" % "okhttp" % "4.12.0"
+    val okHttpMockServer = "com.squareup.okhttp3" % "mockwebserver" % "4.10.0"
+    val jsqlparser = "com.github.jsqlparser" % "jsqlparser" % "4.1"
+    val oshiCore = "com.github.oshi" % "oshi-core" % "6.4.13"
 
     val kanelaAgentVersion = settingKey[String]("Kanela Agent version")
     val kanelaAgentJar = taskKey[File]("Kanela Agent jar")
@@ -64,8 +71,8 @@ object BaseProject extends AutoPlugin {
     // This installs the GPG signing key from the
     setupGpg()
 
-    def compileScope(deps: ModuleID*): Seq[ModuleID]  = deps map (_ % "compile")
-    def testScope(deps: ModuleID*): Seq[ModuleID]     = deps map (_ % "test")
+    def compileScope(deps: ModuleID*): Seq[ModuleID] = deps map (_ % "compile")
+    def testScope(deps: ModuleID*): Seq[ModuleID] = deps map (_ % "test")
     def providedScope(deps: ModuleID*): Seq[ModuleID] = deps map (_ % "provided")
     def optionalScope(deps: ModuleID*): Seq[ModuleID] = deps map (_ % "compile,optional")
 
@@ -82,8 +89,8 @@ object BaseProject extends AutoPlugin {
 
       val allSources = (
         baseSources.filterNot { case (_, path) => extraSources.exists(_._2 == path) } ++
-        manSources ++
-        extraSources
+          manSources ++
+          extraSources
       )
 
       allSources.map(_._1)
@@ -142,10 +149,13 @@ object BaseProject extends AutoPlugin {
       autoImport.`scala_3_version`
     ),
     javacOptions := Seq(
-      "-source", "1.8",
-      "-target", "1.8",
+      "-source",
+      "1.8",
+      "-target",
+      "1.8",
       "-Xlint:-options",
-      "-encoding", "UTF-8",
+      "-encoding",
+      "UTF-8",
       "-XDignore.symbol.file"
     ),
     scalacOptions := Seq(
@@ -155,18 +165,19 @@ object BaseProject extends AutoPlugin {
       "-deprecation",
       "-target:jvm-1.8",
       "-Ywarn-dead-code",
-      "-encoding", "UTF-8",
+      "-encoding",
+      "UTF-8",
       "-language:postfixOps",
       "-language:higherKinds",
       "-Xlog-reflective-calls",
       "-language:existentials",
       "-language:implicitConversions"
     ) ++ (CrossVersion.partialVersion(scalaVersion.value) match {
-      case Some((2,11)) => Seq("-Xfuture", "-Ybackend:GenASM")
-      case Some((2,12)) => Seq("-Xfuture", "-opt:l:method,-closure-invocations")
-      case Some((2,13)) => Seq.empty
-      case Some((3, _)) => Seq("-source:3.0-migration", "-Xtarget:8")
-      case _ => Seq.empty
+      case Some((2, 11)) => Seq("-Xfuture", "-Ybackend:GenASM")
+      case Some((2, 12)) => Seq("-Xfuture", "-opt:l:method,-closure-invocations")
+      case Some((2, 13)) => Seq.empty
+      case Some((3, _))  => Seq("-source:3.0-migration", "-Xtarget:8")
+      case _             => Seq.empty
     })
   )
 
@@ -209,7 +220,7 @@ object BaseProject extends AutoPlugin {
   def findKanelaAgentJar = Def.task {
     update.value.matching {
       moduleFilter(organization = "io.kamon", name = "kanela-agent") &&
-        artifactFilter(`type` = "jar")
+      artifactFilter(`type` = "jar")
     }.head
   }
 
@@ -233,7 +244,7 @@ object BaseProject extends AutoPlugin {
 
   private def kamonReleaseProcess = Def.setting {
     val publishStep =
-      if(isSnapshot.value)
+      if (isSnapshot.value)
         releaseStepCommandAndRemaining("+publish")
       else
         releaseStepCommandAndRemaining("+publishSigned")
@@ -272,9 +283,9 @@ object AssemblyTweaks extends AutoPlugin {
     ),
     assembly / assemblyMergeStrategy := {
       case s if s.startsWith("LICENSE") => MergeStrategy.discard
-      case s if s.startsWith("about") => MergeStrategy.discard
-      case "version.conf" => MergeStrategy.concat
-      case x => (assembly / assemblyMergeStrategy).value(x)
+      case s if s.startsWith("about")   => MergeStrategy.discard
+      case "version.conf"               => MergeStrategy.concat
+      case x                            => (assembly / assemblyMergeStrategy).value(x)
     }
   ) ++ inConfig(Shaded)(Defaults.configSettings)
 }
