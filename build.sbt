@@ -559,13 +559,14 @@ lazy val `kamon-pekko` = (project in file("instrumentation/kamon-pekko"))
     `kamon-testkit` % "test"
   )
 
-lazy val pekkoHttpVersion = "1.1.0"
+lazy val pekkoHttpVersion = "1.1.0+9-5427d0ca-SNAPSHOT"
 
 lazy val `kamon-pekko-http` = (project in file("instrumentation/kamon-pekko-http"))
   .enablePlugins(JavaAgent)
   .disablePlugins(AssemblyPlugin)
   .settings(instrumentationSettings)
   .settings(Seq(
+    resolvers += "Apache Pekko Snapshots" at "https://repository.apache.org/content/groups/snapshots",
     crossScalaVersions := Seq(`scala_2.12_version`, `scala_2.13_version`, scala_3_version),
     libraryDependencies ++= Seq(
       kanelaAgent % "provided",
@@ -586,6 +587,7 @@ lazy val `kamon-pekko-grpc` = (project in file("instrumentation/kamon-pekko-grpc
   .disablePlugins(AssemblyPlugin)
   .settings(instrumentationSettings)
   .settings(Seq(
+    resolvers += "Apache Pekko Snapshots" at "https://repository.apache.org/content/groups/snapshots",
     PB.additionalDependencies := Seq.empty,
     crossScalaVersions := Seq(`scala_2.12_version`, `scala_2.13_version`, scala_3_version),
     libraryDependencies ++= Seq(
