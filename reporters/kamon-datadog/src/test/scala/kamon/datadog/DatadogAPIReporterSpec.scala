@@ -18,9 +18,52 @@ import scala.concurrent.ExecutionContext
 class DatadogAPIReporterSpec extends AbstractHttpReporter with Matchers with Reconfigure {
 
   "the DatadogAPIReporter" should {
+
     val reporter =
       new DatadogAPIReporterFactory().create(ModuleFactory.Settings(Kamon.config(), ExecutionContext.global))
     val now = Instant.ofEpochMilli(1523395554)
+    val examplePeriod = PeriodSnapshot.apply(
+      now.minusMillis(1000),
+      now,
+      MetricSnapshot.ofValues[Long](
+        "test.counter",
+        "test",
+        Metric.Settings.ForValueInstrument(MeasurementUnit.none, java.time.Duration.ZERO),
+        Instrument.Snapshot.apply(TagSet.of("tag1", "value1"), 0L) :: Nil
+      ) :: Nil,
+      Nil,
+      Nil,
+      Nil,
+      Nil
+    )
+
+    "handle retries on retriable HTTP status codes" in {
+      val baseUrl = mockResponse("/test", new MockResponse().setResponseCode(429))
+      applyConfig("kamon.datadog.api.api-url = \"" + baseUrl + "\"")
+      applyConfig("kamon.datadog.api.api-key = \"dummy\"")
+      applyConfig("kamon.datadog.api.compression = false")
+      applyConfig("kamon.datadog.api.init-retry-delay = 100 milliseconds")
+      applyConfig("kamon.datadog.api.retries = 0")
+      reporter.reconfigure(Kamon.config())
+
+      reporter.reportPeriodSnapshot(examplePeriod)
+
+      server.getRequestCount shouldEqual 1
+      server.takeRequest()
+
+      applyConfig("kamon.datadog.api.retries = 3")
+      reporter.reconfigure(Kamon.config())
+
+      mockResponse(new MockResponse().setResponseCode(429))
+      mockResponse(new MockResponse().setResponseCode(503))
+      mockResponse(new MockResponse().setResponseCode(504))
+      reporter.reportPeriodSnapshot(examplePeriod)
+      Thread.sleep(1000)
+      server.takeRequest()
+      server.takeRequest()
+      server.takeRequest()
+      server.getRequestCount shouldEqual 4
+    }
 
     "sends metrics - compressed" in {
       val baseUrl = mockResponse("/test", new MockResponse().setStatus("HTTP/1.1 200 OK"))
@@ -29,22 +72,7 @@ class DatadogAPIReporterSpec extends AbstractHttpReporter with Matchers with Rec
       applyConfig("kamon.datadog.api.compression = true")
       reporter.reconfigure(Kamon.config())
 
-      reporter.reportPeriodSnapshot(
-        PeriodSnapshot.apply(
-          now.minusMillis(1000),
-          now,
-          MetricSnapshot.ofValues[Long](
-            "test.counter",
-            "test",
-            Metric.Settings.ForValueInstrument(MeasurementUnit.none, java.time.Duration.ZERO),
-            Instrument.Snapshot.apply(TagSet.of("tag1", "value1"), 0L) :: Nil
-          ) :: Nil,
-          Nil,
-          Nil,
-          Nil,
-          Nil
-        )
-      )
+      reporter.reportPeriodSnapshot(examplePeriod)
 
       val request = server.takeRequest()
 
@@ -64,22 +92,7 @@ class DatadogAPIReporterSpec extends AbstractHttpReporter with Matchers with Rec
       applyConfig("kamon.datadog.api.compression = false")
       reporter.reconfigure(Kamon.config())
 
-      reporter.reportPeriodSnapshot(
-        PeriodSnapshot.apply(
-          now.minusMillis(1000),
-          now,
-          MetricSnapshot.ofValues[Long](
-            "test.counter",
-            "test",
-            Metric.Settings.ForValueInstrument(MeasurementUnit.none, java.time.Duration.ZERO),
-            Instrument.Snapshot.apply(TagSet.of("tag1", "value1"), 0L) :: Nil
-          ) :: Nil,
-          Nil,
-          Nil,
-          Nil,
-          Nil
-        )
-      )
+      reporter.reportPeriodSnapshot(examplePeriod)
       val request = server.takeRequest()
       request.getRequestUrl.toString shouldEqual baseUrl + "?api_key=dummy"
       request.getMethod shouldEqual "POST"
