@@ -16,25 +16,20 @@
 
 package kamon.instrumentation.akka.http;
 
-import akka.http.scaladsl.model.HttpRequest;
-import akka.http.scaladsl.model.HttpResponse;
 import kanela.agent.libs.net.bytebuddy.asm.Advice;
-import scala.Function1;
-import scala.concurrent.Future;
 
 public class Http2ExtBindAndHandleAdvice {
 
   @Advice.OnMethodEnter(suppress = Throwable.class)
-  public static void onEnter(@Advice.Argument(value = 0, readOnly = false) Function1<HttpRequest, Future<HttpResponse>> handler,
-     @Advice.Argument(1) String iface,
-     @Advice.Argument(2) Integer port) {
+  public static void onEnter(@Advice.Argument(1) String iface, @Advice.Argument(2) Integer port) {
 
     FlowOpsMapAsyncAdvice.currentEndpoint.set(new FlowOpsMapAsyncAdvice.EndpointInfo(iface, port));
-    handler = new Http2BlueprintInterceptor.HandlerWithEndpoint(iface, port, handler);
+    Http2BlueprintAsyncAdvice.currentEndpoint.set(new Http2BlueprintAsyncAdvice.EndpointInfo(iface, port));
   }
 
   @Advice.OnMethodExit
   public static void onExit() {
     FlowOpsMapAsyncAdvice.currentEndpoint.remove();
+    Http2BlueprintAsyncAdvice.currentEndpoint.remove();
   }
 }
