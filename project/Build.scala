@@ -150,9 +150,9 @@ object BaseProject extends AutoPlugin {
     ),
     javacOptions := Seq(
       "-source",
-      "1.8",
+      "17",
       "-target",
-      "1.8",
+      "17",
       "-Xlint:-options",
       "-encoding",
       "UTF-8",
@@ -266,6 +266,8 @@ object BaseProject extends AutoPlugin {
   */
 object AssemblyTweaks extends AutoPlugin {
   import BaseProject.autoImport.Shaded
+  import sbtassembly.AssemblyOption
+  import sbtassembly.AssemblyPlugin.autoImport._
 
   override def requires = AssemblyPlugin
   override def trigger = allRequirements
@@ -275,12 +277,31 @@ object AssemblyTweaks extends AutoPlugin {
     assembly / test := {},
     Compile / packageBin := assembly.value,
     assembly / fullClasspath := (Shaded / externalDependencyClasspath).value ++ (Compile / products).value.classpath,
-    assembly / assemblyOption := (assembly / assemblyOption).value.copy(
-      includeBin = true,
-      includeScala = false,
-      includeDependency = true,
-      cacheOutput = false
-    ),
+    assembly / assemblyOption := {
+      AssemblyOption()
+        .withIncludeBin(true)
+        .withIncludeScala(false)
+        .withIncludeDependency(true)
+        .withCacheOutput(false)
+        .withMergeStrategy(assemblyMergeStrategy.value)
+        .withExcludedJars(assemblyExcludedJars.value)
+        .withAppendContentHash(false)
+        .withPrependShellScript(None)
+        .withMaxHashLength(0)
+        .withShadeRules((assembly / assemblyShadeRules).value)
+        .withScalaVersion(scalaVersion.value)
+        .withLevel(logLevel.?.value.getOrElse(Level.Info))
+        .withRepeatableBuild(true)
+    },
+    // assemblyPackageScala / assembleArtifact := false,
+    // assemblyPackageDependency / assembleArtifact := true,
+    // assemblyCacheOutput := false,
+    // assembly / assemblyOption := (assembly / assemblyOption).value.copy(
+    //   includeBin = true,
+    //   includeScala = false,
+    //   includeDependency = true,
+    //   cacheOutput = false
+    // ),
     assembly / assemblyMergeStrategy := {
       case s if s.startsWith("LICENSE") => MergeStrategy.discard
       case s if s.startsWith("about")   => MergeStrategy.discard

@@ -1,0 +1,37 @@
+{
+    "workerCache": {
+        "mill.scalalib.ZincWorkerModule.worker": {
+            "identityHashCode": 569976699,
+            "inputHash": 837774061
+        }
+    },
+    "evalWatched": [
+        "ref:v0:c984eca8:/home/ivantopo/code/kamon/mill-build/resources",
+        "ref:v0:c984eca8:/home/ivantopo/code/kamon/mill-build/compile-resources",
+        "ref:v0:c984eca8:/home/ivantopo/code/kamon/mill-build/src",
+        "ref:v0:3c84c76e:/home/ivantopo/code/kamon/build.mill",
+        "qref:v0:9a512bc1:/home/ivantopo/code/kamon/out/mill-launcher/0.12.7.jar"
+    ],
+    "moduleWatched": [],
+    "classLoaderIdentity": [
+        857138714
+    ],
+    "runClasspath": [
+        "qref:v1:66635991:/home/ivantopo/.cache/coursier/v1/https/repo1.maven.org/maven2/org/scala-lang/scala-library/2.13.15/scala-library-2.13.15.jar",
+        "qref:v1:4b580bec:/home/ivantopo/.cache/coursier/v1/https/repo1.maven.org/maven2/com/lihaoyi/mill-moduledefs_2.13/0.11.2/mill-moduledefs_2.13-0.11.2.jar",
+        "ref:v0:c984eca8:/home/ivantopo/code/kamon/mill-build/compile-resources",
+        "qref:v0:9a512bc1:/home/ivantopo/code/kamon/out/mill-launcher/0.12.7.jar",
+        "qref:v1:f36d9836:/home/ivantopo/.cache/coursier/v1/https/repo1.maven.org/maven2/com/lihaoyi/mill-runner-linenumbers_2.13/0.12.7/mill-runner-linenumbers_2.13-0.12.7.jar",
+        "qref:v1:930501cd:/home/ivantopo/.cache/coursier/v1/https/repo1.maven.org/maven2/org/scala-lang/scala-compiler/2.13.15/scala-compiler-2.13.15.jar",
+        "qref:v1:66635991:/home/ivantopo/.cache/coursier/v1/https/repo1.maven.org/maven2/org/scala-lang/scala-library/2.13.15/scala-library-2.13.15.jar",
+        "qref:v1:4b580bec:/home/ivantopo/.cache/coursier/v1/https/repo1.maven.org/maven2/com/lihaoyi/mill-moduledefs_2.13/0.11.2/mill-moduledefs_2.13-0.11.2.jar",
+        "qref:v1:2b82832f:/home/ivantopo/.cache/coursier/v1/https/repo1.maven.org/maven2/com/lihaoyi/mill-main-client/0.12.7/mill-main-client-0.12.7.jar",
+        "qref:v1:0d6dad67:/home/ivantopo/.cache/coursier/v1/https/repo1.maven.org/maven2/org/scala-lang/scala-reflect/2.13.15/scala-reflect-2.13.15.jar",
+        "qref:v1:c3fede0e:/home/ivantopo/.cache/coursier/v1/https/repo1.maven.org/maven2/io/github/java-diff-utils/java-diff-utils/4.12/java-diff-utils-4.12.jar",
+        "qref:v1:756f448c:/home/ivantopo/.cache/coursier/v1/https/repo1.maven.org/maven2/org/jline/jline/3.26.3/jline-3.26.3.jar",
+        "qref:v1:93dd03ee:/home/ivantopo/.cache/coursier/v1/https/repo1.maven.org/maven2/net/java/dev/jna/jna/5.14.0/jna-5.14.0.jar",
+        "qref:v1:589290b0:/home/ivantopo/.cache/coursier/v1/https/repo1.maven.org/maven2/com/lihaoyi/sourcecode_2.13/0.3.0/sourcecode_2.13-0.3.0.jar",
+        "ref:v0:ac87b63b:/home/ivantopo/code/kamon/out/mill-build/compile.dest/classes"
+    ],
+    "runClasspathHash": 506048435
+}

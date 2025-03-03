@@ -27,6 +27,64 @@ val coreProjects = Seq[ProjectReference](
   `kamon-core-bench`
 )
 
+lazy val `kanela-dependencies` = (project in file("agent/kanela-dependencies"))
+  .settings(noPublishing: _*)
+  .settings(
+    exportJars := true,
+    crossPaths := false,
+    autoScalaLibrary := false,
+    libraryDependencies ++= Seq(
+      "org.ow2.asm" % "asm-commons" % "9.7.1" % "provided,shaded" intransitive,
+      "org.ow2.asm" % "asm-tree" % "9.7.1" % "provided,shaded" intransitive
+    ),
+    assembly / assemblyShadeRules := Seq(
+      ShadeRule.zap("module-info").inAll,
+      ShadeRule.rename("org.objectweb.**" -> "net.bytebuddy.jar.@1").inAll
+    )
+  )
+
+lazy val kanela = (project in file("agent/kanela"))
+  .dependsOn(`kanela-dependencies` % "provided,shaded")
+  .settings(
+    exportJars := true,
+    crossPaths := false,
+    autoScalaLibrary := false,
+    assembly / fullClasspath := (Shaded / dependencyClasspath).value ++ (Compile / products).value.classpath,
+    Compile / packageBin / packageOptions ++= Seq(
+      Package.ManifestAttributes("Agent-Class" -> "kanela.agent.Kanela"),
+      Package.ManifestAttributes("Premain-Class" -> "kanela.agent.Kanela"),
+      Package.ManifestAttributes("Main-Class" -> "kanela.agent.attacher.Attacher"),
+      Package.ManifestAttributes("Can-Redefine-Classes" -> "true"),
+      Package.ManifestAttributes("Can-Retransform-Classes" -> "true"),
+      Package.ManifestAttributes("Can-Set-Native-Method-Prefix" -> "true")
+    ),
+    libraryDependencies ++= Seq(
+      "com.typesafe" % "config" % "1.4.3" % "provided,shaded",
+      "org.tinylog" % "tinylog" % "1.3.6" % "provided,shaded",
+      "net.bytebuddy" % "byte-buddy" % "1.17.0" % "provided,shaded",
+      "net.bytebuddy" % "byte-buddy-agent" % "1.17.0" % "provided,shaded",
+      "org.scalameta" %% "munit" % "1.0.4" % Test
+    ),
+    assembly / assemblyShadeRules := Seq(
+      ShadeRule.zap("module-info").inAll,
+      ShadeRule.zap("**module-info").inAll,
+      ShadeRule.rename("org.tinylog.**" -> "kanela.agent.libs.@0").inAll,
+      ShadeRule.rename("com.typesafe.**" -> "kanela.agent.libs.@0").inAll,
+      ShadeRule.rename("net.bytebuddy.**" -> "kanela.agent.libs.@0").inAll
+    )
+  )
+
+lazy val `kanela-tests` = (project in file("agent/kanela-tests"))
+  .dependsOn(kanela)
+  .disablePlugins(AssemblyPlugin)
+  .settings(noPublishing: _*)
+  .settings(
+    Test / javaOptions := Seq("-javaagent:" + (kanela / assembly).value),
+    libraryDependencies ++= Seq(
+      "org.scalameta" %% "munit" % "1.0.4" % Test
+    )
+  )
+
 lazy val core = (project in file("core"))
   .disablePlugins(AssemblyPlugin)
   .settings(noPublishing: _*)
@@ -35,7 +93,6 @@ lazy val core = (project in file("core"))
 
 lazy val `kamon-core` = (project in file("core/kamon-core"))
   .enablePlugins(BuildInfoPlugin)
-  .enablePlugins(AssemblyPlugin)
   .settings(
     buildInfoKeys := Seq[BuildInfoKey](version),
     buildInfoPackage := "kamon.status",
@@ -70,7 +127,6 @@ lazy val `kamon-core` = (project in file("core/kamon-core"))
   )
 
 lazy val `kamon-status-page` = (project in file("core/kamon-status-page"))
-  .enablePlugins(AssemblyPlugin)
   .settings(
     assembly / assemblyShadeRules := Seq(
       ShadeRule.rename("com.grack.nanojson.**" -> "kamon.lib.@0").inAll,
@@ -432,7 +488,6 @@ lazy val `kamon-annotation-api` = (project in file("instrumentation/kamon-annota
 
 lazy val `kamon-annotation` = (project in file("instrumentation/kamon-annotation"))
   .enablePlugins(JavaAgent)
-  .enablePlugins(AssemblyPlugin)
   .settings(instrumentationSettings: _*)
   .settings(
     assembly / assemblyShadeRules := Seq(
@@ -866,7 +921,6 @@ lazy val reporters = (project in file("reporters"))
   .aggregate(reportersProjects: _*)
 
 lazy val `kamon-datadog` = (project in file("reporters/kamon-datadog"))
-  .enablePlugins(AssemblyPlugin)
   .settings(
     assembly / assemblyMergeStrategy := {
       case PathList("META-INF", xs @ _*) => MergeStrategy.discard
@@ -888,7 +942,6 @@ lazy val `kamon-datadog` = (project in file("reporters/kamon-datadog"))
   ).dependsOn(`kamon-core`, `kamon-testkit` % "test")
 
 lazy val `kamon-apm-reporter` = (project in file("reporters/kamon-apm-reporter"))
-  .enablePlugins(AssemblyPlugin)
   .settings(
     assembly / test := {},
     assembly / assemblyMergeStrategy := {
@@ -1010,6 +1063,11 @@ lazy val bundle = (project in file("bundle"))
 import com.lightbend.sbt.javaagent.Modules
 import BundleKeys._
 
+lazy val noBloopSettings = Seq(
+  Compile / bloopGenerate := Value(None),
+  Test / bloopGenerate := Value(None)
+)
+
 lazy val commonBundleSettings = Seq(
   moduleName := "kamon-bundle",
   assembly / fullClasspath ++= (Shaded / internalDependencyClasspath).value,
@@ -1023,12 +1081,12 @@ lazy val commonBundleSettings = Seq(
       fileName.contains("kamon-core") || fileName.contains("oshi-core")
     })
   },
-  assembly / assemblyOption := (assembly / assemblyOption).value.copy(
-    includeBin = true,
-    includeScala = false,
-    includeDependency = false,
-    cacheOutput = false
-  ),
+  // assembly / assemblyOption := (assembly / assemblyOption).value.copy(
+  //   includeBin = true,
+  //   includeScala = false,
+  //   includeDependency = false,
+  //   cacheOutput = false
+  // ),
   assembly / assemblyMergeStrategy := {
     case "reference.conf" => MergeStrategy.concat
     case anyOther         => (assembly / assemblyMergeStrategy).value(anyOther)
@@ -1040,7 +1098,6 @@ lazy val commonBundleSettings = Seq(
 
 lazy val `kamon-runtime-attacher` = (project in file("bundle/kamon-runtime-attacher"))
   .enablePlugins(BuildInfoPlugin)
-  .enablePlugins(AssemblyPlugin)
   .settings(
     moduleName := "kamon-runtime-attacher",
     buildInfoPackage := "kamon.runtime.attacher",
@@ -1168,8 +1225,8 @@ lazy val `kamon-bundle-dependencies-3` = (project in file("bundle/kamon-bundle-d
   )
 
 lazy val `kamon-bundle` = (project in file("bundle/kamon-bundle"))
-  .enablePlugins(AssemblyPlugin)
   .settings(commonBundleSettings)
+  .settings(noBloopSettings)
   .settings(ideSkipProject: _*)
   .settings(
     crossScalaVersions := Seq(
@@ -1183,8 +1240,8 @@ lazy val `kamon-bundle` = (project in file("bundle/kamon-bundle"))
   )
 
 lazy val `kamon-bundle-3` = (project in file("bundle/kamon-bundle-3"))
-  .enablePlugins(AssemblyPlugin)
   .settings(commonBundleSettings)
+  .settings(noBloopSettings)
   .settings(ideSkipProject: _*)
   .settings(
     scalaVersion := scala_3_version,
@@ -1196,8 +1253,8 @@ lazy val `kamon-bundle-3` = (project in file("bundle/kamon-bundle-3"))
   )
 
 lazy val `kamon-bundle_2_11` = (project in file("bundle/kamon-bundle_2.11"))
-  .enablePlugins(AssemblyPlugin)
   .settings(commonBundleSettings)
+  .settings(noBloopSettings)
   .settings(ideSkipProject: _*)
   .settings(
     scalaVersion := `scala_2.11_version`,
