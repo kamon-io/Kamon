@@ -17,7 +17,6 @@
 package kamon
 package status
 
-import kamon.status.Status.Instrumentation.TypeError
 import org.slf4j.LoggerFactory
 import java.lang.{Boolean => JBoolean}
 import java.util.{List => JavaList, Map => JavaMap}
@@ -35,7 +34,7 @@ object InstrumentationStatus {
 
   private val _logger = LoggerFactory.getLogger("kamon.status.Status.Instrumentation")
   private val _kanelaLoadedPropertyName = "kanela.loaded"
-  private val _registryClassName = "kanela.agent.api.instrumentation.listener.InstrumentationRegistryListener"
+  private val _registryClassName = "kanela.agent.bootstrap.StatusApi"
 
   /**
     * Tries to fetch the current instrumentation information from Kanela and assemble a status instance. Since the
@@ -53,39 +52,32 @@ object InstrumentationStatus {
       val present = (registryClass != null) && kanelaLoaded
 
       val kanelaVersion = Class.forName("kanela.agent.util.BuildInfo", false, ClassLoader.getSystemClassLoader)
-        .getMethod("version")
-        .invoke(null)
+        .getField("version")
+        .get(null)
         .asInstanceOf[String]
 
-      val modules = registryClass.getMethod("shareModules")
+      val modules = registryClass.getMethod("shareModulesInfo")
         .invoke(null)
         .asInstanceOf[JavaList[JavaMap[String, String]]]
         .asScala
         .map(toModule)
 
-      val errors = registryClass.getMethod("shareErrors")
-        .invoke(null)
-        .asInstanceOf[JavaMap[String, JavaList[Throwable]]]
-        .asScala
-        .map(toTypeError)
-        .toSeq
-
-      Status.Instrumentation(present, Option(kanelaVersion), modules.toSeq, errors)
+      Status.Instrumentation(present, Option(kanelaVersion), modules.toSeq)
     } catch {
       case t: Throwable =>
-        if (warnIfFailed) {
+        if (warnIfFailed || true) {
           t match {
-            case _: ClassNotFoundException if warnIfFailed =>
+            case _: ClassNotFoundException =>
               _logger.warn(
                 "Failed to load the instrumentation modules status because the Kanela agent is not available"
               )
 
-            case t: Throwable if warnIfFailed =>
+            case t: Throwable =>
               _logger.warn("Failed to load the instrumentation modules status", t)
           }
         }
 
-        Status.Instrumentation(false, None, Seq.empty, Seq.empty)
+        Status.Instrumentation(false, None, Seq.empty)
     }
   }
 
@@ -100,14 +92,5 @@ object InstrumentationStatus {
       JBoolean.parseBoolean(map.get("enabled")),
       JBoolean.parseBoolean(map.get("active"))
     )
-  }
-
-  /**
-    * Transforms a pair of information into a type error instance. The convention of the first element being the type
-    * name is tied to Kanela's implementation
-    */
-  private def toTypeError(pair: (String, JavaList[Throwable])): TypeError = {
-    val (typeName, errors) = pair
-    TypeError(typeName, errors.asScala.toSeq)
   }
 }

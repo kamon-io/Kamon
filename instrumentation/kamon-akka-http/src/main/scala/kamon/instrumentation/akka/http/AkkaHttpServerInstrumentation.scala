@@ -1,19 +1,3 @@
-/*
- * Copyright 2013-2021 The Kamon Project <https://kamon.io>
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 package kamon.instrumentation.akka.http
 
 import java.util.concurrent.Callable
@@ -24,7 +8,7 @@ import akka.http.scaladsl.server.PathMatcher.{Matched, Unmatched}
 import akka.http.scaladsl.server.directives.{BasicDirectives, CompleteOrRecoverWithMagnet, OnSuccessMagnet}
 import akka.http.scaladsl.server.directives.RouteDirectives.reject
 import akka.http.scaladsl.server._
-import akka.http.scaladsl.server.util.Tupler
+import akka.http.scaladsl.server.util.{Tuple, Tupler}
 import akka.http.scaladsl.util.FastFuture
 import kamon.Kamon
 import kamon.instrumentation.akka.http.HasMatchingContext.PathMatchingContext
@@ -33,7 +17,7 @@ import kanela.agent.api.instrumentation.InstrumentationBuilder
 import kanela.agent.api.instrumentation.mixin.Initializer
 import kanela.agent.libs.net.bytebuddy.implementation.bind.annotation._
 
-import scala.concurrent.{ExecutionContext, Future, Promise}
+import scala.concurrent.{Batchable, ExecutionContext, Future, Promise}
 import scala.util.control.NonFatal
 import scala.util.{Failure, Success, Try}
 import java.util.regex.Pattern
@@ -43,6 +27,7 @@ import akka.stream.scaladsl.Flow
 import kamon.context.Context
 import kanela.agent.libs.net.bytebuddy.matcher.ElementMatchers.isPublic
 
+import scala.annotation.static
 import scala.collection.immutable
 
 class AkkaHttpServerInstrumentation extends InstrumentationBuilder {
@@ -56,7 +41,6 @@ class AkkaHttpServerInstrumentation extends InstrumentationBuilder {
     * operation name before the request processing hits the routing tree, we are delaying the sampling decision to the
     * point at which we have some operation name.
     */
-
   onType("akka.http.scaladsl.HttpExt")
     .advise(method("bindAndHandle"), classOf[HttpExtBindAndHandleAdvice])
 
@@ -64,8 +48,8 @@ class AkkaHttpServerInstrumentation extends InstrumentationBuilder {
     * For the HTTP/2 instrumentation, since the parts where we can capture the interface/port and the actual flow
     * creation happen at different times we are wrapping the handler with the interface/port data and reading that
     * information when turning the handler function into a flow and wrapping it the same way we would for HTTP/1.
+    *
     */
-
   onType("akka.http.impl.engine.http2.Http2Ext")
     .advise(method("bindAndHandleAsync") and isPublic(), classOf[Http2ExtBindAndHandleAdvice])
 
@@ -78,7 +62,7 @@ class AkkaHttpServerInstrumentation extends InstrumentationBuilder {
     */
   onType("akka.http.scaladsl.server.RequestContextImpl")
     .mixin(classOf[HasMatchingContext.Mixin])
-    .intercept(method("copy"), RequestContextCopyInterceptor)
+    .intercept(method("copy"), classOf[RequestContextCopyInterceptor])
 
   onType("akka.http.scaladsl.server.directives.PathDirectives")
     .intercept(method("rawPathPrefix"), classOf[PathDirectivesRawPathPrefixInterceptor])
@@ -110,7 +94,7 @@ class AkkaHttpServerInstrumentation extends InstrumentationBuilder {
     */
 
   onType("akka.stream.scaladsl.FlowOps")
-    .advise(method("mapAsync"), classOf[FlowOpsMapAsyncAdvice])
+    .advise(method("mapAsync"), classOf[kamon.instrumentation.akka.http.FlowOpsMapAsyncAdvice])
 }
 
 trait HasMatchingContext {
@@ -285,10 +269,11 @@ object LastAutomaticOperationNameEdit {
     new LastAutomaticOperationNameEdit(operationName, allowAutomaticChanges)
 }
 
+class RequestContextCopyInterceptor
 object RequestContextCopyInterceptor {
 
   @RuntimeType
-  def copy(@This context: RequestContext, @SuperCall copyCall: Callable[RequestContext]): RequestContext = {
+  @static def copy(@This context: RequestContext, @SuperCall copyCall: Callable[RequestContext]): RequestContext = {
     val copiedRequestContext = copyCall.call()
     copiedRequestContext.asInstanceOf[HasMatchingContext].setMatchingContext(
       context.asInstanceOf[HasMatchingContext].matchingContext
@@ -301,8 +286,8 @@ class PathDirectivesRawPathPrefixInterceptor
 object PathDirectivesRawPathPrefixInterceptor {
   import BasicDirectives._
 
-  def rawPathPrefix[T](@Argument(0) matcher: PathMatcher[T]): Directive[T] = {
-    implicit val LIsTuple = matcher.ev
+  @static def rawPathPrefix[T](@Argument(0) matcher: PathMatcher[T]): Directive[T] = {
+    implicit val LIsTuple: Tuple[T] = matcher.ev
 
     extract { ctx =>
       val fullPath = ctx.unmatchedPath.toString()
@@ -318,7 +303,7 @@ object PathDirectivesRawPathPrefixInterceptor {
       (ctx, matching)
     } flatMap {
       case (ctx, Matched(rest, values)) =>
-        tprovide(values) & mapRequestContext(_ withUnmatchedPath rest) & mapRouteResult { routeResult =>
+        tprovide[T](values) & mapRequestContext(_ withUnmatchedPath rest) & mapRouteResult { routeResult =>
           if (routeResult.isInstanceOf[Rejected])
             ctx.asInstanceOf[HasMatchingContext].popOneMatchingContext()
 
