@@ -89,7 +89,7 @@ class AkkaHttpServerInstrumentation extends InstrumentationBuilder {
     */
 
   onType("akka.stream.scaladsl.FlowOps")
-    .advise(method("mapAsync"), classOf[FlowOpsMapAsyncAdvice])
+    .advise(method("mapAsync"), classOf[kamon.instrumentation.akka.http.FlowOpsMapAsyncAdvice])
 }
 
 trait HasMatchingContext {

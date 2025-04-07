@@ -23,11 +23,10 @@ import kanela.agent.libs.net.bytebuddy.implementation.bind.annotation.{Argument,
 import sttp.tapir.server.ServerEndpoint
 import java.util.concurrent.Callable
 
-import kanela.agent.api.instrumentation.classloader.ClassRefiner
 
 class TapirInstrumentationLegacy extends InstrumentationBuilder {
   onTypes("sttp.tapir.server.akkahttp.EndpointToAkkaServer", "sttp.tapir.server.akkahttp.AkkaHttpServerInterpreter")
-    .when(ClassRefiner.builder().mustContain("sttp.tapir.server.ServerEndpoint").withMethod("renderPathTemplate"))
+    .when(classIsPresent("sttp.tapir.server.ServerEndpoint").withExpectedMethodNames("renderPathTemplate"))
     .intercept(method("toRoute"), classOf[TapirToRouteInterceptorLegacy])
 }
 

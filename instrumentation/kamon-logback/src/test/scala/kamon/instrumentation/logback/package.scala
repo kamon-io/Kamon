@@ -15,11 +15,11 @@ import kamon.instrumentation.logback.tools.{
   TraceIDConverter
 }
 import kamon.logback.util.LogbackConfigurator
-import org.slf4j.impl.StaticLoggerBinder
+import org.slf4j.LoggerFactory
 
 package object logback {
 
-  val context: LoggerContext = StaticLoggerBinder.getSingleton.getLoggerFactory.asInstanceOf[LoggerContext]
+  val context: LoggerContext = LoggerFactory.getILoggerFactory.asInstanceOf[LoggerContext]
   val configurator = new LogbackConfigurator(context)
   configurator.conversionRule("traceID", classOf[TraceIDConverter])
   configurator.conversionRule("spanID", classOf[SpanIDConverter])
