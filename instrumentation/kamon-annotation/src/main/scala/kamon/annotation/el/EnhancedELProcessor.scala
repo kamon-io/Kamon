@@ -19,7 +19,8 @@ package kamon.annotation.el
 import java.util.function.Supplier
 
 import javax.el.ELProcessor
-import kanela.agent.util.log.Logger
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import scala.util.{Failure, Success, Try}
 
@@ -27,34 +28,31 @@ import scala.util.{Failure, Success, Try}
  * Pimp ELProcessor injecting some useful methods.
  */
 object EnhancedELProcessor {
+  private val logger = LoggerFactory.getLogger("kamon.annotation.el.EnhancedELProcessor")
   private val Pattern = """[#|$]\{(.*)\}""".r
 
   implicit class Syntax(val processor: ELProcessor) extends AnyVal {
-    import scala.collection.JavaConverters._
+    import scala.jdk.CollectionConverters._
 
-    def evalToString(expression: String): String = extract(expression).map { str ⇒
+    def evalToString(expression: String): String = extract(expression).map { str =>
       eval[String](str) match {
         case Success(value) => value
         case Failure(cause) =>
-          Logger.warn(
-            new Supplier[String] {
-              override def get(): String =
-                s"${cause.getMessage} -> we will complete the operation with 'unknown' string"
-            },
+          logger.warn(
+            s"${cause.getMessage} -> we will complete the operation with 'unknown' string",
             cause
           )
+
           "unknown"
       }
     } getOrElse expression
 
-    def evalToMap(expression: String): Map[String, String] = extract(expression).map { str ⇒
+    def evalToMap(expression: String): Map[String, String] = extract(expression).map { str =>
       eval[java.util.HashMap[String, String]](s"{$str}") match {
-        case Success(value) ⇒ value.asInstanceOf[java.util.HashMap[String, String]].asScala.toMap
-        case Failure(cause) ⇒
-          Logger.warn(
-            new Supplier[String] {
-              override def get(): String = s"${cause.getMessage} -> we will complete the operation with an empty map"
-            },
+        case Success(value) => value.asInstanceOf[java.util.HashMap[String, String]].asScala.toMap
+        case Failure(cause) =>
+          logger.warn(
+            s"${cause.getMessage} -> we will complete the operation with an empty map",
             cause
           )
           Map.empty[String, String]
@@ -64,8 +62,8 @@ object EnhancedELProcessor {
     private def eval[A](str: String): Try[A] = Try(processor.eval(str).asInstanceOf[A])
 
     private def extract(expression: String): Option[String] = expression match {
-      case Pattern(ex) ⇒ Some(ex)
-      case _ ⇒ None
+      case Pattern(ex) => Some(ex)
+      case _           => None
     }
   }
 }

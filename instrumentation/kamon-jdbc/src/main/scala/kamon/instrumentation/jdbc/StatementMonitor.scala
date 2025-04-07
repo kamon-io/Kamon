@@ -22,12 +22,12 @@ import kamon.instrumentation.jdbc.utils.{LoggingSupport, SqlVisitor}
 import kamon.metric.RangeSampler
 import kamon.tag.{Lookups, TagSet}
 import kamon.trace.Span
-import kanela.agent.bootstrap.stack.CallStackDepth
 import net.sf.jsqlparser.parser.CCJSqlParserUtil
 
 import java.sql.PreparedStatement
 import java.time.Instant
 import java.time.temporal.ChronoUnit
+import java.util.{HashMap => JavaHashMap}
 
 object StatementMonitor extends LoggingSupport {
 
@@ -41,6 +41,18 @@ object StatementMonitor extends LoggingSupport {
   @volatile private var parseSqlOperationName: Boolean = false
   @volatile private var addStatementSQL: Boolean = true
   @volatile private var addPreparedStatementSQL: Boolean = true
+
+  val StackDepthThreadLocal = ThreadLocal.withInitial(() => new JavaHashMap[Any, Int]())
+
+  def incrementCallStackDepth(key: Any): Int = {
+    val stackDepthMap = StackDepthThreadLocal.get()
+    if (stackDepthMap.containsKey(key)) return stackDepthMap.compute(key, (k, v) => v + 1)
+    return stackDepthMap.computeIfAbsent(key, v => 0)
+  }
+
+  def resetCallStackDepth(key: Any): Unit = {
+    StackDepthThreadLocal.get().remove(key);
+  }
 
   Kamon.onReconfigure(c => updateSettings(c))
   updateSettings(Kamon.config())
@@ -69,7 +81,7 @@ object StatementMonitor extends LoggingSupport {
   }
 
   def start(statement: Any, sql: String, statementType: String): Option[Invocation] = {
-    if (CallStackDepth.incrementFor(statement) == 0) {
+    if (incrementCallStackDepth(statement) == 0) {
       val startTimestamp = Kamon.clock().instant()
 
       // It could happen that there is no Pool Telemetry on the Pool when fail-fast is enabled and a connection is
@@ -135,7 +147,7 @@ object StatementMonitor extends LoggingSupport {
       span.finish(endedAt)
 
       JdbcInstrumentation.onStatementFinish(sql, elapsedTime)
-      CallStackDepth.resetFor(statement)
+      resetCallStackDepth(statement)
     }
   }
 }

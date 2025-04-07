@@ -22,6 +22,7 @@ class SpringClientInstrumentationSpec
 
   override def beforeAll(): Unit = {
     super.beforeAll()
+    System.setProperty("org.springframework.boot.logging.LoggingSystem", "none")
     TestApp.main(Array(port))
   }
 
