@@ -73,7 +73,7 @@ lazy val `kamon-status-page` = (project in file("core/kamon-status-page"))
   .enablePlugins(AssemblyPlugin)
   .settings(
     assembly / assemblyShadeRules := Seq(
-      ShadeRule.rename("com.grack.nanojson.**" -> "kamon.lib.@0").inAll,
+      ShadeRule.rename("com.grack.nanojson.**" -> "kamon.status.page.@1").inAll,
       ShadeRule.rename("fi.iki.elonen.**" -> "kamon.lib.@0").inAll
     ),
     libraryDependencies ++= Seq(
