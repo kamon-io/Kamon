@@ -57,6 +57,7 @@ package object datadog {
 
   private[datadog] case class HttpClient(
     apiUrl: String,
+    apiVersion: Option[String],
     apiKey: Option[String],
     usingCompression: Boolean,
     usingAgent: Boolean,
@@ -73,6 +74,15 @@ package object datadog {
     def this(config: Config, usingAgent: Boolean) = {
       this(
         config.getString("api-url"),
+        {
+          if (usingAgent) None
+          else {
+            val v = config.getString("version")
+            if (v != "v1" && v != "v2") {
+              sys.error(s"Invalid Datadog API version, the possible values are [v1, v2].")
+            } else Some(v)
+          }
+        },
         if (usingAgent) None else Some(config.getString("api-key")),
         if (usingAgent) false else config.getBoolean("compression"),
         usingAgent,
@@ -109,8 +119,18 @@ package object datadog {
 
     def doMethodWithBody(method: String, contentType: String, contentBody: Array[Byte]): Try[String] = {
       val body = RequestBody.create(MediaType.parse(contentType), contentBody)
-      val url = apiUrl + apiKey.map(key => "?api_key=" + key).getOrElse("")
-      val request = new Request.Builder().url(url).method(method, body).build
+      val url = if(apiVersion.contains("v1")) {
+        apiUrl + apiKey.map(key => "?api_key=" + key).getOrElse("")
+      } else {
+        apiUrl
+      }
+      val request = {
+        val builder = new Request.Builder().url(url).method(method, body)
+        if(apiVersion.contains("v2")) {
+          builder.header("DD-API-KEY", apiKey.getOrElse(""))
+        }
+        builder.build()
+      }
 
       doRequestWithRetries(request) match {
         case Success(response) =>
@@ -136,11 +156,6 @@ package object datadog {
 
     def doPut(contentType: String, contentBody: Array[Byte]): Try[String] = {
       doMethodWithBody("PUT", contentType, contentBody)
-    }
-
-    def doJsonPost(contentBody: String): Try[String] = {
-      // Datadog Agent does not accept ";charset=UTF-8", using bytes to send Json posts
-      doPost("application/json", contentBody.getBytes(StandardCharsets.UTF_8))
     }
 
     def doJsonPut(contentBody: String): Try[String] = {

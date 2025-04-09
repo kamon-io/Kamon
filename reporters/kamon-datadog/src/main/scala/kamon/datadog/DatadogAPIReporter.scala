@@ -79,12 +79,45 @@ class DatadogAPIReporter(
 
     val host = Kamon.environment.host
     val interval = Math.round(Duration.between(snapshot.from, snapshot.to).toMillis() / 1000d)
-    val seriesBuilder = new StringBuilder()
+
+    val payloadBuilder = new StringBuilder()
+
+    val apiVersion = httpClient.apiVersion
+      .getOrElse(throw new IllegalStateException("Inconsistent configuration: api.version is a required configuration setting for the Datadog API reporter."))
 
     @inline
     def doubleToPercentileString(double: Double) = {
       if (double == double.toLong) f"${double.toLong}%d"
       else f"$double%s"
+    }
+
+    @inline
+    def metricTypeJsonPart(metricTypeStr: String) = {
+      if(apiVersion == "v1") {
+        s"\"type\":\"$metricTypeStr\""
+      }
+      // v2 requires an enum type in the payload instead of the string name
+      else {
+        if(metricTypeStr == countMetricType) {
+          "\"type\":1"
+        } else if(metricTypeStr == gaugeMetricType) {
+          "\"type\":3"
+        } else {
+          //  This reporter currently only supports counter and gauges.
+          // `0` is an undefined metric type in Datadog API.
+          "\"type\":0"
+        }
+      }
+    }
+
+    lazy val hostJsonPart = {
+      if(apiVersion == "v1") {
+        s"\"host\":\"$host\""
+      }
+      // v2 has a "resources" array field where "host" should be defined
+      else {
+        s"\"resources\":[{\"name\":\"$host\",\"type\":\"host\"}]"
+      }
     }
 
     def addDistribution(metric: MetricSnapshot.Distributions): Unit = {
@@ -93,19 +126,19 @@ class DatadogAPIReporter(
         val dist = d.value
 
         val average = if (dist.count > 0L) (dist.sum / dist.count) else 0L
-        addMetric(metric.name + ".avg", valueFormat.format(scale(average, unit)), gauge, d.tags)
-        addMetric(metric.name + ".count", valueFormat.format(dist.count), count, d.tags)
-        addMetric(metric.name + ".median", valueFormat.format(scale(dist.percentile(50d).value, unit)), gauge, d.tags)
+        addMetric(metric.name + ".avg", valueFormat.format(scale(average, unit)), gaugeMetricType, d.tags)
+        addMetric(metric.name + ".count", valueFormat.format(dist.count), countMetricType, d.tags)
+        addMetric(metric.name + ".median", valueFormat.format(scale(dist.percentile(50d).value, unit)), gaugeMetricType, d.tags)
         configuration.percentiles.foreach { p =>
           addMetric(
             metric.name + s".${doubleToPercentileString(p)}percentile",
             valueFormat.format(scale(dist.percentile(p).value, unit)),
-            gauge,
+            gaugeMetricType,
             d.tags
           )
         }
-        addMetric(metric.name + ".max", valueFormat.format(scale(dist.max, unit)), gauge, d.tags)
-        addMetric(metric.name + ".min", valueFormat.format(scale(dist.min, unit)), gauge, d.tags)
+        addMetric(metric.name + ".max", valueFormat.format(scale(dist.max, unit)), gaugeMetricType, d.tags)
+        addMetric(metric.name + ".min", valueFormat.format(scale(dist.min, unit)), gaugeMetricType, d.tags)
       }
     }
 
@@ -113,14 +146,19 @@ class DatadogAPIReporter(
       val customTags = (configuration.extraTags ++ tags.iterator(_.toString).map(p => p.key -> p.value).filter(t =>
         configuration.tagFilter.accept(t._1)
       )).map { case (k, v) ⇒ quote"$k:$v" }
+
       val allTagsString = customTags.mkString("[", ",", "]")
 
-      if (seriesBuilder.length() > 0) seriesBuilder.append(",")
+      if (payloadBuilder.length() > 0) payloadBuilder.append(",")
 
-      seriesBuilder
-        .append(
-          s"""{"metric":"$metricName","interval":$interval,"points":[[$timestamp,$value]],"type":"$metricType","host":"$host","tags":$allTagsString}"""
-        )
+      val point = if(apiVersion == "v1") {
+        s"[$timestamp,$value]"
+      } else {
+        s"{\"timestamp\":$timestamp,\"value\":$value}"
+      }
+
+      payloadBuilder
+        .append(s"""{"metric":"$metricName",${metricTypeJsonPart(metricType)},"interval":$interval,"points":[$point],"tags":$allTagsString,$hostJsonPart}""".stripMargin)
     }
 
     snapshot.counters.foreach { snap =>
@@ -128,7 +166,7 @@ class DatadogAPIReporter(
         addMetric(
           snap.name,
           valueFormat.format(scale(instrument.value, snap.settings.unit)),
-          count,
+          countMetricType,
           instrument.tags
         )
       }
@@ -138,7 +176,7 @@ class DatadogAPIReporter(
         addMetric(
           snap.name,
           valueFormat.format(scale(instrument.value, snap.settings.unit)),
-          gauge,
+          gaugeMetricType,
           instrument.tags
         )
       }
@@ -146,11 +184,10 @@ class DatadogAPIReporter(
 
     (snapshot.histograms ++ snapshot.rangeSamplers ++ snapshot.timers).foreach(addDistribution)
 
-    seriesBuilder
+    payloadBuilder
       .insert(0, "{\"series\":[")
       .append("]}")
-      .toString()
-      .getBytes(StandardCharsets.UTF_8)
+      .toString.getBytes(StandardCharsets.UTF_8)
 
   }
 
@@ -166,8 +203,8 @@ class DatadogAPIReporter(
 }
 
 private object DatadogAPIReporter {
-  val count = "count"
-  val gauge = "gauge"
+  val countMetricType = "count"
+  val gaugeMetricType = "gauge"
 
   case class Configuration(
     httpConfig: Config,
