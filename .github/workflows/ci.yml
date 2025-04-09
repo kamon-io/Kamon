@@ -1,5 +1,11 @@
 name: Test all the things
-on: [ push, pull_request ]
+
+on:
+  pull_request:
+  push:
+    branches:
+      - master
+
 env:
   JAVA_OPTS: -Xms5120M -Xmx5120M -Xss6M -XX:ReservedCodeCacheSize=256M -Dfile.encoding=UTF-8
   JVM_OPTS: -Xms5120M -Xmx5120M -Xss6M -XX:ReservedCodeCacheSize=256M -Dfile.encoding=UTF-8
