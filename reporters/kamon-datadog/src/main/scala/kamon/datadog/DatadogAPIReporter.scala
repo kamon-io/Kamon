@@ -27,17 +27,18 @@ import kamon.metric.{MeasurementUnit, MetricSnapshot, PeriodSnapshot}
 import kamon.tag.{Tag, TagSet}
 import kamon.util.{EnvironmentTags, Filter}
 import kamon.{Kamon, module}
-import kamon.datadog.DatadogAPIReporter.Configuration
+import kamon.datadog.DatadogAPIReporter.{Configuration, configureHttpClient}
 import kamon.module.{MetricReporter, ModuleFactory}
 import org.slf4j.LoggerFactory
 import org.slf4j.event.Level
+
 import scala.collection.JavaConverters._
 import scala.util.{Failure, Success}
 
 class DatadogAPIReporterFactory extends ModuleFactory {
   override def create(settings: ModuleFactory.Settings): DatadogAPIReporter = {
     val config = DatadogAPIReporter.readConfiguration(settings.config)
-    new DatadogAPIReporter(config, new HttpClient(config.httpConfig, usingAgent = false))
+    new DatadogAPIReporter(config, configureHttpClient(config.httpConfig))
   }
 }
 
@@ -62,7 +63,7 @@ class DatadogAPIReporter(
   override def reconfigure(config: Config): Unit = {
     val newConfiguration = readConfiguration(config)
     configuration = newConfiguration
-    httpClient = new HttpClient(configuration.httpConfig, usingAgent = false)
+    httpClient = configureHttpClient(configuration.httpConfig)
   }
 
   override def reportPeriodSnapshot(snapshot: PeriodSnapshot): Unit = {
@@ -82,8 +83,7 @@ class DatadogAPIReporter(
 
     val payloadBuilder = new StringBuilder()
 
-    val apiVersion = httpClient.apiVersion
-      .getOrElse(throw new IllegalStateException("Inconsistent configuration: api.version is a required configuration setting for the Datadog API reporter."))
+    val apiVersion = configuration.apiVersion
 
     @inline
     def doubleToPercentileString(double: Double) = {
@@ -206,8 +206,41 @@ private object DatadogAPIReporter {
   val countMetricType = "count"
   val gaugeMetricType = "gauge"
 
+  def readApiVersion(config: Config): String = {
+    val apiVersion = config.getString("version")
+    if (apiVersion != "v1" && apiVersion != "v2") {
+      sys.error(s"Invalid Datadog API version, the possible values are [v1, v2].")
+    }
+    apiVersion
+  }
+
+  def configureHttpClient(config: Config): HttpClient = {
+    val baseClient = buildHttpClient(config)
+
+    val apiVersion = readApiVersion(config)
+
+    val apiKey = config.getString("api-key")
+    val apiUrl = {
+      val url = config.getString("api-url")
+
+       if (apiVersion == "v1") {
+        url + "?api_key=" + apiKey
+      } else {
+        url
+      }
+    }
+    val headers = {
+      if (apiVersion == "v2") {
+        List("DD-API-KEY" -> apiKey)
+      } else List.empty
+    }
+
+    baseClient.copy(endpoint = apiUrl, headers = headers)
+  }
+
   case class Configuration(
     httpConfig: Config,
+    apiVersion: String,
     percentiles: Set[Double],
     timeUnit: MeasurementUnit,
     informationUnit: MeasurementUnit,
@@ -222,6 +255,8 @@ private object DatadogAPIReporter {
 
   def readConfiguration(config: Config): Configuration = {
     val datadogConfig = config.getConfig("kamon.datadog")
+    val httpConfig = datadogConfig.getConfig("api")
+    val apiVersion = readApiVersion(httpConfig)
 
     // Remove the "host" tag since it gets added to the datadog payload separately
     val extraTags = EnvironmentTags
@@ -231,7 +266,8 @@ private object DatadogAPIReporter {
       .map(p => p.key -> Tag.unwrapValue(p).toString)
 
     Configuration(
-      datadogConfig.getConfig("api"),
+      httpConfig = httpConfig,
+      apiVersion = apiVersion,
       percentiles = datadogConfig.getDoubleList("percentiles").asScala.toList.map(_.toDouble).toSet,
       timeUnit = readTimeUnit(datadogConfig.getString("time-unit")),
       informationUnit = readInformationUnit(datadogConfig.getString("information-unit")),
