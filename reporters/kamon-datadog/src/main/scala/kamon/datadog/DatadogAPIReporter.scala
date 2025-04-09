@@ -16,7 +16,6 @@
 
 package kamon.datadog
 
-import java.lang.StringBuilder
 import java.nio.charset.StandardCharsets
 import java.text.{DecimalFormat, DecimalFormatSymbols}
 import java.time.Duration
@@ -26,8 +25,8 @@ import kamon.metric.MeasurementUnit.Dimension.{Information, Time}
 import kamon.metric.{MeasurementUnit, MetricSnapshot, PeriodSnapshot}
 import kamon.tag.{Tag, TagSet}
 import kamon.util.{EnvironmentTags, Filter}
-import kamon.{Kamon, module}
-import kamon.datadog.DatadogAPIReporter.{Configuration, configureHttpClient}
+import kamon.Kamon
+import kamon.datadog.DatadogAPIReporter.Configuration
 import kamon.module.{MetricReporter, ModuleFactory}
 import org.slf4j.LoggerFactory
 import org.slf4j.event.Level
@@ -38,14 +37,11 @@ import scala.util.{Failure, Success}
 class DatadogAPIReporterFactory extends ModuleFactory {
   override def create(settings: ModuleFactory.Settings): DatadogAPIReporter = {
     val config = DatadogAPIReporter.readConfiguration(settings.config)
-    new DatadogAPIReporter(config, configureHttpClient(config.httpConfig))
+    new DatadogAPIReporter(config)
   }
 }
 
-class DatadogAPIReporter(
-  @volatile private var configuration: Configuration,
-  @volatile private var httpClient: HttpClient
-) extends MetricReporter {
+class DatadogAPIReporter(@volatile private var configuration: Configuration) extends MetricReporter {
   import DatadogAPIReporter._
 
   private val logger = LoggerFactory.getLogger(classOf[DatadogAPIReporter])
@@ -61,13 +57,11 @@ class DatadogAPIReporter(
   }
 
   override def reconfigure(config: Config): Unit = {
-    val newConfiguration = readConfiguration(config)
-    configuration = newConfiguration
-    httpClient = configureHttpClient(configuration.httpConfig)
+    configuration = readConfiguration(config)
   }
 
   override def reportPeriodSnapshot(snapshot: PeriodSnapshot): Unit = {
-    httpClient.doPost("application/json; charset=utf-8", buildRequestBody(snapshot)) match {
+    configuration.httpClient.doPost("application/json; charset=utf-8", buildRequestBody(snapshot)) match {
       case Failure(e) =>
         logger.logAtLevel(configuration.failureLogLevel, e.getMessage)
       case Success(response) =>
@@ -206,18 +200,16 @@ private object DatadogAPIReporter {
   val countMetricType = "count"
   val gaugeMetricType = "gauge"
 
-  def readApiVersion(config: Config): String = {
-    val apiVersion = config.getString("version")
-    if (apiVersion != "v1" && apiVersion != "v2") {
-      sys.error(s"Invalid Datadog API version, the possible values are [v1, v2].")
-    }
-    apiVersion
-  }
-
-  def configureHttpClient(config: Config): HttpClient = {
+  private def configureHttpClient(config: Config): (String, HttpClient) = {
     val baseClient = buildHttpClient(config)
 
-    val apiVersion = readApiVersion(config)
+    val apiVersion = {
+      val v = config.getString("version")
+      if (v != "v1" && v != "v2") {
+        sys.error(s"Invalid Datadog API version, the possible values are [v1, v2].")
+      }
+      v
+    }
 
     val apiKey = config.getString("api-key")
     val apiUrl = {
@@ -235,11 +227,11 @@ private object DatadogAPIReporter {
       } else List.empty
     }
 
-    baseClient.copy(endpoint = apiUrl, headers = headers)
+    (apiVersion, baseClient.copy(endpoint = apiUrl, headers = headers))
   }
 
   case class Configuration(
-    httpConfig: Config,
+    httpClient: HttpClient,
     apiVersion: String,
     percentiles: Set[Double],
     timeUnit: MeasurementUnit,
@@ -256,7 +248,7 @@ private object DatadogAPIReporter {
   def readConfiguration(config: Config): Configuration = {
     val datadogConfig = config.getConfig("kamon.datadog")
     val httpConfig = datadogConfig.getConfig("api")
-    val apiVersion = readApiVersion(httpConfig)
+    val (apiVersion, httpClient) = configureHttpClient(httpConfig)
 
     // Remove the "host" tag since it gets added to the datadog payload separately
     val extraTags = EnvironmentTags
@@ -266,7 +258,7 @@ private object DatadogAPIReporter {
       .map(p => p.key -> Tag.unwrapValue(p).toString)
 
     Configuration(
-      httpConfig = httpConfig,
+      httpClient = httpClient,
       apiVersion = apiVersion,
       percentiles = datadogConfig.getDoubleList("percentiles").asScala.toList.map(_.toDouble).toSet,
       timeUnit = readTimeUnit(datadogConfig.getString("time-unit")),
