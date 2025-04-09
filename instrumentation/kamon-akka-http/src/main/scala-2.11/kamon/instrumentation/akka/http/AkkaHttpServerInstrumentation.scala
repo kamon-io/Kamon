@@ -306,7 +306,6 @@ object PathDirectivesRawPathPrefixInterceptor {
   }
 }
 
-
 object Http2BlueprintInterceptor {
 
   case class HandlerWithEndpoint(interface: String, port: Int, handler: HttpRequest => Future[HttpResponse])
@@ -316,8 +315,10 @@ object Http2BlueprintInterceptor {
   }
 
   @RuntimeType
-  def handleWithStreamIdHeader(@Argument(1) handler: HttpRequest => Future[HttpResponse],
-    @SuperCall zuper: Callable[Flow[HttpRequest, HttpResponse, NotUsed]]): Flow[HttpRequest, HttpResponse, NotUsed] = {
+  def handleWithStreamIdHeader(
+    @Argument(1) handler: HttpRequest => Future[HttpResponse],
+    @SuperCall zuper: Callable[Flow[HttpRequest, HttpResponse, NotUsed]]
+  ): Flow[HttpRequest, HttpResponse, NotUsed] = {
 
     handler match {
       case HandlerWithEndpoint(interface, port, _) =>
