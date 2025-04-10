@@ -223,6 +223,11 @@ class DatadogAPIReporterSpec extends AbstractHttpReporter with Matchers with Rec
       reporter.reportPeriodSnapshot(examplePeriod)
       val request = server.takeRequest()
       val body = request.getBody.readUtf8()
+
+      // v1 differs from v2 on:
+      // - the "type" field value, v1 requires a string, v2 an integer
+      // - the "points" array, v1 was an array of arrays, v2 an array of objects
+      // - the "host" field does not exist, instead there is a "resources" field where "host" is one of the allowed definitions
       Json.parse(body) shouldEqual Json
         .parse(
           """{"series":[{
