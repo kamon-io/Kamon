@@ -88,29 +88,29 @@ class DatadogAPIReporter(@volatile private var configuration: Configuration) ext
     @inline
     def metricTypeJsonPart(metricTypeStr: String) = {
       if (apiVersion == "v1") {
-        s"\"type\":\"$metricTypeStr\""
+        s""""type":"$metricTypeStr""""
       }
       // v2 requires an enum type in the payload instead of the string name
       else {
         if (metricTypeStr == countMetricType) {
-          "\"type\":1"
+          """"type":1"""
         } else if (metricTypeStr == gaugeMetricType) {
-          "\"type\":3"
+          """"type":3"""
         } else {
           //  This reporter currently only supports counter and gauges.
           // `0` is an undefined metric type in Datadog API.
-          "\"type\":0"
+          """"type":0"""
         }
       }
     }
 
     lazy val hostJsonPart = {
       if (apiVersion == "v1") {
-        s"\"host\":\"$host\""
+        s""""host":"$host""""
       }
       // v2 has a "resources" array field where "host" should be defined
       else {
-        s"\"resources\":[{\"name\":\"$host\",\"type\":\"host\"}]"
+        s""""resources":[{"name":"$host","type":"host"}]"""
       }
     }
 
@@ -148,12 +148,12 @@ class DatadogAPIReporter(@volatile private var configuration: Configuration) ext
 
       val allTagsString = customTags.mkString("[", ",", "]")
 
-      if (payloadBuilder.length() > 0) payloadBuilder.append(",")
+      if (payloadBuilder.nonEmpty) payloadBuilder.append(",")
 
       val point = if (apiVersion == "v1") {
         s"[$timestamp,$value]"
       } else {
-        s"{\"timestamp\":$timestamp,\"value\":$value}"
+        s"""{"timestamp":$timestamp,"value":$value}"""
       }
 
       payloadBuilder
