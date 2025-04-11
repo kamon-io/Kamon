@@ -250,7 +250,7 @@ class DatadogAPIReporterSpec extends AbstractHttpReporter with Matchers with Rec
             |{"metric":"test.timer.max","interval":1,"points":[{"timestamp":1523394,"value":10}],"type":3,"resources": [{"type": "host", "name": "test"}],"tags":["env:staging","service:kamon-application"]},
             |{"metric":"test.timer.min","interval":1,"points":[{"timestamp":1523394,"value":0}],"type":3,"resources": [{"type": "host", "name": "test"}],"tags":["env:staging","service:kamon-application"]}]}""".stripMargin
         )
-      }
+    }
 
     reporter.stop()
   }

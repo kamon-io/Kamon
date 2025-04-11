@@ -87,14 +87,14 @@ class DatadogAPIReporter(@volatile private var configuration: Configuration) ext
 
     @inline
     def metricTypeJsonPart(metricTypeStr: String) = {
-      if(apiVersion == "v1") {
+      if (apiVersion == "v1") {
         s"\"type\":\"$metricTypeStr\""
       }
       // v2 requires an enum type in the payload instead of the string name
       else {
-        if(metricTypeStr == countMetricType) {
+        if (metricTypeStr == countMetricType) {
           "\"type\":1"
-        } else if(metricTypeStr == gaugeMetricType) {
+        } else if (metricTypeStr == gaugeMetricType) {
           "\"type\":3"
         } else {
           //  This reporter currently only supports counter and gauges.
@@ -105,7 +105,7 @@ class DatadogAPIReporter(@volatile private var configuration: Configuration) ext
     }
 
     lazy val hostJsonPart = {
-      if(apiVersion == "v1") {
+      if (apiVersion == "v1") {
         s"\"host\":\"$host\""
       }
       // v2 has a "resources" array field where "host" should be defined
@@ -122,7 +122,12 @@ class DatadogAPIReporter(@volatile private var configuration: Configuration) ext
         val average = if (dist.count > 0L) (dist.sum / dist.count) else 0L
         addMetric(metric.name + ".avg", valueFormat.format(scale(average, unit)), gaugeMetricType, d.tags)
         addMetric(metric.name + ".count", valueFormat.format(dist.count), countMetricType, d.tags)
-        addMetric(metric.name + ".median", valueFormat.format(scale(dist.percentile(50d).value, unit)), gaugeMetricType, d.tags)
+        addMetric(
+          metric.name + ".median",
+          valueFormat.format(scale(dist.percentile(50d).value, unit)),
+          gaugeMetricType,
+          d.tags
+        )
         configuration.percentiles.foreach { p =>
           addMetric(
             metric.name + s".${doubleToPercentileString(p)}percentile",
@@ -145,14 +150,16 @@ class DatadogAPIReporter(@volatile private var configuration: Configuration) ext
 
       if (payloadBuilder.length() > 0) payloadBuilder.append(",")
 
-      val point = if(apiVersion == "v1") {
+      val point = if (apiVersion == "v1") {
         s"[$timestamp,$value]"
       } else {
         s"{\"timestamp\":$timestamp,\"value\":$value}"
       }
 
       payloadBuilder
-        .append(s"""{"metric":"$metricName",${metricTypeJsonPart(metricType)},"interval":$interval,"points":[$point],"tags":$allTagsString,$hostJsonPart}""".stripMargin)
+        .append(s"""{"metric":"$metricName",${metricTypeJsonPart(
+                    metricType
+                  )},"interval":$interval,"points":[$point],"tags":$allTagsString,$hostJsonPart}""".stripMargin)
     }
 
     snapshot.counters.foreach { snap =>
@@ -215,7 +222,7 @@ private object DatadogAPIReporter {
     val apiUrl = {
       val url = config.getString("api-url")
 
-       if (apiVersion == "v1") {
+      if (apiVersion == "v1") {
         url + "?api_key=" + apiKey
       } else {
         url

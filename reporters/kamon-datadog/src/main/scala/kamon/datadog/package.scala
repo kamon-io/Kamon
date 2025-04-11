@@ -57,7 +57,7 @@ package object datadog {
     val writeTimeout = config.getDuration("write-timeout")
     val retries = config.getInt("retries")
     val initialRetryDelay = config.getDuration("init-retry-delay")
-    val useCompression = if(config.hasPath("compression")) config.getBoolean("compression") else false
+    val useCompression = if (config.hasPath("compression")) config.getBoolean("compression") else false
 
     HttpClient(
       endpoint = apiUrl,
@@ -67,7 +67,8 @@ package object datadog {
       readTimeout = readTimeout,
       writeTimeout = writeTimeout,
       retries = retries,
-      initRetryDelay = initialRetryDelay)
+      initRetryDelay = initialRetryDelay
+    )
   }
 
   def readTimeUnit(unit: String): MeasurementUnit = unit match {

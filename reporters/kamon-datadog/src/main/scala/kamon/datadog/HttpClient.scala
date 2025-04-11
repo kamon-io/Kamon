@@ -9,15 +9,15 @@ import scala.annotation.tailrec
 import scala.util.{Failure, Success, Try}
 
 private[datadog] case class HttpClient(
-                                        endpoint: String,
-                                        headers: List[(String, String)],
-                                        usingCompression: Boolean,
-                                        connectTimeout: Duration,
-                                        readTimeout: Duration,
-                                        writeTimeout: Duration,
-                                        retries: Int,
-                                        initRetryDelay: Duration
-                                      ) {
+  endpoint: String,
+  headers: List[(String, String)],
+  usingCompression: Boolean,
+  connectTimeout: Duration,
+  readTimeout: Duration,
+  writeTimeout: Duration,
+  retries: Int,
+  initRetryDelay: Duration
+) {
 
   private val retryableStatusCodes: Set[Int] = Set(408, 429, 502, 503, 504)
 
