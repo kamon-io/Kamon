@@ -220,10 +220,28 @@ object BaseProject extends AutoPlugin {
   }
 
   def findKanelaAgentJar = Def.task {
+    val hasSemver = """.*[0-9]+\.[0-9]+\.[0-9]+.*"""
     update.value.matching {
       moduleFilter(organization = "io.kamon", name = "kanela-agent") &&
       artifactFilter(`type` = "jar")
-    }.head
+    }.toList match {
+      case s @ Nil => throw new NoClassDefFoundError("No kanela agent jar found")
+      case h +: Nil =>
+        if (h.getName.matches(hasSemver)) println("Single matching kanela-agent jar found")
+        else System.err.println("kanela-agent jar name did not contain version")
+        h
+      case s =>
+        System.err.println(s"Multiple matching jars - ${s.map(f => f.getName)}")
+        s.filter(_.getName.matches(hasSemver)) match {
+          case Nil =>
+            System.err.println("No jars matching semver ")
+            s.head
+          case v +: Nil => v
+          case more =>
+            System.err.println("Multiple jars matching semver ")
+            more.head
+        }
+    }
   }
 
   private def defaultPomExtra() = {
