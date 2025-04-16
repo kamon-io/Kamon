@@ -228,11 +228,10 @@ object BaseProject extends AutoPlugin {
       case s @ Nil => throw new NoClassDefFoundError("No kanela agent jar found")
       case h +: Nil =>
         if (h.getName.matches(hasSemver)) println("Single matching kanela-agent jar found")
-        else System.err.println("kanela-agent jar did not contain version")
+        else System.err.println("kanela-agent jar name did not contain version")
         h
       case s =>
         System.err.println(s"Multiple matching jars - ${s.map(f => f.getName)}")
-        val hasSemver = """.*[0-9]+\.[0-9]+\.[0-9]+.*"""
         s.filter(_.getName.matches(hasSemver)) match {
           case Nil =>
             System.err.println("No jars matching semver ")
