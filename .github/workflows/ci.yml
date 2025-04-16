@@ -19,7 +19,7 @@ jobs:
       - uses: coursier/cache-action@v6
       - uses: coursier/setup-action@v1
         with:
-          jvm: adopt:8
+          jvm: adopt:17
           apps: sbt
       - name: Test
         run: sbt -v ";+core/test;+instrumentation/test;+reporters/test"
@@ -30,7 +30,7 @@ jobs:
       - uses: coursier/cache-action@v6
       - uses: coursier/setup-action@v1
         with:
-          jvm: adopt:8
+          jvm: adopt:17
           apps: sbt
       - name: Test
         run: sbt -v "+scalafmtCheckAll;scalafmtSbtCheck"
