@@ -26,6 +26,7 @@ import de.heikoseeberger.sbtheader.{HeaderPlugin, License}
 import sbt.plugins.JvmPlugin
 import sbtdynver.DynVerPlugin.autoImport.dynver
 import xerial.sbt.Sonatype.SonatypeKeys._
+import xerial.sbt.Sonatype.sonatypeCentralHost
 
 object BaseProject extends AutoPlugin {
 
@@ -188,6 +189,7 @@ object BaseProject extends AutoPlugin {
 
   private lazy val publishingSettings = Seq(
     publishTo := sonatypePublishToBundle.value,
+    sonatypeCredentialHost := sonatypeCentralHost,
     pomExtra := defaultPomExtra(),
     Test / publishArtifact := false,
     Global / useGpgPinentry := true,

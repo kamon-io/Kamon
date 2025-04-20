@@ -45,14 +45,14 @@ class AkkaHttpServerInstrumentation extends InstrumentationBuilder {
 
   /**
     * For the HTTP/2 instrumentation, since the parts where we can capture the interface/port and the actual flow
-    * creation happen at different times we are wrapping the handler with the interface/port data and reading that
-    * information when turning the handler function into a flow and wrapping it the same way we would for HTTP/1.
+    * creation happen at different times we are advising the handleWithStreamIdHeader method with the interface/port
+    * data and reading that information on method exit to wrap it the same way we would for HTTP/1.
     */
   onType("akka.http.scaladsl.Http2Ext")
     .advise(method("bindAndHandleAsync") and isPublic(), classOf[Http2ExtBindAndHandleAdvice])
 
   onType("akka.http.impl.engine.http2.Http2Blueprint$")
-    .intercept(method("handleWithStreamIdHeader"), Http2BlueprintInterceptor)
+    .advise(method("handleWithStreamIdHeader"), classOf[Http2BlueprintAsyncAdvice])
 
   /**
     * The rest of these sections are just about making sure that we can generate an appropriate operation name (i.e. free
