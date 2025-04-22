@@ -31,8 +31,13 @@ class PrometheusPushgatewayReporter(
 ) extends MetricReporter {
 
   private val _logger = LoggerFactory.getLogger(classOf[PrometheusPushgatewayReporter])
+  private val _initialSettings = PrometheusSettings.readSettings(Kamon.config().getConfig(configPath))
   private val _snapshotAccumulator =
-    PeriodSnapshot.accumulator(Duration.ofDays(365 * 5), Duration.ZERO, Duration.ofDays(365 * 5))
+    PeriodSnapshot.accumulator(
+      _initialSettings.periodSettings.accumulationPeriod,
+      Duration.ZERO,
+      _initialSettings.periodSettings.stalePeriod
+    )
 
   @volatile private var httpClient: HttpClient = _
   @volatile private var settings: PrometheusSettings.Generic = _
