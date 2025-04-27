@@ -1,7 +1,9 @@
 package kamon.instrumentation.futures.cats3
 
+import cats.Parallel
+import cats.effect.std.Dispatcher
 import cats.effect.unsafe.{IORuntime, IORuntimeConfig, Scheduler}
-import cats.effect.{IO, Resource, Spawn}
+import cats.effect.{Async, IO, Resource, Spawn, Sync}
 import kamon.Kamon
 import kamon.context.Context
 import kamon.tag.Lookups.plain
@@ -17,6 +19,8 @@ import scala.concurrent.duration._
 import cats.implicits._
 import kamon.trace.Identifier.Scheme
 import kamon.trace.{Identifier, Span, Trace}
+
+import scala.util.{Failure, Success}
 
 class CatsIoInstrumentationSpec extends AnyWordSpec with Matchers with ScalaFutures with PatienceConfiguration
     with OptionValues with Eventually with BeforeAndAfterEach {
@@ -58,6 +62,126 @@ class CatsIoInstrumentationSpec extends AnyWordSpec with Matchers with ScalaFutu
         context shouldBe contextInsideYield
       }
 
+      "must handle async boundaries" in {
+        val runtime = IORuntime.global
+        val anotherExecutionContext: ExecutionContext =
+          ExecutionContext.fromExecutorService(Executors.newFixedThreadPool(10))
+        val context = Context.of("key", "value")
+
+        def asyncFunction[A](dur: FiniteDuration)(io: IO[A]) = IO.async[A] { cb =>
+          val cancel = runtime.scheduler.sleep(
+            dur,
+            { () =>
+              cb(Right(io.unsafeRunSync()(runtime)))
+            }
+          )
+          IO(Some(IO(cancel.run())))
+        }
+
+        val test =
+          for {
+            _ <- IO.delay(Kamon.storeContext(context))
+            _ <- IO.sleep(10.millis)
+            beforeCleaning <- IO.delay(Kamon.currentContext())
+            beforeCleaningAsync <- asyncFunction(10.millis) {
+              IO(Kamon.currentContext())
+            }
+            _ <- IO.delay(Kamon.storeContext(Context.Empty))
+
+            _ <- Spawn[IO].evalOn(IO.sleep(10.millis), anotherExecutionContext)
+            afterCleaning <- IO.delay(Kamon.currentContext())
+          } yield {
+            afterCleaning shouldBe Context.Empty
+            beforeCleaning shouldBe context
+            beforeCleaningAsync shouldBe context
+          }
+
+        test.unsafeRunSync()(runtime)
+      }
+
+      "must handle async boundaries - F" in {
+        val runtime = IORuntime.global
+        def test[F[_]: Async](dispatcher: Dispatcher[F]) = {
+          val runtime = IORuntime.global
+          val anotherExecutionContext: ExecutionContext =
+            ExecutionContext.fromExecutorService(Executors.newFixedThreadPool(10))
+          val context = Context.of("key", "value")
+
+          def asyncFunction[A](dur: FiniteDuration)(io: F[A]) = Async[F].async[A] { cb =>
+            val cancel = runtime.scheduler.sleep(
+              dur,
+              { () =>
+                dispatcher.unsafeToFuture(io).onComplete {
+                  case Failure(exception) => cb(Left(exception))
+                  case Success(value)     => cb(Right(value))
+                }(anotherExecutionContext)
+              }
+            )
+            Async[F].delay(Some(Async[F].delay(cancel.run())))
+          }
+
+          for {
+            _ <- Async[F].delay(Kamon.storeContext(context))
+            _ <- Async[F].sleep(10.millis)
+            beforeCleaning <- Async[F].delay(Kamon.currentContext())
+            beforeCleaningAsync <- asyncFunction(10.millis) {
+              Async[F].delay(Kamon.currentContext())
+            }
+            _ <- Async[F].delay(Kamon.storeContext(Context.Empty))
+
+            _ <- Spawn[F].evalOn(Async[F].sleep(10.millis), anotherExecutionContext)
+            afterCleaning <- Async[F].delay(Kamon.currentContext())
+          } yield {
+            afterCleaning shouldBe Context.Empty
+            beforeCleaning shouldBe context
+            beforeCleaningAsync shouldBe context
+          }
+
+        }
+
+        Dispatcher.parallel[IO](true).use { dispatcher =>
+          test[IO](dispatcher)
+        }.unsafeRunSync()(runtime)
+      }
+
+      "must correctly use dispatchers" in {
+        val runtime = IORuntime.global
+        def test[F[_]: Async](dispatcher: Dispatcher[F]) = {
+          val anotherExecutionContext: ExecutionContext =
+            ExecutionContext.fromExecutorService(Executors.newFixedThreadPool(10))
+          val context = Context.of("key", "value")
+
+          def asyncFunction[A](io: F[A]) = Async[F].async[A] { cb =>
+            dispatcher.unsafeToFuture(io).onComplete {
+              case Failure(exception) => cb(Left(exception))
+              case Success(value)     => cb(Right(value))
+            }(anotherExecutionContext)
+            Async[F].delay(None)
+          }
+
+          for {
+            _ <- Async[F].delay(Kamon.storeContext(context))
+            beforeCleaningAsync <- asyncFunction {
+              Async[F].delay(Kamon.currentContext())
+            }
+            _ <- Async[F].delay(Kamon.storeContext(Context.Empty))
+          } yield {
+            beforeCleaningAsync shouldBe context
+          }
+        }
+
+        Vector(
+          Dispatcher.sequential[IO](false),
+          Dispatcher.sequential[IO](true),
+          Dispatcher.parallel[IO](false),
+          Dispatcher.parallel[IO](true)
+        ).traverse(_.use { dispatcher =>
+          withClue(s"Dispatcher $dispatcher") {
+            test[IO](dispatcher)
+          }
+        }).unsafeRunSync()(runtime)
+      }
+
       "must allow the context to be cleaned" in {
         val runtime = IORuntime.global
         val anotherExecutionContext: ExecutionContext =
@@ -78,6 +202,28 @@ class CatsIoInstrumentationSpec extends AnyWordSpec with Matchers with ScalaFutu
           }
 
         test.unsafeRunSync()(runtime)
+      }
+
+      "must allow the context to be cleaned - F" in {
+        val runtime = IORuntime.global
+        val anotherExecutionContext: ExecutionContext =
+          ExecutionContext.fromExecutorService(Executors.newFixedThreadPool(10))
+        val context = Context.of("key", "value")
+
+        def test[F[_]: Async] =
+          for {
+            _ <- Async[F].delay(Kamon.storeContext(context))
+            _ <- Spawn[F].evalOn(Async[F].sleep(10.millis), anotherExecutionContext)
+            beforeCleaning <- Async[F].delay(Kamon.currentContext())
+            _ <- Async[F].delay(Kamon.storeContext(Context.Empty))
+            _ <- Spawn[F].evalOn(Async[F].sleep(10.millis), anotherExecutionContext)
+            afterCleaning <- Async[F].delay(Kamon.currentContext())
+          } yield {
+            afterCleaning shouldBe Context.Empty
+            beforeCleaning shouldBe context
+          }
+
+        test[IO].unsafeRunSync()(runtime)
       }
 
       "must be available across asynchronous boundaries" in {
@@ -117,6 +263,46 @@ class CatsIoInstrumentationSpec extends AnyWordSpec with Matchers with ScalaFutu
           }
 
         test.unsafeRunSync()(runtime)
+      }
+
+      "must be available across asynchronous boundaries - F" in {
+        val runtime = IORuntime.apply(
+          ExecutionContext.fromExecutor(Executors.newFixedThreadPool(1)), // pool 4
+          ExecutionContext.fromExecutor(Executors.newFixedThreadPool(1)), // pool 5
+          Scheduler.fromScheduledExecutor(Executors.newSingleThreadScheduledExecutor()), // pool 6
+          () => (),
+          IORuntimeConfig.apply()
+        )
+        val anotherExecutionContext: ExecutionContext =
+          ExecutionContext.fromExecutorService(Executors.newFixedThreadPool(1)) // pool 7
+        val context = Context.of("key", "value")
+        def test[F[_]: Async] =
+          for {
+            scope <- Async[F].delay(Kamon.storeContext(context))
+            len <- Async[F].delay("Hello Kamon!").map(_.length)
+            _ <- Async[F].delay(len.toString)
+            beforeChanging <- getKeyF[F]()
+            evalOnGlobalRes <- Spawn[F].evalOn(Async[F].sleep(Duration.Zero).flatMap(_ => getKeyF[F]()), global)
+            outerSpanIdBeginning <- Async[F].delay(Kamon.currentSpan().id.string)
+            innerSpan <- Async[F].delay(Kamon.clientSpanBuilder("Foo", "attempt").context(context).start())
+            innerSpanId1 <- Spawn[F].evalOn(Async[F].delay(Kamon.currentSpan()), anotherExecutionContext)
+            innerSpanId2 <- Async[F].delay(Kamon.currentSpan())
+            _ <- Async[F].delay(innerSpan.finish())
+            outerSpanIdEnd <- Async[F].delay(Kamon.currentSpan().id.string)
+            evalOnAnotherEx <-
+              Spawn[F].evalOn(Async[F].sleep(Duration.Zero).flatMap(_ => getKeyF[F]()), anotherExecutionContext)
+          } yield {
+            scope.close()
+            withClue("before changing")(beforeChanging shouldBe "value")
+            withClue("on the global exec context")(evalOnGlobalRes shouldBe "value")
+            withClue("on a different exec context")(evalOnAnotherEx shouldBe "value")
+            withClue("final result")(evalOnAnotherEx shouldBe "value")
+            withClue("inner span should be the same on different exec")(innerSpanId1 shouldBe innerSpan)
+            withClue("inner span should be the same on same exec")(innerSpanId2 shouldBe innerSpan)
+            withClue("inner and outer should be different")(outerSpanIdBeginning should not equal innerSpan)
+          }
+
+        test[IO].unsafeRunSync()(runtime)
       }
 
       "must allow complex Span topologies to be created" in {
@@ -163,7 +349,52 @@ class CatsIoInstrumentationSpec extends AnyWordSpec with Matchers with ScalaFutu
         )
         Await.result(result, 100.seconds)
       }
+
+      "must allow complex Span topologies to be created - F" in {
+        val parentSpan = Span.Remote(
+          Scheme.Single.spanIdFactory.generate(),
+          Identifier.Empty,
+          Trace.create(Scheme.Single.traceIdFactory.generate(), Trace.SamplingDecision.Sample)
+        )
+        val context = Context.of(Span.Key, parentSpan)
+        implicit val ec = ExecutionContext.global
+
+        /**
+         * test
+         *   - nestedLevel0
+         *   - nestedUpToLevel2
+         *       - nestedUpToLevel2._2._1
+         *   - fiftyInParallel
+         */
+        def test[F[_]: Async: Parallel] = for {
+          span <- Async[F].delay(Kamon.currentSpan())
+          nestedLevel0 <- meteredWithSpanCapture("level1-A")(Async[F].sleep(100.millis))
+          nestedUpToLevel2 <-
+            meteredWithSpanCapture("level1-B")(meteredWithSpanCapture("level2-B")(Async[F].sleep(100.millis)))
+          fiftyInParallel <-
+            (0 to 49).toList.parTraverse(i => meteredWithSpanCapture(s"operation$i")(Async[F].sleep(100.millis)))
+          afterCede <- meteredWithSpanCapture("cede")(Async[F].cede *> Async[F].delay(Kamon.currentSpan()))
+          afterEverything <- Async[F].delay(Kamon.currentSpan())
+        } yield {
+          span.id.string should not be empty
+          span.id.string shouldBe nestedLevel0._1.parentId.string
+          span.id.string shouldBe nestedUpToLevel2._1.parentId.string
+          nestedUpToLevel2._1.id.string shouldBe nestedUpToLevel2._2._1.parentId.string
+          fiftyInParallel.map(_._1.parentId.string).toSet shouldBe Set(span.id.string)
+          fiftyInParallel.map(_._1.id.string).toSet should have size 50
+          afterCede._1.id.string shouldBe afterCede._2.id.string // A cede should not cause the span to be lost
+          afterEverything.id.string shouldBe span.id.string
+        }
+        val runtime = IORuntime.global
+
+        val result = (1 to 100).toList
+          .parTraverse(_ => IO.delay(Kamon.init()) *> IO.delay(Kamon.storeContext(context)) *> test[IO])
+          .unsafeToFuture()(runtime)
+
+        Await.result(result, 100.seconds)
+      }
     }
+
   }
 
   override protected def afterEach(): Unit = {
@@ -176,21 +407,25 @@ class CatsIoInstrumentationSpec extends AnyWordSpec with Matchers with ScalaFutu
     IO.delay(Kamon.currentContext().getTag(plain("key")))
   }
 
-  private def meteredWithSpanCapture[A](operation: String)(io: IO[A]): IO[(Span, A)] = {
+  private def getKeyF[F[_]: Sync](): F[String] = {
+    Sync[F].delay(Kamon.currentContext().getTag(plain("key")))
+  }
+
+  private def meteredWithSpanCapture[F[_]: Sync: Parallel, A](operation: String)(io: F[A]): F[(Span, A)] = {
     Resource.make {
       for {
-        initialCtx <- IO(Kamon.currentContext())
-        parentSpan <- IO(Kamon.currentSpan())
-        newSpan <- IO(Kamon.spanBuilder(operation).context(initialCtx).asChildOf(parentSpan).start())
-        _ <- IO(Kamon.storeContext(initialCtx.withEntry(Span.Key, newSpan)))
+        initialCtx <- Sync[F].delay(Kamon.currentContext())
+        parentSpan <- Sync[F].delay(Kamon.currentSpan())
+        newSpan <- Sync[F].delay(Kamon.spanBuilder(operation).context(initialCtx).asChildOf(parentSpan).start())
+        _ <- Sync[F].delay(Kamon.storeContext(initialCtx.withEntry(Span.Key, newSpan)))
       } yield (initialCtx, newSpan)
     } {
       case (initialCtx, span) =>
         for {
-          _ <- IO.delay(span.finish())
-          _ <- IO.delay(Kamon.storeContext(initialCtx))
+          _ <- Sync[F].delay(span.finish())
+          _ <- Sync[F].delay(Kamon.storeContext(initialCtx))
         } yield ()
     }
-      .use(_ => (IO.delay(Kamon.currentSpan()), io).parBisequence)
+      .use(_ => (Sync[F].delay(Kamon.currentSpan()), io).parBisequence)
   }
 }
