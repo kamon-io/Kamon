@@ -29,7 +29,9 @@ object Attacher {
 
     } else {
 
-      val embeddedAgentFile = Attacher.getClass.getClassLoader.getResourceAsStream(BuildInfo.kanelaAgentJarName)
+      val embeddedAgentFile =
+        Option(Attacher.getClass.getClassLoader.getResourceAsStream(BuildInfo.kanelaAgentJarName))
+          .getOrElse(throw new RuntimeException(s"Couldn't find kanela jar resource '${BuildInfo.kanelaAgentJarName}'"))
       val temporaryAgentFile = Files.createTempFile(BuildInfo.kanelaAgentJarName, ".jar")
       Files.copy(embeddedAgentFile, temporaryAgentFile, StandardCopyOption.REPLACE_EXISTING)
 

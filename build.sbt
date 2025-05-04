@@ -1007,7 +1007,6 @@ lazy val bundle = (project in file("bundle"))
     `kamon-runtime-attacher`
   )
 
-import com.lightbend.sbt.javaagent.Modules
 import BundleKeys._
 
 lazy val commonBundleSettings = Seq(
@@ -1045,8 +1044,8 @@ lazy val `kamon-runtime-attacher` = (project in file("bundle/kamon-runtime-attac
     moduleName := "kamon-runtime-attacher",
     buildInfoPackage := "kamon.runtime.attacher",
     buildInfoKeys := Seq[BuildInfoKey](kanelaAgentJarName),
-    kanelaAgentJar := update.value.matching(Modules.exactFilter(kanelaAgent)).head,
-    kanelaAgentJarName := kanelaAgentJar.value.getName,
+    kanelaAgentJar := BaseProject.findKanelaAgentJar.value,
+    kanelaAgentJarName := BaseProject.findKanelaAgentJar.value.getName,
     Compile / resourceGenerators += Def.task(Seq(kanelaAgentJar.value)).taskValue,
     assembly / assemblyShadeRules := Seq(
       ShadeRule.zap("**module-info").inAll,
