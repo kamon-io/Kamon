@@ -28,7 +28,7 @@ object InstrumentationUtils {
       private var _headers = Map.empty[String, String]
 
       override def statusCode: Int = {
-        response.getStatus
+        response.getStatus()
       }
 
       override def write(header: String, value: String): Unit = {

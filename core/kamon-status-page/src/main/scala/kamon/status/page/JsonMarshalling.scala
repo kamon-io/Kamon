@@ -147,21 +147,6 @@ object JsonMarshalling {
 
       instrumentationObject
         .end() // end modules
-        .`object`("errors")
-
-      instance.errors.foreach { typeError =>
-        val errorsArray = instrumentationObject.array(typeError.targetType)
-        typeError.errors.foreach(t => {
-          errorsArray.`object`()
-            .value("message", t.getMessage)
-            .value("stacktrace", t.getStackTrace.mkString("", EOL, EOL))
-            .end()
-        })
-        errorsArray.end()
-      }
-
-      instrumentationObject
-        .end() // errors
         .end() // object
         .done()
     }

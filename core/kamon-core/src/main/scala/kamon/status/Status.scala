@@ -112,8 +112,7 @@ object Status {
   case class Instrumentation(
     present: Boolean,
     kanelaVersion: Option[String],
-    modules: Seq[Status.Instrumentation.ModuleInfo],
-    errors: Seq[Status.Instrumentation.TypeError]
+    modules: Seq[Status.Instrumentation.ModuleInfo]
   )
 
   object Instrumentation {
@@ -130,14 +129,6 @@ object Status {
       description: String,
       enabled: Boolean,
       active: Boolean
-    )
-
-    /**
-      * Describes errors that might have occurred while transforming a target type.
-      */
-    case class TypeError(
-      targetType: String,
-      errors: Seq[Throwable]
     )
   }
 }
