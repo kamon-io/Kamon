@@ -41,7 +41,7 @@ class TypedActorMetricsSpec extends AnyWordSpec
     "respect the configured include and exclude filters" in new ActorMetricsFixtures {
       sendMessage("world")
       val pathValues = ActorProcessingTime.tagValues("path")
-      pathValues should not contain("greet-service/")
+      pathValues should not contain ("greet-service/")
       pathValues should contain("greet-service/user")
 
     }
