@@ -49,15 +49,6 @@ class TypedActorMetricsSpec extends AnyWordSpec
     super.afterAll()
   }
 
-  def actorTags(path: String): TagSet =
-    TagSet.from(
-      Map(
-        "path" -> path,
-        "system" -> "ActorMetricsSpec",
-        "dispatcher" -> "pekko.actor.default-dispatcher"
-      )
-    )
-
   trait ActorMetricsFixtures {
 
     def sendMessage(name: String): Unit = {
