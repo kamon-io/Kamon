@@ -40,7 +40,10 @@ class TypedActorMetricsSpec extends AnyWordSpec
   "the Kamon typed actor metrics" should {
     "respect the configured include and exclude filters" in new ActorMetricsFixtures {
       sendMessage("world")
-      ActorProcessingTime.tagValues("path") should contain("greet-service/user")
+      val pathValues = ActorProcessingTime.tagValues("path")
+      pathValues should not contain("greet-service/")
+      pathValues should contain("greet-service/user")
+
     }
   }
 
