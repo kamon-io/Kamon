@@ -35,7 +35,6 @@ object ActorCellInfo {
     val actorName = ref.path.name
 
     val pathString = ref.path.elements.mkString("/")
-    val isRootSupervisor = pathString.length == 0 || pathString == "user" || pathString == "system"
     val isRouter = hasRouterProps(props)
     val isRoutee = PekkoPrivateAccess.isRoutedActorRef(parent)
     val isTemporary = PekkoPrivateAccess.isUnstartedActorCell(cell)
@@ -47,6 +46,11 @@ object ActorCellInfo {
         (parent.asInstanceOf[HasRouterProps].routerProps.routerConfig.getClass, Some(props.actorClass()))
       else
         (props.actorClass(), None)
+
+    val isRootSupervisor = if (!isRouter && !isRoutee && isTyped(actorOrRouterClass))
+      pathString != "user"
+    else
+      pathString.isEmpty || pathString == "user" || pathString == "system"
 
     val fullPath = if (isRoutee) cellName(system, parent) else cellName(system, ref)
     val dispatcherName = if (isRouter) {

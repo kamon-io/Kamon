@@ -525,7 +525,8 @@ lazy val `kamon-pekko` = (project in file("instrumentation/kamon-pekko"))
   .settings(Seq(
     crossScalaVersions := Seq(`scala_2.12_version`, `scala_2.13_version`, scala_3_version),
     libraryDependencies ++= Seq(
-      "org.apache.pekko" %% "pekko-actor" % "1.0.1" % "provided"
+      "org.apache.pekko" %% "pekko-actor" % "1.0.1" % "provided",
+      "org.apache.pekko" %% "pekko-actor-typed" % "1.0.1" % "test"
     )
   ))
   .dependsOn(
