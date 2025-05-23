@@ -57,7 +57,7 @@ class Tracer(initialConfig: Config, clock: Clock, contextStorage: ContextStorage
   @volatile private var _includeErrorType: Boolean = false
   @volatile private var _ignoredOperations: Set[String] = Set.empty
   @volatile private var _trackMetricsOnIgnoredOperations: Boolean = false
-  private val _onSpanFinish: Span.Finished => Unit = _spanBuffer.offer
+  @volatile private var _onSpanFinish: Span.Finished => Unit = _spanBuffer.offer
 
   reconfigure(initialConfig)
 
@@ -481,6 +481,7 @@ class Tracer(initialConfig: Config, clock: Clock, contextStorage: ContextStorage
         // If we eventually decide to keep those possible Spans around then we will need to change the queue type to
         // multiple consumer as the reconfiguring thread will need to drain the contents before replacing.
         _spanBuffer = new MpscArrayQueue[Span.Finished](traceReporterQueueSize)
+        _onSpanFinish = _spanBuffer.offer
       }
 
       _sampler = sampler
