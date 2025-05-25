@@ -19,7 +19,6 @@ package kamon.instrumentation.tapir
 import akka.http.scaladsl.server.Route
 import kamon.Kamon
 import kanela.agent.api.instrumentation.InstrumentationBuilder
-import kanela.agent.api.instrumentation.classloader.ClassRefiner
 import kanela.agent.libs.net.bytebuddy.implementation.bind.annotation.{Argument, SuperCall}
 import sttp.tapir.server.ServerEndpoint
 
@@ -27,7 +26,7 @@ import java.util.concurrent.Callable
 
 class TapirInstrumentation extends InstrumentationBuilder {
   onTypes("sttp.tapir.server.akkahttp.EndpointToAkkaServer", "sttp.tapir.server.akkahttp.AkkaHttpServerInterpreter")
-    .when(ClassRefiner.builder().mustContain("sttp.tapir.server.ServerEndpoint").withMethods("showPathTemplate"))
+    .when(classIsPresent("sttp.tapir.server.ServerEndpoint").withExpectedMethodNames("showPathTemplate"))
     .intercept(method("toRoute"), classOf[TapirToRouteInterceptor])
 }
 

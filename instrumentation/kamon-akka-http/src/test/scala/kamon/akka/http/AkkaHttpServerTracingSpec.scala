@@ -231,12 +231,9 @@ class AkkaHttpServerTracingSpec extends AnyWordSpecLike with Matchers with Scala
 
       "correctly time entity transfer timings" in {
         val target = s"$protocol://$interface:$port/$stream"
-        def probablyScala3 = util.Properties.releaseVersion.contains("2.13.10")
-
         def makeCall = client.newCall(new Request.Builder().url(target).build()).execute()
         // akka 2.7.0 is flaky on this
-        if (probablyScala3) Try(makeCall).orElse(Try(makeCall))
-        else makeCall
+        Try(makeCall).orElse(Try(makeCall))
 
         val span = eventually(timeout(10 seconds)) {
           val span = testSpanReporter().nextSpan().value

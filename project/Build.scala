@@ -35,10 +35,10 @@ object BaseProject extends AutoPlugin {
     /** Marker configuration for dependencies that will be shaded into their module's jar.  */
     lazy val Shaded = config("shaded").hide
 
-    val kanelaAgent = "io.kamon" % "kanela-agent" % "1.0.18"
-    val slf4jApi = "org.slf4j" % "slf4j-api" % "1.7.36"
-    val slf4jnop = "org.slf4j" % "slf4j-nop" % "1.7.36"
-    val logbackClassic = "ch.qos.logback" % "logback-classic" % "1.2.12"
+    val kanelaAgent = "io.kamon" % "kanela-agent" % "2.0.0-beta.1"
+    val slf4jApi = "org.slf4j" % "slf4j-api" % "2.0.17"
+    val slf4jnop = "org.slf4j" % "slf4j-nop" % "2.0.17"
+    val logbackClassic = "ch.qos.logback" % "logback-classic" % "1.3.15"
     val scalatest = "org.scalatest" %% "scalatest" % "3.2.9"
     val hdrHistogram = "org.hdrhistogram" % "HdrHistogram" % "2.1.10"
     val okHttp = "com.squareup.okhttp3" % "okhttp" % "4.12.0"
@@ -64,10 +64,8 @@ object BaseProject extends AutoPlugin {
       SettingKey[Boolean]("ideSkipProject") := true
     )
 
-    val `scala_2.11_version` = "2.11.12"
-    val `scala_2.12_version` = "2.12.19"
     val `scala_2.13_version` = "2.13.13"
-    val scala_3_version = "3.3.1"
+    val scala_3_version = "3.3.5"
 
     // This installs the GPG signing key from the
     setupGpg()
@@ -144,8 +142,6 @@ object BaseProject extends AutoPlugin {
     crossPaths := true,
     scalaVersion := autoImport.`scala_2.13_version`,
     crossScalaVersions := Seq(
-      autoImport.`scala_2.11_version`,
-      autoImport.`scala_2.12_version`,
       autoImport.`scala_2.13_version`,
       autoImport.`scala_3_version`
     ),
@@ -160,24 +156,19 @@ object BaseProject extends AutoPlugin {
       "-XDignore.symbol.file"
     ),
     scalacOptions := Seq(
-      "-g:vars",
+      "-release:8",
       "-feature",
       "-unchecked",
       "-deprecation",
-      "-target:jvm-1.8",
-      "-Ywarn-dead-code",
       "-encoding",
       "UTF-8",
       "-language:postfixOps",
       "-language:higherKinds",
-      "-Xlog-reflective-calls",
       "-language:existentials",
       "-language:implicitConversions"
     ) ++ (CrossVersion.partialVersion(scalaVersion.value) match {
-      case Some((2, 11)) => Seq("-Xfuture", "-Ybackend:GenASM")
-      case Some((2, 12)) => Seq("-Xfuture", "-opt:l:method,-closure-invocations")
-      case Some((2, 13)) => Seq.empty
-      case Some((3, _))  => Seq("-source:3.0-migration", "-Xtarget:8")
+      case Some((2, 13)) => Seq("-g:vars", "-Ywarn-dead-code", "-Xlog-reflective-calls")
+      case Some((3, _))  => Seq("-source:3.0-migration")
       case _             => Seq.empty
     })
   )
