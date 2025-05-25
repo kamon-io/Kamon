@@ -1149,6 +1149,7 @@ lazy val `kamon-bundle-dependencies-3` = (project in file("bundle/kamon-bundle-d
     `kamon-pekko`,
     `kamon-pekko-http`,
     `kamon-pekko-grpc`,
+    `kamon-pekko-connectors-kafka`,
     `kamon-apache-httpclient`,
     `kamon-apache-cxf`
   )
