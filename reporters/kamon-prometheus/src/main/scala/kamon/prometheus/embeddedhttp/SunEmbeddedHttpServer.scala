@@ -41,6 +41,7 @@ class SunEmbeddedHttpServer(hostname: String, port: Int, path: String, scrapeSou
           val bytes = data.getBytes(StandardCharsets.UTF_8)
           var os: OutputStream = null
           try {
+            httpExchange.getResponseHeaders.set("Content-Type", "text/plain; charset=UTF-8")
             if (shouldUseCompression(httpExchange)) {
               httpExchange.getResponseHeaders.set("Content-Encoding", "gzip")
               httpExchange.sendResponseHeaders(200, 0)
@@ -51,7 +52,7 @@ class SunEmbeddedHttpServer(hostname: String, port: Int, path: String, scrapeSou
               httpExchange.sendResponseHeaders(200, bytes.length)
               os.write(bytes)
             }
-          } finally Option(os).map(_.close())
+          } finally Option(os).foreach(_.close())
         } else httpExchange.sendResponseHeaders(404, -1)
       }
     }
