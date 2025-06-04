@@ -16,7 +16,7 @@ jobs:
       - uses: coursier/cache-action@v6
       - uses: coursier/setup-action@v1
         with:
-          jvm: adopt:17
+          jvm: zulu:17
           apps: sbt
       - name: Release
         run: sbt ";+instrumentation/publishLocal; release"
