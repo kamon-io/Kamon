@@ -27,6 +27,7 @@ import org.scalatest.OptionValues
 import org.scalatest.wordspec.AnyWordSpecLike
 import org.scalatestplus.play._
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
+import play.core.PlayVersion
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.ws.WSClient
@@ -41,65 +42,84 @@ import play.api.test._
 import scala.concurrent.{ExecutionContext, Future}
 
 class AkkaHTTPRequestHandlerInstrumentationSpec extends {
-  val confFile = "/instrumentation/kamon-play/src/test-common/resources/conf/application-akka-http.conf"
-  //https://www.playframaework.com/documentation/2.6.x/NettyServer#Verifying-that-the-Netty-server-is-running
-  //The Akka HTTP backend will not set a value for this request attribute.
-  val expectedServer = "play.server.akka-http"
-} with RequestHandlerInstrumentationSpec
+      // https://www.playframaework.com/documentation/2.6.x/NettyServer#Verifying-that-the-Netty-server-is-running
+      // The Akka HTTP backend will not set a value for this request attribute.
+      val (confFile, expectedServer) = {
+        if (PlayVersion.current.startsWith("2")) {
+          (
+            "/instrumentation/kamon-play/src/test-common/resources/conf/application-akka-http.conf",
+            "play.server.akka-http"
+          )
+        } else {
+          (
+            "/instrumentation/kamon-play/src/test-common/resources/conf/application-pekko-http.conf",
+            "pekko.http.server"
+          )
+        }
+      }
+
+    } with RequestHandlerInstrumentationSpec
 
 class NettyRequestHandlerInstrumentationSpec extends {
-  val confFile = "/instrumentation/kamon-play/src/test-common/resources/conf/application-netty.conf"
-  val expectedServer = "play.server.netty"
-} with RequestHandlerInstrumentationSpec
+      val confFile = "/instrumentation/kamon-play/src/test-common/resources/conf/application-netty.conf"
+      val expectedServer = "play.server.netty"
+    } with RequestHandlerInstrumentationSpec
 
 abstract class RequestHandlerInstrumentationSpec extends PlaySpecShim with GuiceOneServerPerSuite with ScalaFutures
-    with Eventually with SpanSugar with InitAndStopKamonAfterAll with MetricInspection.Syntax with OptionValues with TestSpanReporter {
+    with Eventually with SpanSugar with InitAndStopKamonAfterAll with MetricInspection.Syntax with OptionValues
+    with TestSpanReporter {
 
   val confFile: String
   val expectedServer: String
 
   System.setProperty("config.file", System.getProperty("user.dir") + confFile)
-  
   implicit val executor: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
 
   def testRoutes(app: Application): PartialFunction[(String, String), Handler] = {
     val action = app.injector.instanceOf(classOf[DefaultActionBuilder])
 
     {
-      case ("GET", "/ok")         => handler(action { Ok })
-      case ("GET", "/request-id") => handler(action { Ok(Kamon.currentContext().getTag(option("request-id")).getOrElse("undefined")) })
-      case ("GET", "/async")      => handler(action.async { Future { Ok } })
-      case ("GET", "/not-found")  => handler(action { NotFound })
-      case ("GET", "/server")     => handler(action { req => Ok(serverImplementationName(req)) })
-      case ("GET", "/error")      => handler(action(_ => sys.error("This page generates an error!")))
+      case ("GET", "/ok") => handler(action { Ok })
+      case ("GET", "/request-id") =>
+        handler(action { Ok(Kamon.currentContext().getTag(option("request-id")).getOrElse("undefined")) })
+      case ("GET", "/async")     => handler(action.async { Future { Ok } })
+      case ("GET", "/not-found") => handler(action { NotFound })
+      case ("GET", "/server")    => handler(action { req => Ok(serverImplementationName(req)) })
+      case ("GET", "/error")     => handler(action(_ => sys.error("This page generates an error!")))
     }
   }
 
   def serverImplementationName(req: Request[AnyContent]): String = {
     req.attrs.get(RequestAttrKey.Server)
-      .map(s => if(s == "netty") "play.server.netty" else "unknown")
-      .getOrElse("play.server.akka-http")
+      .map(s => if (s == "netty") "play.server.netty" else "unknown")
+      .getOrElse(expectedServer) // The `Server` attribute is only set when unsing Netty
   }
 
   // Adds the HandlerDef attribute to the request which simulates what would happen when a generated router handles
   // the request.
   def handler[T](action: Action[T]): Handler = {
-    Stage.modifyRequest(req => {
-      req.addAttr(Router.Attrs.HandlerDef, HandlerDef(
-        classLoader = getClass.getClassLoader,
-        routerPackage = "kamon",
-        controller = "kamon.TestController",
-        method = "testMethod",
-        parameterTypes = Seq.empty,
-        verb = req.method,
-        path = req.path
-      ))
-    }, action)
+    Stage.modifyRequest(
+      req => {
+        req.addAttr(
+          Router.Attrs.HandlerDef,
+          HandlerDef(
+            classLoader = getClass.getClassLoader,
+            routerPackage = "kamon",
+            controller = "kamon.TestController",
+            method = "testMethod",
+            parameterTypes = Seq.empty,
+            verb = req.method,
+            path = req.path
+          )
+        )
+      },
+      action
+    )
   }
 
   override def fakeApplication(): Application = new GuiceApplicationBuilder()
     .appRoutes(testRoutes)
-    .build
+    .build()
 
   "the Request instrumentation" should {
     "check the right server is configured" in {
