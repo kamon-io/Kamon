@@ -612,9 +612,11 @@ lazy val `kamon-play` = (project in file("instrumentation/kamon-play"))
     crossScalaVersions := Seq(`scala_2.13_version`)
   )
   .dependsOn(
-    `kamon-akka` % "compile,test-common,test-play-2.8,test-play-2.7",
-    `kamon-akka-http` % "compile,test-common,test-play-2.8,test-play-2.7",
-    `kamon-testkit` % "test-common,test-play-2.8,test-play-2.7"
+    `kamon-akka` % "compile,test-common,test-play-28,test-play-29",
+    `kamon-akka-http` % "compile,test-common,test-play-28,test-play-29",
+    `kamon-pekko` % "compile,test-common,test-play-30",
+    `kamon-pekko-http` % "compile,test-common,test-play-30",
+    `kamon-testkit` % "test-common,test-play-28,test-play-29,test-play-30"
   )
 
 lazy val `kamon-okhttp` = (project in file("instrumentation/kamon-okhttp"))
