@@ -15,7 +15,6 @@
 
 package kamon.instrumentation.jdbc
 
-import ch.vorburger.mariadb4j.DB
 import com.typesafe.config.ConfigFactory
 import kamon.Kamon
 import kamon.tag.Lookups._
@@ -28,6 +27,8 @@ import org.scalatest.matchers.should.Matchers
 import org.scalatest.time.SpanSugar
 import org.scalatest.wordspec.AnyWordSpec
 import org.scalatest.{BeforeAndAfterEach, OptionValues}
+import org.testcontainers.containers.PostgreSQLContainer
+import org.testcontainers.containers.MySQLContainer
 
 import java.sql.{Connection, DriverManager, ResultSet}
 import java.time.Duration
@@ -65,11 +66,13 @@ class StatementInstrumentationSpec extends AnyWordSpec
   override implicit def patienceConfig: PatienceConfig = PatienceConfig(timeout = scaled(2 seconds))
 
   val drivers = Seq(
+    DriverSuite.Postgres,
     DriverSuite.H2,
     DriverSuite.SQLite,
     DriverSuite.MySQL,
-    DriverSuite.HikariH2
-  ).filter(canRunInCurrentEnvironment)
+    DriverSuite.HikariH2,
+    DriverSuite.PostgresWithAWSAdvancedDriver
+  )
 
   "the StatementInstrumentation" when {
     drivers.foreach { driver =>
@@ -265,7 +268,7 @@ class StatementInstrumentationSpec extends AnyWordSpec
           if (driver.supportSleeping) {
             val vendorTags = TagSet.of("db.vendor", driver.vendor)
 
-            for (id ← 1 to 10) yield {
+            for (id <- 1 to 10) yield {
               Future {
                 val connection = driver.connect()
                 driver.sleep(connection, Duration.ofMillis(1500))
@@ -437,12 +440,13 @@ class StatementInstrumentationSpec extends AnyWordSpec
     object MySQL extends DriverSuite with AddressTableSetup {
       val name = "MySQL"
       val vendor = "mysql"
-      val url = "jdbc:mysql://localhost/test"
       val supportSleeping = false
+      lazy val mysqlContainer = new MySQLContainer("mysql:8.4.5")
+      lazy val url = mysqlContainer.getJdbcUrl() + "?user=test&password=test"
       lazy val connection = DriverManager.getConnection(url)
 
       override def init(): Unit = {
-        DB.newEmbeddedDB(3306).start()
+        mysqlContainer.start()
         initializeAddressTable(connect())
       }
 
@@ -450,22 +454,76 @@ class StatementInstrumentationSpec extends AnyWordSpec
 
       override def sleep(connection: Connection, duration: Duration): Unit = {}
 
-      override def cleanup() = connection.close()
+      override def cleanup() = {
+        connection.close()
+        mysqlContainer.stop()
+      }
+    }
+
+    object Postgres extends DriverSuite with AddressTableSetup {
+      val name = "Postgres"
+      val vendor = "postgresql"
+      val supportSleeping = false
+      lazy val postgresqlContainer = new PostgreSQLContainer("postgres:16")
+      lazy val url = postgresqlContainer.getJdbcUrl() + "&user=test&password=test"
+      lazy val connection = DriverManager.getConnection(url)
+
+      override def init(): Unit = {
+        postgresqlContainer.start()
+        initializeAddressTable(connect())
+      }
+
+      override def connect(): Connection = connection
+
+      override def sleep(connection: Connection, duration: Duration): Unit = {}
+
+      override def cleanup() = {
+        connection.close()
+        postgresqlContainer.stop()
+      }
+    }
+
+    object PostgresWithAWSAdvancedDriver extends DriverSuite with AddressTableSetup {
+      val name = "Postgres with AWS Advanced Driver"
+      val vendor = "postgresql"
+      val supportSleeping = false
+
+      // It seems like the AWS wrapper will remove all parameters we pass on the
+      // connection string and turn them into properties before passing them to
+      // the underlying driver, so we need to cleanup the URL for all assertions
+      // to work as epected.
+      val connectionProperties = new java.util.Properties()
+      connectionProperties.setProperty("user", "test")
+      connectionProperties.setProperty("password", "test")
+      lazy val postgresqlContainer = new PostgreSQLContainer("postgres:16")
+      lazy val url = postgresqlContainer.getJdbcUrl().replace("?loggerLevel=OFF", "")
+      lazy val urlForConnection = url.replace("postgresql", "aws-wrapper:postgresql")
+      lazy val connection = DriverManager.getConnection(urlForConnection, connectionProperties)
+
+      override def init(): Unit = {
+        postgresqlContainer.start()
+        initializeAddressTable(connect())
+      }
+
+      override def connect(): Connection = connection
+
+      override def sleep(connection: Connection, duration: Duration): Unit = {}
+
+      override def cleanup() = {
+        connection.close()
+        postgresqlContainer.stop()
+      }
     }
 
     trait AddressTableSetup {
       def initializeAddressTable(connection: Connection): Unit = {
         connection.createStatement().executeUpdate("DROP TABLE IF EXISTS Address;")
         connection.createStatement().executeUpdate("CREATE TABLE Address (Nr INTEGER, Name VARCHAR(128));")
-        connection.createStatement().executeUpdate(s"INSERT INTO Address (Nr, Name) VALUES(1, 'foo')")
-        connection.createStatement().executeUpdate(s"INSERT INTO Address (Nr, Name) VALUES(2, 'foo')")
-        connection.createStatement().executeUpdate(s"INSERT INTO Address (Nr, Name) VALUES(3, 'foo')")
-        connection.createStatement().executeUpdate(s"INSERT INTO Address (Nr, Name) VALUES(4, 'foo')")
+        connection.createStatement().executeUpdate("INSERT INTO Address (Nr, Name) VALUES(1, 'foo')")
+        connection.createStatement().executeUpdate("INSERT INTO Address (Nr, Name) VALUES(2, 'foo')")
+        connection.createStatement().executeUpdate("INSERT INTO Address (Nr, Name) VALUES(3, 'foo')")
+        connection.createStatement().executeUpdate("INSERT INTO Address (Nr, Name) VALUES(4, 'foo')")
       }
     }
-  }
-
-  def canRunInCurrentEnvironment(driverSuite: DriverSuite): Boolean = {
-    !(System.getenv("TRAVIS") != null && driverSuite.vendor == "mysql")
   }
 }

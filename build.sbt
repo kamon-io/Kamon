@@ -309,8 +309,12 @@ lazy val `kamon-jdbc` = (project in file("instrumentation/kamon-jdbc"))
       logbackClassic % "test",
       "com.typesafe.slick" %% "slick-hikaricp" % slickVersion(scalaBinaryVersion.value) % "test",
       "com.h2database" % "h2" % "1.4.192" % "test",
+      "org.postgresql" % "postgresql" % "42.5.4" % "test",
+      "software.amazon.jdbc" % "aws-advanced-jdbc-wrapper" % "2.5.6" % "test",
+      "com.mysql" % "mysql-connector-j" % "9.3.0" % "test",
       "org.xerial" % "sqlite-jdbc" % "3.34.0" % "test",
-      "ch.vorburger.mariaDB4j" % "mariaDB4j" % "2.5.3" % "test"
+      "org.testcontainers" % "postgresql" % "1.19.8" % "test",
+      "org.testcontainers" % "mysql" % "1.19.8" % "test"
     )
   ).dependsOn(`kamon-core`, `kamon-executors`, `kamon-testkit` % "test")
 

@@ -47,7 +47,7 @@ class PreparedStatementExecuteMethodAdvisor
 object PreparedStatementExecuteMethodAdvisor {
   @Advice.OnMethodEnter(suppress = classOf[Throwable])
   @static def executeStart(@Advice.This statement: HasStatementSQL): Option[Invocation] = {
-    StatementMonitor.start(statement, statement.capturedStatementSQL(), StatementTypes.GenericExecute)
+    StatementMonitor.start(statement, statement.capturedStatementSQL, StatementTypes.GenericExecute)
   }
 
   @Advice.OnMethodExit(onThrowable = classOf[Throwable], suppress = classOf[Throwable])
@@ -79,7 +79,7 @@ class PreparedStatementExecuteQueryMethodAdvisor
 object PreparedStatementExecuteQueryMethodAdvisor {
   @Advice.OnMethodEnter(suppress = classOf[Throwable])
   @static def executeStart(@Advice.This statement: HasStatementSQL): Option[Invocation] = {
-    StatementMonitor.start(statement, statement.capturedStatementSQL(), StatementTypes.Query)
+    StatementMonitor.start(statement, statement.capturedStatementSQL, StatementTypes.Query)
   }
 
   @Advice.OnMethodExit(onThrowable = classOf[Throwable], suppress = classOf[Throwable])
@@ -111,7 +111,7 @@ class PreparedStatementExecuteUpdateMethodAdvisor
 object PreparedStatementExecuteUpdateMethodAdvisor {
   @Advice.OnMethodEnter(suppress = classOf[Throwable])
   @static def executeStart(@Advice.This statement: HasStatementSQL): Option[Invocation] = {
-    StatementMonitor.start(statement, statement.capturedStatementSQL(), StatementTypes.Update)
+    StatementMonitor.start(statement, statement.capturedStatementSQL, StatementTypes.Update)
   }
 
   @Advice.OnMethodExit(onThrowable = classOf[Throwable], suppress = classOf[Throwable])
@@ -130,7 +130,7 @@ object StatementExecuteBatchMethodAdvisor {
   @Advice.OnMethodEnter(suppress = classOf[Throwable])
   @static def executeStart(@Advice.This statement: Any): Option[Invocation] = {
     val statementSQL = statement match {
-      case hSQL: HasStatementSQL => hSQL.capturedStatementSQL()
+      case hSQL: HasStatementSQL => hSQL.capturedStatementSQL
       case _                     => statement.toString
     }
 

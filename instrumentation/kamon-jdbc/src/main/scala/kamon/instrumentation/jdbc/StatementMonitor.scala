@@ -92,8 +92,8 @@ object StatementMonitor extends LoggingSupport {
           val poolTelemetry = cpt.connectionPoolTelemetry.get()
           (poolTelemetry.instruments.inFlightStatements, poolTelemetry.databaseTags)
 
-        case dbt: HasDatabaseTags if dbt.databaseTags() != null =>
-          (JdbcMetrics.InFlightStatements.withTags(dbt.databaseTags().metricTags), dbt.databaseTags())
+        case dbt: HasDatabaseTags if dbt.databaseTags != null =>
+          (JdbcMetrics.InFlightStatements.withTags(dbt.databaseTags.metricTags), dbt.databaseTags)
 
         case _ =>
           (JdbcMetrics.InFlightStatements.withoutTags(), DatabaseTags(TagSet.Empty, TagSet.Empty))
