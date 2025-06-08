@@ -34,14 +34,19 @@ class PrometheusReporter(configPath: String = DefaultConfigPath, initialConfig: 
 
   private val _logger = LoggerFactory.getLogger(classOf[PrometheusReporter])
   private var _embeddedHttpServer: Option[EmbeddedHttpServer] = None
-  private val _snapshotAccumulator =
-    PeriodSnapshot.accumulator(Duration.ofDays(365 * 5), Duration.ZERO, Duration.ofDays(365 * 5))
 
   @volatile private var _preparedScrapeData: String =
     "# The kamon-prometheus module didn't receive any data just yet.\n"
 
   @volatile private var _config = initialConfig
   @volatile private var _reporterSettings = readSettings(initialConfig.getConfig(configPath))
+
+  private val _snapshotAccumulator =
+    PeriodSnapshot.accumulator(
+      _reporterSettings.generic.periodSettings.accumulationPeriod,
+      Duration.ZERO,
+      _reporterSettings.generic.periodSettings.stalePeriod
+    )
 
   {
     startEmbeddedServerIfEnabled()

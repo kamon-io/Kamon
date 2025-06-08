@@ -21,6 +21,8 @@ import kamon.tag.TagSet
 import kamon.util.Filter.Glob
 import kamon.{Kamon, UtilsOnConfig}
 
+import java.time.Duration
+
 import scala.collection.JavaConverters._
 
 object PrometheusSettings {
@@ -33,12 +35,18 @@ object PrometheusSettings {
     customBuckets: Map[String, Seq[java.lang.Double]],
     includeEnvironmentTags: Boolean,
     summarySettings: SummarySettings,
-    gaugeSettings: GaugeSettings
+    gaugeSettings: GaugeSettings,
+    periodSettings: PeriodSettings
   )
 
   case class SummarySettings(
     quantiles: Seq[java.lang.Double],
     metricMatchers: Seq[Glob]
+  )
+
+  case class PeriodSettings(
+    accumulationPeriod: Duration,
+    stalePeriod: Duration
   )
 
   case class GaugeSettings(metricMatchers: Seq[Glob])
@@ -57,6 +65,10 @@ object PrometheusSettings {
       ),
       gaugeSettings = GaugeSettings(
         metricMatchers = prometheusConfig.getStringList("gauges.metrics").asScala.map(Glob).toSeq
+      ),
+      periodSettings = PeriodSettings(
+        accumulationPeriod = prometheusConfig.getDuration("periods.accumulation"),
+        stalePeriod = prometheusConfig.getDuration("periods.stale")
       )
     )
   }
