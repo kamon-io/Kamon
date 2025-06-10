@@ -53,7 +53,7 @@ class AkkaHTTPRequestHandlerInstrumentationSpec extends {
         } else {
           (
             "/instrumentation/kamon-play/src/test-common/resources/conf/application-pekko-http.conf",
-            "pekko.http.server"
+            "play.server.pekko-http"
           )
         }
       }
