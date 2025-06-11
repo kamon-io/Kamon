@@ -31,7 +31,6 @@ import kamon.instrumentation.http.HttpServerInstrumentation.RequestHandler
 import kamon.instrumentation.http.{HttpMessage, HttpServerInstrumentation}
 import kamon.util.CallingThreadExecutionContext
 import kanela.agent.api.instrumentation.InstrumentationBuilder
-import kanela.agent.api.instrumentation.classloader.ClassRefiner
 import kanela.agent.api.instrumentation.mixin.Initializer
 import kanela.agent.libs.net.bytebuddy.asm.Advice
 import org.slf4j.LoggerFactory
@@ -46,32 +45,28 @@ import scala.util.{Failure, Success}
 class PlayServerInstrumentation extends InstrumentationBuilder {
 
   /**
-      * When using the Akka HTTP server, we will use the exact same instrumentation that comes from the Akka HTTP module,
-      * the only difference here is that we will change the component name.
-      */
-  private val isAkkaHttpAround = ClassRefiner.builder().mustContain("play.core.server.AkkaHttpServerProvider").build()
-
+    * When using the Akka HTTP server, we will use the exact same instrumentation that comes from the Akka HTTP module,
+    * the only difference here is that we will change the component name.
+    */
   onType("play.core.server.AkkaHttpServer")
-    .when(isAkkaHttpAround)
+    .when(classIsPresent("play.core.server.AkkaHttpServerProvider"))
     .advise(
       anyMethods("createServerBinding", "play$core$server$AkkaHttpServer$$createServerBinding"),
       CreateServerBindingAdvice
     )
 
   /**
-      * When using the Netty HTTP server we are rolling our own instrumentation which simply requires us to create the
-      * HttpServerInstrumentation instance and call the expected callbacks on it.
-      */
-  private val isNettyAround = ClassRefiner.builder().mustContain("play.core.server.NettyServerProvider").build()
-
+    * When using the Netty HTTP server we are rolling our own instrumentation which simply requires us to create the
+    * HttpServerInstrumentation instance and call the expected callbacks on it.
+    */
   onType("play.core.server.NettyServer")
-    .when(isNettyAround)
+    .when(classIsPresent("play.core.server.NettyServerProvider"))
     .mixin(classOf[HasServerInstrumentation.Mixin])
     .advise(isConstructor, NettyServerInitializationAdvice)
 
   if (hasGenericFutureListener()) {
     onType("play.core.server.netty.PlayRequestHandler")
-      .when(isNettyAround)
+      .when(classIsPresent("play.core.server.NettyServerProvider"))
       .mixin(classOf[HasServerInstrumentation.Mixin])
       .mixin(classOf[HasTimestamp.Mixin])
       .advise(isConstructor, PlayRequestHandlerConstructorAdvice)
@@ -87,7 +82,7 @@ class PlayServerInstrumentation extends InstrumentationBuilder {
 
   private def hasGenericFutureListener(): Boolean = {
     try { Class.forName("io.netty.util.concurrent.GenericFutureListener") != null }
-    catch { case _ => false }
+    catch { case _: Throwable => false }
   }
 
 }

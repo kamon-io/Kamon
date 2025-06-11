@@ -26,7 +26,8 @@ import kamon.annotation.el.TagsEvaluator;
 import kamon.metric.*;
 import kamon.tag.TagSet;
 import kamon.trace.SpanBuilder;
-import kanela.agent.util.log.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.Method;
 import java.util.Collections;
@@ -38,6 +39,7 @@ import java.util.concurrent.TimeUnit;
 
 public final class AnnotationCache {
 
+  private static Logger logger = LoggerFactory.getLogger(AnnotationCache.class);
   private static Map<MetricKey, Object> metrics = buildCache();
 
   private static Map<MetricKey, Object> buildCache() {
@@ -195,7 +197,7 @@ public final class AnnotationCache {
   private static RemovalListener<MetricKey, Object> LogExpirationListener() {
     return (key, value, cause) ->   {
       if(value instanceof Instrument) ((Instrument) value).remove();
-      Logger.debug(() -> "Expiring key: " + key + "with value" + value);
+      logger.debug("Expiring key: " + key + "with value" + value);
     };
   }
 

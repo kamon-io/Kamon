@@ -196,7 +196,7 @@ lazy val `kamon-twitter-future` = (project in file("instrumentation/kamon-twitte
   .enablePlugins(JavaAgent)
   .settings(instrumentationSettings)
   .settings(
-    crossScalaVersions := Seq(`scala_2.11_version`, `scala_2.12_version`, `scala_2.13_version`),
+    crossScalaVersions := Seq(`scala_2.13_version`),
     libraryDependencies ++= Seq(
       kanelaAgent % "provided",
       "com.twitter" %% "util-core" % "20.3.0" % "provided",
@@ -210,7 +210,7 @@ lazy val `kamon-scalaz-future` = (project in file("instrumentation/kamon-scalaz-
   .enablePlugins(JavaAgent)
   .settings(instrumentationSettings)
   .settings(
-    crossScalaVersions := Seq(`scala_2.11_version`, `scala_2.12_version`, `scala_2.13_version`),
+    crossScalaVersions := Seq(`scala_2.13_version`),
     libraryDependencies ++= Seq(
       kanelaAgent % "provided",
       "org.scalaz" %% "scalaz-concurrent" % "7.2.28" % "provided",
@@ -236,7 +236,7 @@ lazy val `kamon-cats-io` = (project in file("instrumentation/kamon-cats-io"))
   .enablePlugins(JavaAgent)
   .settings(instrumentationSettings)
   .settings(
-    crossScalaVersions := Seq(`scala_2.11_version`, `scala_2.12_version`, `scala_2.13_version`),
+    crossScalaVersions := Seq(`scala_2.13_version`),
     libraryDependencies ++= Seq(
       kanelaAgent % "provided", {
         if (scalaBinaryVersion.value == "2.11")
@@ -254,7 +254,7 @@ lazy val `kamon-cats-io-3` = (project in file("instrumentation/kamon-cats-io-3")
   .enablePlugins(JavaAgent)
   .settings(instrumentationSettings)
   .settings(
-    crossScalaVersions := Seq(`scala_2.12_version`, `scala_2.13_version`, scala_3_version),
+    crossScalaVersions := Seq(`scala_2.13_version`, scala_3_version),
     libraryDependencies ++= Seq(
       kanelaAgent % "provided",
       "org.typelevel" %% "cats-effect" % "3.3.14" % "provided",
@@ -268,7 +268,7 @@ lazy val `kamon-zio-2` = (project in file("instrumentation/kamon-zio-2"))
   .enablePlugins(JavaAgent)
   .settings(instrumentationSettings)
   .settings(
-    crossScalaVersions := Seq(`scala_2.12_version`, `scala_2.13_version`, scala_3_version),
+    crossScalaVersions := Seq(`scala_2.13_version`, scala_3_version),
     libraryDependencies ++= Seq(
       kanelaAgent % "provided",
       "dev.zio" %% "zio" % "2.0.21" % "provided",
@@ -333,7 +333,7 @@ lazy val `kamon-mongo-legacy` = (project in file("instrumentation/kamon-mongo-le
   .enablePlugins(JavaAgent)
   .settings(instrumentationSettings)
   .settings(
-    crossScalaVersions := Seq(`scala_2.11_version`, `scala_2.12_version`, `scala_2.13_version`),
+    crossScalaVersions := Seq(`scala_2.13_version`),
     libraryDependencies ++= Seq(
       kanelaAgent % "provided",
       "org.mongodb" % "mongodb-driver-sync" % "3.11.0" % "provided",
@@ -350,7 +350,7 @@ lazy val `kamon-mongo` = (project in file("instrumentation/kamon-mongo"))
   .enablePlugins(JavaAgent)
   .settings(instrumentationSettings)
   .settings(
-    crossScalaVersions := Seq(`scala_2.11_version`, `scala_2.12_version`, `scala_2.13_version`),
+    crossScalaVersions := Seq(`scala_2.13_version`),
     libraryDependencies ++= Seq(
       kanelaAgent % "provided",
       "org.mongodb" % "mongodb-driver-sync" % "4.2.3" % "provided",
@@ -366,7 +366,7 @@ lazy val `kamon-cassandra` = (project in file("instrumentation/kamon-cassandra")
   .disablePlugins(AssemblyPlugin)
   .enablePlugins(JavaAgent)
   .settings(instrumentationSettings)
-  .settings(crossScalaVersions := Seq(`scala_2.11_version`, `scala_2.12_version`, `scala_2.13_version`))
+  .settings(crossScalaVersions := Seq(`scala_2.13_version`))
   .dependsOn(`kamon-core`, `kamon-instrumentation-common`, `kamon-testkit` % "test", `kamon-executors`)
 
 lazy val `kamon-elasticsearch` = (project in file("instrumentation/kamon-elasticsearch"))
@@ -412,6 +412,7 @@ lazy val `kamon-spring` = (project in file("instrumentation/kamon-spring"))
       kanelaAgent % "provided",
       "org.springframework.boot" % "spring-boot-starter-web" % "2.4.2" % "provided",
       "org.springframework.boot" % "spring-boot-starter-webflux" % "2.4.2" % "provided",
+      "javax.servlet" % "javax.servlet-api" % "4.0.1" % "provided",
       okHttp % "test",
       "com.h2database" % "h2" % "1.4.200" % "test",
       "javax.xml.bind" % "jaxb-api" % "2.3.1" % "test",
@@ -466,14 +467,13 @@ lazy val `kamon-akka` = (project in file("instrumentation/kamon-akka"))
   .disablePlugins(AssemblyPlugin)
   .settings(instrumentationSettings: _*)
   .dependsOn(
-    `kamon-scala-future` % "compile,common,akka-2.5,akka-2.6",
-    `kamon-testkit` % "test,test-common,test-akka-2.5,test-akka-2.6"
+    `kamon-scala-future` % "compile,common,akka-2.6",
+    `kamon-testkit` % "test,test-common,test-akka-2.6"
   )
 
 def akkaHttpVersion(scalaVersion: String) = scalaVersion match {
-  case "2.11" => "10.1.12"
-  case "3"    => "10.5.0"
-  case _      => "10.2.8"
+  case "3" => "10.5.0"
+  case _   => "10.2.8"
 }
 def akkaStreamVersion(scalaVersion: String) = scalaVersion match {
   case "3" => "2.7.0"
@@ -484,22 +484,11 @@ def akkaGrpcRuntimeVersion(scalaVersion: String) = scalaVersion match {
   case _   => "2.1.3"
 }
 
-def versionedScalaSourceDirectories(sourceDir: File, scalaVersion: String): List[File] =
-  scalaVersion match {
-    case "3"    => List(sourceDir / "scala-2.13+")
-    case "2.13" => List(sourceDir / "scala-2.13+")
-    case _      => Nil
-  }
-
 lazy val `kamon-akka-http` = (project in file("instrumentation/kamon-akka-http"))
   .enablePlugins(JavaAgent)
   .disablePlugins(AssemblyPlugin)
   .settings(instrumentationSettings)
   .settings(Seq(
-    Compile / unmanagedSourceDirectories ++= versionedScalaSourceDirectories(
-      (Compile / sourceDirectory).value,
-      scalaBinaryVersion.value
-    ),
     resolvers += Resolver.bintrayRepo("hseeberger", "maven"),
     javaAgents += "org.mortbay.jetty.alpn" % "jetty-alpn-agent" % "2.0.10" % "test",
     libraryDependencies ++= Seq(
@@ -523,7 +512,7 @@ lazy val `kamon-pekko` = (project in file("instrumentation/kamon-pekko"))
   .disablePlugins(AssemblyPlugin)
   .settings(instrumentationSettings: _*)
   .settings(Seq(
-    crossScalaVersions := Seq(`scala_2.12_version`, `scala_2.13_version`, scala_3_version),
+    crossScalaVersions := Seq(`scala_2.13_version`, scala_3_version),
     libraryDependencies ++= Seq(
       "org.apache.pekko" %% "pekko-actor" % "1.0.1" % "provided"
     )
@@ -540,7 +529,7 @@ lazy val `kamon-pekko-http` = (project in file("instrumentation/kamon-pekko-http
   .disablePlugins(AssemblyPlugin)
   .settings(instrumentationSettings)
   .settings(Seq(
-    crossScalaVersions := Seq(`scala_2.12_version`, `scala_2.13_version`, scala_3_version),
+    crossScalaVersions := Seq(`scala_2.13_version`, scala_3_version),
     libraryDependencies ++= Seq(
       kanelaAgent % "provided",
       "org.apache.pekko" %% "pekko-http" % pekkoHttpVersion % "provided",
@@ -561,7 +550,7 @@ lazy val `kamon-pekko-grpc` = (project in file("instrumentation/kamon-pekko-grpc
   .settings(instrumentationSettings)
   .settings(Seq(
     PB.additionalDependencies := Seq.empty,
-    crossScalaVersions := Seq(`scala_2.12_version`, `scala_2.13_version`, scala_3_version),
+    crossScalaVersions := Seq(`scala_2.13_version`, scala_3_version),
     libraryDependencies ++= Seq(
       kanelaAgent % "provided",
       "org.apache.pekko" %% "pekko-http" % pekkoHttpVersion % "provided",
@@ -581,7 +570,7 @@ lazy val `kamon-pekko-connectors-kafka` = (project in file("instrumentation/kamo
   .enablePlugins(JavaAgent)
   .settings(instrumentationSettings)
   .settings(
-    crossScalaVersions := Seq(`scala_2.12_version`, `scala_2.13_version`, scala_3_version),
+    crossScalaVersions := Seq(`scala_2.13_version`, scala_3_version),
     libraryDependencies ++= Seq(
       kanelaAgent % "provided",
       "org.apache.pekko" %% "pekko-connectors-kafka" % "1.0.0" % "provided",
@@ -597,7 +586,7 @@ lazy val `kamon-akka-grpc` = (project in file("instrumentation/kamon-akka-grpc")
   .settings(instrumentationSettings)
   .settings(Seq(
     PB.additionalDependencies := Seq.empty,
-    crossScalaVersions := Seq(`scala_2.12_version`, `scala_2.13_version`, scala_3_version),
+    crossScalaVersions := Seq(`scala_2.13_version`, scala_3_version),
     libraryDependencies ++= Seq(
       kanelaAgent % "provided",
       "com.typesafe.akka" %% "akka-http" % akkaHttpVersion(scalaBinaryVersion.value) % "provided",
@@ -620,12 +609,14 @@ lazy val `kamon-play` = (project in file("instrumentation/kamon-play"))
   .disablePlugins(AssemblyPlugin)
   .settings(
     instrumentationSettings,
-    crossScalaVersions := Seq(`scala_2.11_version`, `scala_2.12_version`, `scala_2.13_version`)
+    crossScalaVersions := Seq(`scala_2.13_version`)
   )
   .dependsOn(
-    `kamon-akka` % "compile,test-common,test-play-2.8,test-play-2.7,test-play-2.6",
-    `kamon-akka-http` % "compile,test-common,test-play-2.8,test-play-2.7,test-play-2.6",
-    `kamon-testkit` % "test-common,test-play-2.8,test-play-2.7,test-play-2.6"
+    `kamon-akka` % "compile,test-common,test-play-28,test-play-29",
+    `kamon-akka-http` % "compile,test-common,test-play-28,test-play-29",
+    `kamon-pekko` % "compile,test-common,test-play-30",
+    `kamon-pekko-http` % "compile,test-common,test-play-30",
+    `kamon-testkit` % "test-common,test-play-28,test-play-29,test-play-30"
   )
 
 lazy val `kamon-okhttp` = (project in file("instrumentation/kamon-okhttp"))
@@ -648,7 +639,7 @@ lazy val `kamon-tapir` = (project in file("instrumentation/kamon-tapir"))
   .enablePlugins(JavaAgent)
   .settings(
     instrumentationSettings,
-    crossScalaVersions := Seq(`scala_2.12_version`, `scala_2.13_version`),
+    crossScalaVersions := Seq(`scala_2.13_version`),
     libraryDependencies ++= Seq(
       kanelaAgent % "provided,legacy",
 
@@ -704,7 +695,7 @@ lazy val `kamon-caffeine` = (project in file("instrumentation/kamon-caffeine"))
 lazy val `kamon-lagom` = (project in file("instrumentation/kamon-lagom"))
   .disablePlugins(AssemblyPlugin)
   .settings(
-    crossScalaVersions := Seq(`scala_2.11_version`, `scala_2.12_version`, `scala_2.13_version`),
+    crossScalaVersions := Seq(`scala_2.13_version`),
     libraryDependencies ++= {
       CrossVersion.partialVersion(scalaVersion.value) match {
         case Some((2, scalaMajor)) if scalaMajor == 11 =>
@@ -720,7 +711,7 @@ lazy val `kamon-finagle` = (project in file("instrumentation/kamon-finagle"))
   .enablePlugins(JavaAgent)
   .settings(instrumentationSettings)
   .settings(
-    crossScalaVersions := Seq(`scala_2.12_version`, `scala_2.13_version`),
+    crossScalaVersions := Seq(`scala_2.13_version`),
     libraryDependencies ++= Seq(
       kanelaAgent % "provided",
       "com.twitter" %% "finagle-http" % "21.12.0" % "provided",
@@ -751,7 +742,7 @@ lazy val `kamon-alpakka-kafka` = (project in file("instrumentation/kamon-alpakka
   .enablePlugins(JavaAgent)
   .settings(instrumentationSettings)
   .settings(
-    crossScalaVersions := Seq(`scala_2.12_version`, `scala_2.13_version`),
+    crossScalaVersions := Seq(`scala_2.13_version`),
     libraryDependencies ++= Seq(
       kanelaAgent % "provided",
       "com.typesafe.akka" %% "akka-stream-kafka" % "2.1.1" % "provided",
@@ -790,7 +781,7 @@ lazy val `kamon-http4s-0_23` = (project in file("instrumentation/kamon-http4s-0.
   .settings(
     name := "kamon-http4s-0.23",
     scalacOptions ++= { if (scalaBinaryVersion.value == "2.12") Seq("-Ypartial-unification") else Seq.empty },
-    crossScalaVersions := Seq(`scala_2.12_version`, `scala_2.13_version`, `scala_3_version`),
+    crossScalaVersions := Seq(`scala_2.13_version`, `scala_3_version`),
     libraryDependencies ++= Seq(
       "org.http4s" %% "http4s-client" % "0.23.19" % Provided,
       "org.http4s" %% "http4s-server" % "0.23.19" % Provided,
@@ -1002,7 +993,6 @@ lazy val bundle = (project in file("bundle"))
   .settings(crossScalaVersions := Nil)
   .aggregate(
     `kamon-bundle`,
-    `kamon-bundle_2_11`,
     `kamon-bundle-3`,
     `kamon-runtime-attacher`
   )
@@ -1103,13 +1093,12 @@ lazy val `kamon-bundle-dependencies-all` = (project in file("bundle/kamon-bundle
   *   Add a reference here to all the project dependencies that can be built
   *   from 2.12. Currently only Scala 2.12 and 2.13.
   */
-lazy val `kamon-bundle-dependencies-2-12-and-up` = (project in file("bundle/kamon-bundle-dependencies-2-12-and-up"))
+lazy val `kamon-bundle-dependencies-2-13` = (project in file("bundle/kamon-bundle-dependencies-2-12-and-up"))
   .disablePlugins(AssemblyPlugin)
   .settings(noPublishing: _*)
   .settings(ideSkipProject: _*)
   .settings(
     crossScalaVersions := Seq(
-      `scala_2.12_version`,
       `scala_2.13_version`
     )
   )
@@ -1172,13 +1161,12 @@ lazy val `kamon-bundle` = (project in file("bundle/kamon-bundle"))
   .settings(ideSkipProject: _*)
   .settings(
     crossScalaVersions := Seq(
-      `scala_2.12_version`,
       `scala_2.13_version`
     )
   )
   .dependsOn(
     `kamon-core`,
-    `kamon-bundle-dependencies-2-12-and-up` % "shaded"
+    `kamon-bundle-dependencies-2-13` % "shaded"
   )
 
 lazy val `kamon-bundle-3` = (project in file("bundle/kamon-bundle-3"))
@@ -1192,21 +1180,6 @@ lazy val `kamon-bundle-3` = (project in file("bundle/kamon-bundle-3"))
   .dependsOn(
     `kamon-core`,
     `kamon-bundle-dependencies-3` % "shaded"
-  )
-
-lazy val `kamon-bundle_2_11` = (project in file("bundle/kamon-bundle_2.11"))
-  .enablePlugins(AssemblyPlugin)
-  .settings(commonBundleSettings)
-  .settings(ideSkipProject: _*)
-  .settings(
-    scalaVersion := `scala_2.11_version`,
-    crossScalaVersions := Seq(
-      `scala_2.11_version`
-    )
-  )
-  .dependsOn(
-    `kamon-core`,
-    `kamon-bundle-dependencies-all` % "shaded"
   )
 
 lazy val `bill-of-materials` = (project in file("bill-of-materials"))
