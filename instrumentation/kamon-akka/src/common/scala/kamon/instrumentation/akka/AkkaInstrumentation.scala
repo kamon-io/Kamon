@@ -115,7 +115,7 @@ object AkkaInstrumentation {
     private def safeFilter(config: Config, allowDoomsday: Boolean): Filter = {
       val includes = config.getStringList("includes").asScala
       if(!allowDoomsday && includes.contains("**")) {
-        val newIncludes = "includes = " + includes.filter(_ == "**").map(s => s""""$s"""").mkString("[ ", ", ", " ]")
+        val newIncludes = "includes = " + includes.filterNot(_ == "**").map(s => s""""$s"""").mkString("[ ", ", ", " ]")
         val safeFilterConfig = ConfigFactory.parseString(newIncludes).withFallback(config)
 
         Filter.from(safeFilterConfig)
