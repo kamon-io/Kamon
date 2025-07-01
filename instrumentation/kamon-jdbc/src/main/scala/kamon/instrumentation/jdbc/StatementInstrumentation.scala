@@ -28,6 +28,9 @@ import kanela.agent.api.instrumentation.bridge.FieldBridge
 import kanela.agent.libs.net.bytebuddy.asm.Advice
 
 import scala.util.Try
+
+import kanela.agent.libs.net.bytebuddy.description.`type`.TypeDescription
+import kanela.agent.libs.net.bytebuddy.matcher.ElementMatcher
 import kanela.agent.libs.net.bytebuddy.matcher.ElementMatchers._
 
 import scala.annotation.static
@@ -57,13 +60,16 @@ class StatementInstrumentation extends InstrumentationBuilder {
     .mixin(classOf[HasDatabaseTags.Mixin])
     .mixin(classOf[HasConnectionPoolTelemetry.Mixin])
 
-  onTypesMatching(hasSuperType(named("java.sql.Statement")).and(not(nameStartsWith("com.zaxxer.hikari"))))
+  private val ignoredDriverWrappers: ElementMatcher.Junction[TypeDescription] =
+    nameStartsWith("com.zaxxer.hikari").or(nameStartsWith("software.amazon.jdbc.wrapper"))
+
+  onTypesMatching(hasSuperType(named("java.sql.Statement")).and(not(ignoredDriverWrappers)))
     .advise(method("execute").and(withOneStringArgument), classOf[StatementExecuteMethodAdvisor])
     .advise(method("executeQuery").and(withOneStringArgument), classOf[StatementExecuteQueryMethodAdvisor])
     .advise(method("executeUpdate").and(withOneStringArgument), classOf[StatementExecuteUpdateMethodAdvisor])
     .advise(anyMethods("executeBatch", "executeLargeBatch"), classOf[StatementExecuteBatchMethodAdvisor])
 
-  onTypesMatching(hasSuperType(named("java.sql.PreparedStatement")).and(not(nameStartsWith("com.zaxxer.hikari"))))
+  onTypesMatching(hasSuperType(named("java.sql.PreparedStatement")).and(not(ignoredDriverWrappers)))
     .advise(method("execute"), classOf[PreparedStatementExecuteMethodAdvisor])
     .advise(method("executeQuery"), classOf[PreparedStatementExecuteQueryMethodAdvisor])
     .advise(method("executeUpdate"), classOf[PreparedStatementExecuteUpdateMethodAdvisor])
@@ -98,7 +104,7 @@ class StatementInstrumentation extends InstrumentationBuilder {
 case class DatabaseTags(metricTags: TagSet, spanTags: TagSet)
 
 trait HasDatabaseTags {
-  def databaseTags(): DatabaseTags
+  def databaseTags: DatabaseTags
   def setDatabaseTags(databaseTags: DatabaseTags): Unit
 }
 
@@ -111,7 +117,7 @@ object HasDatabaseTags {
 }
 
 trait HasStatementSQL {
-  def capturedStatementSQL(): String
+  def capturedStatementSQL: String
   def setStatementSQL(sql: String): Unit
 }
 
@@ -157,7 +163,7 @@ object CreateStatementAdvice {
 
   @Advice.OnMethodExit
   @static def exit(@Advice.This connection: Any, @Advice.Return statement: Any): Unit = {
-    statement.asInstanceOf[HasDatabaseTags].setDatabaseTags(connection.asInstanceOf[HasDatabaseTags].databaseTags())
+    statement.asInstanceOf[HasDatabaseTags].setDatabaseTags(connection.asInstanceOf[HasDatabaseTags].databaseTags)
     statement.asInstanceOf[HasConnectionPoolTelemetry].setConnectionPoolTelemetry(
       connection.asInstanceOf[HasConnectionPoolTelemetry].connectionPoolTelemetry
     )
@@ -173,7 +179,7 @@ object CreatePreparedStatementAdvice {
     @Advice.Argument(0) sql: String,
     @Advice.Return statement: Any
   ): Unit = {
-    statement.asInstanceOf[HasDatabaseTags].setDatabaseTags(connection.asInstanceOf[HasDatabaseTags].databaseTags())
+    statement.asInstanceOf[HasDatabaseTags].setDatabaseTags(connection.asInstanceOf[HasDatabaseTags].databaseTags)
     statement.asInstanceOf[HasConnectionPoolTelemetry].setConnectionPoolTelemetry(
       statement.asInstanceOf[HasConnectionPoolTelemetry].connectionPoolTelemetry
     )
