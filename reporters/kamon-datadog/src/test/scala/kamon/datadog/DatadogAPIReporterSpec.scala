@@ -212,8 +212,47 @@ class DatadogAPIReporterSpec extends AbstractHttpReporter with Matchers with Rec
         )
     }
 
-    reporter.stop()
+    "support v1 and v2 of the submission endpoint" in {
+      val baseUrl = mockResponse("/test", new MockResponse().setStatus("HTTP/1.1 200 OK"))
+      applyConfig("kamon.datadog.api.api-url = \"" + baseUrl + "\"")
+      applyConfig("kamon.datadog.api.api-key = \"dummy\"")
+      applyConfig("kamon.datadog.percentiles = []")
 
+      applyConfig("kamon.datadog.api.version = \"v2\"")
+      reporter.reconfigure(Kamon.config())
+      reporter.reportPeriodSnapshot(examplePeriod)
+      val request = server.takeRequest()
+      val body = request.getBody.readUtf8()
+
+      // v1 differs from v2 on:
+      // - the "type" field value, v1 requires a string, v2 an integer
+      // - the "points" array, v1 was an array of arrays, v2 an array of objects
+      // - the "host" field does not exist, instead there is a "resources" field where "host" is one of the allowed definitions
+      Json.parse(body) shouldEqual Json
+        .parse(
+          """{"series":[{
+            |"metric": "test.counter",
+            |"interval": 1,
+            |"points": [{"timestamp": 1523394, "value": 0}],
+            |"type": 1,
+            |"tags": ["env:staging","service:kamon-application","tag1:value1"],
+            |"resources": [{"type": "host", "name": "test"}]
+            |}]}""".stripMargin
+        )
+
+      reporter.reportPeriodSnapshot(examplePeriodWithDistributions)
+      Json.parse(server.takeRequest().getBody.readUtf8()) shouldEqual Json
+        .parse(
+          """{"series":[
+            |{"metric":"test.timer.avg","interval":1,"points":[{"timestamp":1523394,"value":20}],"type":3,"resources": [{"type": "host", "name": "test"}],"tags":["env:staging","service:kamon-application"]},
+            |{"metric":"test.timer.count","interval":1,"points":[{"timestamp":1523394,"value":5}],"type":1,"resources": [{"type": "host", "name": "test"}],"tags":["env:staging","service:kamon-application"]},
+            |{"metric":"test.timer.median","interval":1,"points":[{"timestamp":1523394,"value":0}],"type":3,"resources": [{"type": "host", "name": "test"}],"tags":["env:staging","service:kamon-application"]},
+            |{"metric":"test.timer.max","interval":1,"points":[{"timestamp":1523394,"value":10}],"type":3,"resources": [{"type": "host", "name": "test"}],"tags":["env:staging","service:kamon-application"]},
+            |{"metric":"test.timer.min","interval":1,"points":[{"timestamp":1523394,"value":0}],"type":3,"resources": [{"type": "host", "name": "test"}],"tags":["env:staging","service:kamon-application"]}]}""".stripMargin
+        )
+    }
+
+    reporter.stop()
   }
 
 }
