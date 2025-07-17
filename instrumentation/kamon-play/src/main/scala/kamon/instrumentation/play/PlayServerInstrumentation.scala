@@ -25,7 +25,8 @@ import io.netty.handler.codec.http.{HttpRequest, HttpResponse}
 import io.netty.util.concurrent.GenericFutureListener
 import kamon.{ClassLoading, Kamon}
 import kamon.context.Storage
-import kamon.instrumentation.akka.http.ServerFlowWrapper
+import kamon.instrumentation.akka.http.{ServerFlowWrapper => AkkaHttpServerFlowWrapper}
+import kamon.instrumentation.pekko.http.{ServerFlowWrapper => PekkoHttpServerFlowWrapper}
 import kamon.instrumentation.context.{CaptureCurrentTimestampOnExit, HasTimestamp}
 import kamon.instrumentation.http.HttpServerInstrumentation.RequestHandler
 import kamon.instrumentation.http.{HttpMessage, HttpServerInstrumentation}
@@ -52,7 +53,18 @@ class PlayServerInstrumentation extends InstrumentationBuilder {
     .when(classIsPresent("play.core.server.AkkaHttpServerProvider"))
     .advise(
       anyMethods("createServerBinding", "play$core$server$AkkaHttpServer$$createServerBinding"),
-      CreateServerBindingAdvice
+      CreateAkkaHttpServerBindingAdvice
+    )
+
+  /**
+    * When using the Pekko HTTP server, we will use the exact same instrumentation that comes from the Pekko HTTP module,
+    * the only difference here is that we will change the component name.
+    */
+  onType("play.core.server.PekkoHttpServer")
+    .when(classIsPresent("play.core.server.PekkoHttpServerProvider"))
+    .advise(
+      anyMethods("createServerBinding", "play$core$server$PekkoHttpServer$$createServerBinding"),
+      CreatePekkoHttpServerBindingAdvice
     )
 
   /**
@@ -87,15 +99,27 @@ class PlayServerInstrumentation extends InstrumentationBuilder {
 
 }
 
-object CreateServerBindingAdvice {
+object CreateAkkaHttpServerBindingAdvice {
 
   @Advice.OnMethodEnter
   def enter(): Unit =
-    ServerFlowWrapper.changeSettings("play.server.akka-http", "kamon.instrumentation.play.http.server")
+    AkkaHttpServerFlowWrapper.changeSettings("play.server.akka-http", "kamon.instrumentation.play.http.server")
 
   @Advice.OnMethodExit
   def exit(): Unit =
-    ServerFlowWrapper.resetSettings()
+    AkkaHttpServerFlowWrapper.resetSettings()
+
+}
+
+object CreatePekkoHttpServerBindingAdvice {
+
+  @Advice.OnMethodEnter
+  def enter(): Unit =
+    PekkoHttpServerFlowWrapper.changeSettings("play.server.pekko-http", "kamon.instrumentation.play.http.server")
+
+  @Advice.OnMethodExit
+  def exit(): Unit =
+    PekkoHttpServerFlowWrapper.resetSettings()
 
 }
 

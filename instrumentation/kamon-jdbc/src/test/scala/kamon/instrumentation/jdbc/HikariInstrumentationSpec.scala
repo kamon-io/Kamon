@@ -28,6 +28,7 @@ import org.scalatest.matchers.should.Matchers
 import org.scalatest.time.SpanSugar
 import org.scalatest.wordspec.AnyWordSpec
 import org.scalatest.{BeforeAndAfterEach, OptionValues}
+import org.testcontainers.containers.PostgreSQLContainer
 
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutor}
 
@@ -42,7 +43,7 @@ class HikariInstrumentationSpec extends AnyWordSpec
     with InitAndStopKamonAfterAll
     with OptionValues {
 
-  import HikariInstrumentationSpec.{createH2Pool, createSQLitePool}
+  import HikariInstrumentationSpec.{createH2Pool, createSQLitePool, createAwsWrapperPool}
   implicit val parallelQueriesContext: ExecutionContextExecutor =
     ExecutionContext.fromExecutor(Executors.newFixedThreadPool(16))
 
@@ -55,6 +56,7 @@ class HikariInstrumentationSpec extends AnyWordSpec
   )
 
   "the Hikari instrumentation" should {
+
     "track each hikari pool using the pool name as tag and cleanup after closing the pool" in {
       val pool1 = createH2Pool("example-1")
       val pool2 = createH2Pool("example-2")
@@ -209,6 +211,20 @@ class HikariInstrumentationSpec extends AnyWordSpec
       connection.close()
       pool.close()
     }
+
+    "construct pools with the AWS wrapper" in {
+      val postgresqlContainer = new PostgreSQLContainer("postgres:16")
+      postgresqlContainer.start()
+      val url = postgresqlContainer
+        .getJdbcUrl()
+        .replace("postgresql", "aws-wrapper:postgresql") + "&user=test&password=test"
+
+      val pool = createAwsWrapperPool("aws-wrapper", url)
+      val connection = pool.getConnection()
+      connection.close()
+      pool.close()
+      postgresqlContainer.stop()
+    }
   }
 }
 
@@ -239,6 +255,16 @@ object HikariInstrumentationSpec {
 
     val config = basicConfig(name, size)
     config.setJdbcUrl(s"jdbc:sqlite::memory:")
+
+    val hikariPool = new HikariDataSource(config)
+    hikariPool
+  }
+
+  def createAwsWrapperPool(name: String, url: String, size: Int = 1): HikariDataSource = {
+    System.setProperty("com.zaxxer.hikari.housekeeping.periodMs", "200")
+
+    val config = basicConfig(name, size)
+    config.setJdbcUrl(url)
 
     val hikariPool = new HikariDataSource(config)
     hikariPool
