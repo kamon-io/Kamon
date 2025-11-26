@@ -1,0 +1,20 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&display=swap');
+@import 'tailwindcss';
+@import '@nuxt/ui';
+
+@theme static {
+  --font-sans: 'DM Sans', sans-serif;
+
+  --color-shamrock-50: #f1fcf5;
+  --color-shamrock-100: #defaec;
+  --color-shamrock-200: #bff3d8;
+  --color-shamrock-300: #8de8ba;
+  --color-shamrock-400: #54d494;
+  --color-shamrock-500: #2dba74;
+  --color-shamrock-600: #23a966;
+  --color-shamrock-700: #1c794b;
+  --color-shamrock-800: #1b603e;
+  --color-shamrock-900: #184f35;
+  --color-shamrock-950: #082b1b;
+  --color-shamrock: #23a966;
+}

@@ -1,45 +1,40 @@
 {
-  "name": "kamon-status",
-  "version": "2.0.0",
+  "name": "kamon-status-page",
+  "version": "2.8.0",
   "private": true,
+  "type": "module",
   "scripts": {
-    "serve": "vue-cli-service serve",
-    "build": "vue-cli-service build",
-    "lint": "vue-cli-service lint"
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "type-check": "vue-tsc --build",
+    "lint": "eslint . --fix",
+    "format": "prettier --write src/"
   },
   "dependencies": {
-    "axios": "^0.21.1",
-    "ts-option": "1.1.5",
-    "underscore": "^1.9.1",
-    "vue": "2.6.10",
-    "vue-class-component": "7.0.2",
-    "vue-property-decorator": "8.1.0",
-    "vue-router": "3.0.6",
-    "vuetify": "^2.4.0"
+    "@nuxt/ui": "4.2.1",
+    "@unhead/vue": "2.0.19",
+    "@vueuse/core": "13.9.0",
+    "tailwindcss": "4.1.17",
+    "vue": "3.5.25",
+    "vue-router": "4.6.3"
   },
   "devDependencies": {
-    "@fortawesome/fontawesome-free": "5.8.1",
-    "@types/underscore": "^1.8.14",
-    "@vue/cli-plugin-typescript": "3.6.0",
-    "@vue/cli-service": "3.6.0",
-    "fstream": ">=1.0.12",
-    "node-sass": "4.11.0",
-    "sass": "^1.32.0",
-    "sass-loader": "^7.1.0",
-    "tar": ">=2.2.2",
-    "typescript": "3.9.7",
-    "vue-cli-plugin-vuetify": "~2.1.0",
-    "vue-template-compiler": "2.6.10",
-    "vuetify-loader": "^1.7.0"
-  },
-  "postcss": {
-    "plugins": {
-      "autoprefixer": {}
-    }
-  },
-  "browserslist": [
-    "> 1%",
-    "last 2 versions",
-    "not ie <= 8"
-  ]
+    "@tsconfig/node22": "^22.0.5",
+    "@types/node": "^22.19.1",
+    "@vitejs/plugin-vue": "^5.2.4",
+    "@vue/eslint-config-prettier": "^10.2.0",
+    "@vue/eslint-config-typescript": "^14.6.0",
+    "@vue/tsconfig": "^0.7.0",
+    "eslint": "^9.39.1",
+    "eslint-plugin-vue": "~10.0.1",
+    "jiti": "^2.6.1",
+    "npm-run-all2": "^7.0.2",
+    "prettier": "3.5.3",
+    "typescript": "~5.8.3",
+    "vite": "^6.4.1",
+    "vite-plugin-singlefile": "^2.3.0",
+    "vite-plugin-vue-devtools": "^7.7.9",
+    "vue-tsc": "^2.2.12"
+  }
 }
