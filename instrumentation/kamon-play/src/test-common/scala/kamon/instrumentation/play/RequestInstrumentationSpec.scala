@@ -86,6 +86,16 @@ abstract class RequestHandlerInstrumentationSpec extends PlaySpecShim with Guice
       case ("GET", "/not-found") => handler(action { NotFound })
       case ("GET", "/server")    => handler(action { req => Ok(serverImplementationName(req)) })
       case ("GET", "/error")     => handler(action(_ => sys.error("This page generates an error!")))
+      case ("GET", "/rename-outside")    => {
+        Kamon.currentSpan().name("renamed-outside-action")
+        handler(action { req => Ok(serverImplementationName(req)) })
+      }
+      case ("GET", "/rename-inside")    => {
+        handler(action { req =>
+          Kamon.currentSpan().name("renamed-inside-action")
+          Ok(serverImplementationName(req))
+        })
+      }
     }
   }
 
@@ -140,6 +150,36 @@ abstract class RequestHandlerInstrumentationSpec extends PlaySpecShim with Guice
       eventually(timeout(5 seconds)) {
         val span = testSpanReporter().nextSpan().value
         span.operationName mustBe "/ok"
+        span.metricTags.get(plain("component")) mustBe expectedServer
+        span.metricTags.get(plain("http.method")) mustBe "GET"
+        span.metricTags.get(plainLong("http.status_code")) mustBe 200L
+      }
+    }
+
+    "do not assign operation names if the server span was renamed before returning an action" in {
+      val wsClient = app.injector.instanceOf[WSClient]
+      val endpoint = s"http://localhost:$port/rename-outside"
+      val response = await(wsClient.url(endpoint).get())
+      response.status mustBe 200
+
+      eventually(timeout(5 seconds)) {
+        val span = testSpanReporter().nextSpan().value
+        span.operationName mustBe "renamed-outside-action"
+        span.metricTags.get(plain("component")) mustBe expectedServer
+        span.metricTags.get(plain("http.method")) mustBe "GET"
+        span.metricTags.get(plainLong("http.status_code")) mustBe 200L
+      }
+    }
+
+    "preserve operation names assigned inside actions" in {
+      val wsClient = app.injector.instanceOf[WSClient]
+      val endpoint = s"http://localhost:$port/rename-inside"
+      val response = await(wsClient.url(endpoint).get())
+      response.status mustBe 200
+
+      eventually(timeout(5 seconds)) {
+        val span = testSpanReporter().nextSpan().value
+        span.operationName mustBe "renamed-inside-action"
         span.metricTags.get(plain("component")) mustBe expectedServer
         span.metricTags.get(plain("http.method")) mustBe "GET"
         span.metricTags.get(plainLong("http.status_code")) mustBe 200L
