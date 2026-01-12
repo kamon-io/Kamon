@@ -291,7 +291,9 @@ object GenerateOperationNameOnFilterHandler {
   def enter(@Advice.Argument(0) request: RequestHeader): Unit = {
     request.attrs.get(Router.Attrs.HandlerDef).map(handler => {
       val span = Kamon.currentSpan()
-      span.name(_routerNameGenerator.generateOperationName(handler))
+      if (span.operationName() == "http.server.request") {
+        span.name(_routerNameGenerator.generateOperationName(handler))
+      }
       span.takeSamplingDecision()
     })
   }
