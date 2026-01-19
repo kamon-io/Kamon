@@ -91,7 +91,7 @@ object DatadogSpanReporter {
 
     Configuration(
       getTranslator(config),
-      new HttpClient(config.getConfig(DatadogSpanReporter.httpConfigPath), usingAgent = true),
+      buildHttpClient(config.getConfig(DatadogSpanReporter.httpConfigPath)),
       Kamon.filter("kamon.datadog.environment-tags.filter"),
       EnvironmentTags.from(Kamon.environment, config.getConfig("kamon.datadog.environment-tags")).without("service")
     )
