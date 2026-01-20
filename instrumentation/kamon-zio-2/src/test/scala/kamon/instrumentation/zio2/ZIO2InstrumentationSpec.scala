@@ -167,6 +167,12 @@ class ZIO2InstrumentationSpec extends AnyWordSpec with Matchers with ScalaFuture
     }
   }
 
+  override protected def afterEach(): Unit = {
+    super.afterEach()
+
+    kamon.context.Storage.Debug.printNonEmptyThreads()
+  }
+
   private def getKey: UIO[String] = {
     ZIO.succeed(Kamon.currentContext().getTag(plain("key")))
   }
