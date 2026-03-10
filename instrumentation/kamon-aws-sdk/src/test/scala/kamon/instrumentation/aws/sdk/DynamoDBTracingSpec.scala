@@ -60,7 +60,7 @@ class DynamoDBTracingSpec extends AnyWordSpec with Matchers with OptionValues wi
 
       eventually(timeout(5 seconds)) {
         val span = testSpanReporter().nextSpan().value
-        span.operationName shouldBe "CreateTable"
+        span.operationName shouldBe "DynamoDb.CreateTable"
         span.metricTags.get(plain("component")) shouldBe "DynamoDb"
       }
     }
