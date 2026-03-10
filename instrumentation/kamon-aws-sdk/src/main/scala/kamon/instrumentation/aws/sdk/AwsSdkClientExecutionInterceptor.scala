@@ -42,7 +42,7 @@ class AwsSdkClientExecutionInterceptor extends ExecutionInterceptor {
       val serviceName = executionAttributes.getAttribute(SdkExecutionAttribute.SERVICE_NAME)
       val clientType = executionAttributes.getAttribute(SdkExecutionAttribute.CLIENT_TYPE)
 
-      val clientSpan = Kamon.clientSpanBuilder(operationName, serviceName)
+      val clientSpan = Kamon.clientSpanBuilder(s"$serviceName.$operationName", serviceName)
         .tag("aws.sdk.client_type", clientType.name())
         .start()
 
