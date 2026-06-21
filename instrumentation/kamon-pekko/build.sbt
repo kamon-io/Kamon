@@ -15,7 +15,7 @@ libraryDependencies ++= Seq(
   "org.apache.pekko" %% "pekko-remote" % pekkoVersion % "provided,test",
   "org.apache.pekko" %% "pekko-cluster" % pekkoVersion % "provided,test",
   "org.apache.pekko" %% "pekko-cluster-sharding" % pekkoVersion % "provided,test",
-  "org.apache.pekko" %% "pekko-protobuf" % pekkoVersion % "provided,test",
+  "org.apache.pekko" %% "pekko-protobuf-v3" % pekkoVersion % "provided,test",
   "org.apache.pekko" %% "pekko-testkit" % pekkoVersion % Test
 )
 
