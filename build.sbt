@@ -146,6 +146,7 @@ val instrumentationProjects = Seq[ProjectReference](
   `kamon-alpakka-kafka`,
   `kamon-http4s-1_0`,
   `kamon-http4s-0_23`,
+  `kamon-http4k`,
   `kamon-apache-httpclient`,
   `kamon-apache-cxf`
 )
@@ -792,6 +793,24 @@ lazy val `kamon-http4s-0_23` = (project in file("instrumentation/kamon-http4s-0.
       "org.http4s" %% "http4s-blaze-client" % "0.23.14" % Test,
       "org.http4s" %% "http4s-blaze-server" % "0.23.14" % Test,
       "org.http4s" %% "http4s-dsl" % "0.23.19" % Test,
+      scalatest % Test
+    )
+  )
+  .dependsOn(
+    `kamon-core`,
+    `kamon-instrumentation-common`,
+    `kamon-testkit` % Test
+  )
+
+lazy val `kamon-http4k` = (project in file("instrumentation/kamon-http4k"))
+  .disablePlugins(AssemblyPlugin)
+  .enablePlugins(JavaAgent)
+  .settings(instrumentationSettings)
+  .settings(
+    name := "kamon-http4k",
+    crossScalaVersions := Seq(`scala_2.13_version`, `scala_3_version`),
+    libraryDependencies ++= Seq(
+      "org.http4k" % "http4k-core" % "6.55.0.0" % "provided,test",
       scalatest % Test
     )
   )
