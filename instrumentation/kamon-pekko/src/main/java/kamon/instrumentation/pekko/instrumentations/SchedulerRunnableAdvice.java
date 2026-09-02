@@ -4,7 +4,7 @@
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
  * except in compliance with the License. You may obtain a copy of the License at
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *  http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software distributed under the
  * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
@@ -19,12 +19,17 @@ import kamon.Kamon;
 import kamon.context.Context;
 import kamon.context.Storage;
 import kanela.agent.libs.net.bytebuddy.asm.Advice;
+import org.apache.pekko.actor.Scheduler;
 
 public class SchedulerRunnableAdvice {
 
   @Advice.OnMethodEnter(suppress = Throwable.class)
   public static void enter(@Advice.Argument(value = 1, readOnly = false) Runnable runnable) {
-    runnable = new ContextAwareRunnable(Kamon.currentContext(), runnable);
+    if (Scheduler.TaskRunOnClose.class.isAssignableFrom(runnable.getClass())) {
+      runnable = new TaskRunOnCloseContextAwareRunnable(Kamon.currentContext(), runnable);
+    } else {
+      runnable = new ContextAwareRunnable(Kamon.currentContext(), runnable);
+    }
   }
 
   public static class ContextAwareRunnable implements Runnable {
@@ -32,6 +37,27 @@ public class SchedulerRunnableAdvice {
     private final Runnable underlyingRunnable;
 
     public ContextAwareRunnable(Context context, Runnable underlyingRunnable) {
+      this.context = context;
+      this.underlyingRunnable = underlyingRunnable;
+    }
+
+    @Override
+    public void run() {
+      final Storage.Scope scope = Kamon.storeContext(context);
+
+      try {
+        underlyingRunnable.run();
+      } finally {
+        scope.close();
+      }
+    }
+  }
+
+  public static class TaskRunOnCloseContextAwareRunnable implements Runnable, Scheduler.TaskRunOnClose {
+    private final Context context;
+    private final Runnable underlyingRunnable;
+
+    public TaskRunOnCloseContextAwareRunnable(Context context, Runnable underlyingRunnable) {
       this.context = context;
       this.underlyingRunnable = underlyingRunnable;
     }
