@@ -25,7 +25,11 @@ public class SchedulerRunnableAdvice {
 
   @Advice.OnMethodEnter(suppress = Throwable.class)
   public static void enter(@Advice.Argument(value = 1, readOnly = false) Runnable runnable) {
-    runnable = new ContextAwareRunnable(Kamon.currentContext(), runnable);
+    if (Scheduler.TaskRunOnClose.class.isAssignableFrom(runnable.getClass())) {
+      runnable = new TaskRunOnCloseContextAwareRunnable(Kamon.currentContext(), runnable);
+    } else {
+      runnable = new ContextAwareRunnable(Kamon.currentContext(), runnable);
+    }
   }
 
   public static class ContextAwareRunnable implements Runnable {
