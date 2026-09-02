@@ -32,9 +32,8 @@ import scala.collection.mutable.ListBuffer
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
-class ActorCellInstrumentationSpec extends TestKit(ActorSystem("ActorCellInstrumentationSpec")) with AnyWordSpecLike
-    with BeforeAndAfterAll with ImplicitSender with Eventually with MetricInspection.Syntax with Matchers
-    with InitAndStopKamonAfterAll {
+class ActorCellInstrumentationSpec extends TestKit(ActorSystem("ActorCellInstrumentationSpec")) with StopSystemAfterAll
+    with ImplicitSender with Eventually with MetricInspection.Syntax with Matchers {
   implicit lazy val executionContext: ExecutionContext = system.dispatcher
   import ContextTesting._
 

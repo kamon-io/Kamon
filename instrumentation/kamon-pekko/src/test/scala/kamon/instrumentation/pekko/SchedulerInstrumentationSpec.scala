@@ -27,8 +27,8 @@ import org.scalatest.wordspec.AnyWordSpecLike
 import scala.concurrent.Promise
 import scala.concurrent.duration._
 
-class SchedulerInstrumentationSpec extends TestKit(ActorSystem("SchedulerInstrumentationSpec")) with AnyWordSpecLike
-    with Matchers with InitAndStopKamonAfterAll with ImplicitSender with Eventually {
+class SchedulerInstrumentationSpec extends TestKit(ActorSystem("SchedulerInstrumentationSpec")) with StopSystemAfterAll
+    with Matchers with ImplicitSender with Eventually {
 
   "the Pekko Scheduler instrumentation" should {
     "propagate the current context in calls to scheduler.scheduleOnce" in {

@@ -33,9 +33,8 @@ import java.util.concurrent.Executors
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.concurrent.duration._
 
-class DispatcherMetricsSpec extends TestKit(ActorSystem("DispatcherMetricsSpec")) with AnyWordSpecLike with Matchers
-    with MetricInspection.Syntax
-    with BeforeAndAfterAll with ImplicitSender with Eventually {
+class DispatcherMetricsSpec extends TestKit(ActorSystem("DispatcherMetricsSpec")) with StopSystemAfterAll with Matchers
+    with MetricInspection.Syntax with ImplicitSender with Eventually {
 
   "the Kamon dispatcher metrics" should {
 

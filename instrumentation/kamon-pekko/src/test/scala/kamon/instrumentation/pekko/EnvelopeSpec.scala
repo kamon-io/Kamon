@@ -25,8 +25,8 @@ import org.scalatest.BeforeAndAfterAll
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
 
-class EnvelopeSpec extends TestKit(ActorSystem("EnvelopeSpec")) with AnyWordSpecLike with Matchers
-    with BeforeAndAfterAll with ImplicitSender {
+class EnvelopeSpec extends TestKit(ActorSystem("EnvelopeSpec")) with StopSystemAfterAll with Matchers
+    with ImplicitSender {
 
   "EnvelopeInstrumentation" should {
     "mixin EnvelopeContext" in {

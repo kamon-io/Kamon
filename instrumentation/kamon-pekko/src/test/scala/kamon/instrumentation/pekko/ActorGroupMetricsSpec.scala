@@ -31,9 +31,9 @@ import org.scalatest.wordspec.AnyWordSpecLike
 import scala.concurrent.duration._
 import scala.util.Random
 
-class ActorGroupMetricsSpec extends TestKit(ActorSystem("ActorGroupMetricsSpec")) with AnyWordSpecLike
+class ActorGroupMetricsSpec extends TestKit(ActorSystem("ActorGroupMetricsSpec")) with StopSystemAfterAll
     with MetricInspection.Syntax
-    with InstrumentInspection.Syntax with Matchers with InitAndStopKamonAfterAll with ImplicitSender with Eventually {
+    with InstrumentInspection.Syntax with Matchers with ImplicitSender with Eventually {
 
   "the Kamon actor-group metrics" should {
     "increase the member count when an actor matching the pattern is created" in new ActorGroupMetricsFixtures {
