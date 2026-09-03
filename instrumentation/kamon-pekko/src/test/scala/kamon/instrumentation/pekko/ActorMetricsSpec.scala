@@ -29,9 +29,9 @@ import org.scalatest.wordspec.AnyWordSpecLike
 
 import scala.concurrent.duration._
 
-class ActorMetricsSpec extends TestKit(ActorSystem("ActorMetricsSpec")) with AnyWordSpecLike
+class ActorMetricsSpec extends TestKit(ActorSystem("ActorMetricsSpec")) with StopSystemAfterAll
     with MetricInspection.Syntax with InstrumentInspection.Syntax with Matchers
-    with ImplicitSender with Eventually with InitAndStopKamonAfterAll {
+    with ImplicitSender with Eventually {
 
   "the Kamon actor metrics" should {
     "respect the configured include and exclude filters" in new ActorMetricsFixtures {

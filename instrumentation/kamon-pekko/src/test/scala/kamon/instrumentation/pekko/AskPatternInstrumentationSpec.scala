@@ -29,8 +29,9 @@ import org.scalatest.wordspec.AnyWordSpecLike
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
-class AskPatternInstrumentationSpec extends TestKit(ActorSystem("AskPatternInstrumentationSpec")) with AnyWordSpecLike
-    with InitAndStopKamonAfterAll with ImplicitSender {
+class AskPatternInstrumentationSpec extends TestKit(ActorSystem("AskPatternInstrumentationSpec"))
+    with StopSystemAfterAll
+    with ImplicitSender {
 
   implicit lazy val ec: ExecutionContext = system.dispatcher
   implicit val askTimeout: Timeout = Timeout(10 millis)

@@ -25,9 +25,9 @@ import org.scalatest.BeforeAndAfterAll
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
 
-class ActorLoggingInstrumentationSpec extends TestKit(ActorSystem("ActorCellInstrumentationSpec")) with AnyWordSpecLike
-    with Matchers
-    with BeforeAndAfterAll with ImplicitSender {
+class ActorLoggingInstrumentationSpec extends TestKit(ActorSystem("ActorCellInstrumentationSpec"))
+    with StopSystemAfterAll
+    with Matchers with ImplicitSender {
   import ContextTesting._
 
   "the ActorLogging instrumentation" should {

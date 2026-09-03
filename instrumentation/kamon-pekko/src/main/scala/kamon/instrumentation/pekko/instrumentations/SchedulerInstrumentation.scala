@@ -25,4 +25,11 @@ class SchedulerInstrumentation extends InstrumentationBuilder {
     */
   onSubTypesOf("org.apache.pekko.actor.Scheduler")
     .advise(method("scheduleOnce").and(withArgument(1, classOf[Runnable])), classOf[SchedulerRunnableAdvice])
+
+  /**
+   * Specialised form for 'TaskRunOnClose' runnables to avoid dropping marker trait
+   * */
+  onSubTypesOf("org.apache.pekko.actor.Scheduler")
+    .when(classIsPresent("org.apache.pekko.actor.Scheduler$TaskRunOnClose"))
+    .advise(method("scheduleOnce").and(withArgument(1, classOf[Runnable])), classOf[SchedulerTaskRunOnCloseAdvice])
 }

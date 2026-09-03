@@ -26,7 +26,8 @@ import org.scalatest.BeforeAndAfterAll
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
 
-import scala.concurrent.ExecutionContextExecutor
+import scala.concurrent.duration.DurationInt
+import scala.concurrent.{Await, ExecutionContextExecutor}
 import scala.util.control.NonFatal
 
 class SystemMessageInstrumentationSpec extends TestKit(ActorSystem("ActorSystemMessageInstrumentationSpec"))
@@ -115,6 +116,11 @@ class SystemMessageInstrumentationSpec extends TestKit(ActorSystem("ActorSystemM
         // TODO: FIXME expectNoMessage(1 second)
       }
     }
+  }
+
+  override protected def afterAll(): Unit = {
+    super.afterAll()
+    Await.ready(system.terminate(), 20.seconds)
   }
 
   private def propagatedContextKey(): String =

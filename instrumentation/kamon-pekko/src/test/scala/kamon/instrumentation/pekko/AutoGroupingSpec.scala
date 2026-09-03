@@ -26,9 +26,9 @@ import org.scalatest.wordspec.AnyWordSpecLike
 
 import scala.concurrent.duration._
 
-class AutoGroupingSpec extends TestKit(ActorSystem("AutoGroupingSpec")) with AnyWordSpecLike
+class AutoGroupingSpec extends TestKit(ActorSystem("AutoGroupingSpec")) with StopSystemAfterAll
     with MetricInspection.Syntax
-    with InstrumentInspection.Syntax with Matchers with InitAndStopKamonAfterAll with ImplicitSender with Eventually {
+    with InstrumentInspection.Syntax with Matchers with ImplicitSender with Eventually {
 
   import AutoGroupingSpec._
 

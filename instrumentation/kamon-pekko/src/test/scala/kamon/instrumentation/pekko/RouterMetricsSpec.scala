@@ -30,9 +30,9 @@ import org.scalatest.wordspec.AnyWordSpecLike
 
 import scala.concurrent.duration._
 
-class RouterMetricsSpec extends TestKit(ActorSystem("RouterMetricsSpec")) with AnyWordSpecLike
+class RouterMetricsSpec extends TestKit(ActorSystem("RouterMetricsSpec")) with StopSystemAfterAll
     with MetricInspection.Syntax
-    with InstrumentInspection.Syntax with Matchers with InitAndStopKamonAfterAll with ImplicitSender with Eventually {
+    with InstrumentInspection.Syntax with Matchers with ImplicitSender with Eventually {
 
   "the Kamon router metrics" should {
     "respect the configured include and exclude filters" in new RouterMetricsFixtures {

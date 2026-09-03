@@ -23,9 +23,9 @@ import java.util.concurrent.TimeUnit
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, Future}
 
-class MessageTracingSpec extends TestKit(ActorSystem("MessageTracing")) with AnyWordSpecLike
+class MessageTracingSpec extends TestKit(ActorSystem("MessageTracing")) with StopSystemAfterAll
     with MetricInspection.Syntax
-    with Matchers with SpanInspection with Reconfigure with InitAndStopKamonAfterAll with ImplicitSender with Eventually
+    with Matchers with SpanInspection with Reconfigure with ImplicitSender with Eventually
     with OptionValues with ScalaFutures with TestSpanReporter {
 
   "Message tracing instrumentation" should {
