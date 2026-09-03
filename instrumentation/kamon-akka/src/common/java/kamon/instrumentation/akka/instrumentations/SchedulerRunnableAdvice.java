@@ -20,12 +20,28 @@ import kamon.Kamon;
 import kamon.context.Context;
 import kamon.context.Storage;
 import kanela.agent.libs.net.bytebuddy.asm.Advice;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class SchedulerRunnableAdvice {
+  private static final Logger log = LoggerFactory.getLogger(SchedulerRunnableAdvice.class);
+
+  private static final Class<?> runOnClose() {
+    try {
+      return Class.forName("akka.actor.Scheduler.TaskRunOnClose");
+    } catch (ClassNotFoundException e) {
+      return null;
+    } catch (Throwable e) {
+      log.error("Unable to retain TaskRunOnClose marker trait on akka runnables", e);
+      return null;
+    }
+  }
+
+  public static final Class<?> taskRunOnClose = runOnClose();
 
   @Advice.OnMethodEnter(suppress = Throwable.class)
   public static void enter(@Advice.Argument(value = 1, readOnly = false) Runnable runnable) {
-    if (Scheduler.TaskRunOnClose.class.isAssignableFrom(runnable.getClass())) {
+    if (taskRunOnClose != null && taskRunOnClose.isAssignableFrom(runnable.getClass())) {
       runnable = new TaskRunOnCloseContextAwareRunnable(Kamon.currentContext(), runnable);
     } else {
       runnable = new ContextAwareRunnable(Kamon.currentContext(), runnable);
@@ -53,7 +69,7 @@ public class SchedulerRunnableAdvice {
     }
   }
 
-  public static class TaskRunOnCloseContextAwareRunnable implements Runnable, Scheduler.TaskRunOnClose {
+  public static class TaskRunOnCloseContextAwareRunnable implements Scheduler.TaskRunOnClose {
     private final Context context;
     private final Runnable underlyingRunnable;
 
