@@ -15,7 +15,6 @@
 
 package kamon.instrumentation.akka.instrumentations;
 
-import akka.actor.Scheduler;
 import kamon.Kamon;
 import kamon.context.Context;
 import kamon.context.Storage;
@@ -51,27 +50,6 @@ public class SchedulerRunnableAdvice {
     private final Runnable underlyingRunnable;
 
     public ContextAwareRunnable(Context context, Runnable underlyingRunnable) {
-      this.context = context;
-      this.underlyingRunnable = underlyingRunnable;
-    }
-
-    @Override
-    public void run() {
-      final Storage.Scope scope = Kamon.storeContext(context);
-
-      try {
-        underlyingRunnable.run();
-      } finally {
-        scope.close();
-      }
-    }
-  }
-
-  public static class TaskRunOnCloseContextAwareRunnable implements Scheduler.TaskRunOnClose {
-    private final Context context;
-    private final Runnable underlyingRunnable;
-
-    public TaskRunOnCloseContextAwareRunnable(Context context, Runnable underlyingRunnable) {
       this.context = context;
       this.underlyingRunnable = underlyingRunnable;
     }
