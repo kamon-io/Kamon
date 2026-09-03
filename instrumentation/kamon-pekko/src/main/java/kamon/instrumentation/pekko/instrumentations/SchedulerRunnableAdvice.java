@@ -28,7 +28,7 @@ public class SchedulerRunnableAdvice {
 
   private static final Class<?> runOnClose() {
     try {
-      return Class.forName("akka.actor.Scheduler.TaskRunOnClose");
+      return Class.forName("org.apache.pekko.actor.TaskRunOnClose");
     } catch (ClassNotFoundException e) {
       return null;
     } catch (Throwable e) {
