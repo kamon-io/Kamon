@@ -1,7 +1,5 @@
 package kamon.instrumentation.apache.httpclient
 
-import com.dimafeng.testcontainers.{MockServerContainer, ForAllTestContainer}
-
 import kamon.Kamon
 import kamon.tag.Lookups._
 import kamon.testkit._
@@ -12,7 +10,7 @@ import org.scalatest.concurrent.Eventually
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.time.SpanSugar
 import org.scalatest.wordspec.AnyWordSpec
-import org.scalatest.OptionValues
+import org.scalatest.{BeforeAndAfterAll, OptionValues}
 import java.net.URI
 import org.mockserver.client.MockServerClient
 import org.mockserver.model.HttpRequest.{request => mockRequest}
@@ -29,6 +27,8 @@ import org.apache.http.client.protocol.HttpClientContext
 import org.apache.http.impl.client.BasicCookieStore
 import org.mockserver.model.HttpResponse
 import org.apache.http.client.methods.HttpPost
+import org.testcontainers.containers.MockServerContainer
+import org.testcontainers.utility.DockerImageName
 
 class HttpUriRequestSpec
     extends AnyWordSpec
@@ -39,7 +39,7 @@ class HttpUriRequestSpec
     with OptionValues
     with TestSpanReporter
     with InitAndStopKamonAfterAll
-    with ForAllTestContainer {
+    with BeforeAndAfterAll {
 
   private val _logger =
     LoggerFactory.getLogger(classOf[HttpUriRequestSpec])
@@ -48,7 +48,7 @@ class HttpUriRequestSpec
     "create client span when using execute(...)" in {
       clientExpectation.simpleGetExpectation
       val client = HttpClients.createMinimal()
-      val target = s"${container.endpoint}${clientExpectation.simpleGetPath}"
+      val target = s"${container.getEndpoint}${clientExpectation.simpleGetPath}"
       val request = new HttpGet(target)
       val response = client.execute(request)
 
@@ -65,7 +65,7 @@ class HttpUriRequestSpec
     "replace operation name from config" in {
       clientExpectation.customOptNameExpectation
       val client = HttpClients.createMinimal()
-      val target = s"${container.endpoint}${clientExpectation.customOptNamePath}"
+      val target = s"${container.getEndpoint}${clientExpectation.customOptNamePath}"
       val request = new HttpPost(target)
       val response = client.execute(request)
 
@@ -82,7 +82,7 @@ class HttpUriRequestSpec
     "append current context into HTTP headers" in {
       clientExpectation.checkHeadersExpectation
       val client = HttpClients.createMinimal()
-      val target = s"${container.endpoint}${clientExpectation.checkHeadersPath}"
+      val target = s"${container.getEndpoint}${clientExpectation.checkHeadersPath}"
       val testTag = "custom.tag"
       val testTagVal = "haha! gotcha"
       val request = new HttpGet(target)
@@ -114,7 +114,7 @@ class HttpUriRequestSpec
     "mark spans as errors when request fails" in {
       clientExpectation.test500Expectation
       val client = HttpClients.createMinimal()
-      val target = s"${container.endpoint}${clientExpectation.test500Path}"
+      val target = s"${container.getEndpoint}${clientExpectation.test500Path}"
       val ctx = new BasicHttpContext()
       ctx.setAttribute(HttpClientContext.COOKIE_STORE, new BasicCookieStore())
       val request = new HttpGet(target)
@@ -136,7 +136,7 @@ class HttpUriRequestSpec
     "not mark spans as error when response handler throws" in {
       clientExpectation.failingResponseHandlerExpectation
       val client = HttpClients.createMinimal()
-      val target = s"${container.endpoint}${clientExpectation.failingResponseHandlerPath}"
+      val target = s"${container.getEndpoint}${clientExpectation.failingResponseHandlerPath}"
       val request = new HttpGet(target)
       assertThrows[RuntimeException] {
         client.execute(request, new ErrorThrowingHandler())
@@ -155,9 +155,9 @@ class HttpUriRequestSpec
 
   }
 
-  override val container: MockServerContainer = MockServerContainer()
+  val container = new MockServerContainer(DockerImageName.parse("mockserver/mockserver:5.13.2"))
   lazy val clientExpectation: MockServerExpectations =
-    new MockServerExpectations(container.container.getHost, container.serverPort)
+    new MockServerExpectations(container.getHost, container.getServerPort)
 
   override protected def beforeAll(): Unit = {
     super.beforeAll()

@@ -4,19 +4,34 @@ import kamon.tag.Lookups._
 import kamon.testkit.{InitAndStopKamonAfterAll, TestSpanReporter}
 import org.mongodb.scala._
 import org.mongodb.scala.model.{Accumulators, Aggregates, Filters, Updates}
-import org.scalatest.OptionValues
+import org.scalatest.{BeforeAndAfterAll, OptionValues}
 import org.scalatest.concurrent.Eventually
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
+import org.testcontainers.mongodb.MongoDBContainer
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
 
-class MongoScalaDriverInstrumentationSpec extends EmbeddedMongoTest(port = 4445) with Matchers with TestSpanReporter
-    with Eventually with OptionValues with InitAndStopKamonAfterAll {
+class MongoScalaDriverInstrumentationSpec extends AnyWordSpec with Matchers with TestSpanReporter
+    with Eventually with OptionValues with InitAndStopKamonAfterAll with BeforeAndAfterAll {
 
-  val client = scalaClient()
-  val tools = client.getDatabase("test").getCollection("tools")
+  val mongoContainer = new MongoDBContainer("mongo:4.2")
+  var client: MongoClient = _
+  var tools: MongoCollection[Document] = _
+
+  override protected def beforeAll(): Unit = {
+    super.beforeAll()
+    mongoContainer.start()
+    client = MongoClient(mongoContainer.getConnectionString())
+    tools = client.getDatabase("test").getCollection("tools")
+  }
+
+  override protected def afterAll(): Unit = {
+    if (client != null) client.close()
+    mongoContainer.stop()
+    super.afterAll()
+  }
 
   "the MongoDB Driver Instrumentation" should {
 

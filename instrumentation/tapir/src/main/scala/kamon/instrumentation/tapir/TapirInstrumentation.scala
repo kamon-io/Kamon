@@ -16,7 +16,6 @@
 
 package kamon.instrumentation.tapir
 
-import akka.http.scaladsl.server.Route
 import kamon.Kamon
 import kanela.agent.api.instrumentation.InstrumentationBuilder
 import kanela.agent.libs.net.bytebuddy.implementation.bind.annotation.{Argument, SuperCall}
@@ -25,33 +24,42 @@ import sttp.tapir.server.ServerEndpoint
 import java.util.concurrent.Callable
 
 class TapirInstrumentation extends InstrumentationBuilder {
-  onTypes("sttp.tapir.server.akkahttp.EndpointToAkkaServer", "sttp.tapir.server.akkahttp.AkkaHttpServerInterpreter")
+  onTypes(
+    "sttp.tapir.server.akkahttp.AkkaHttpServerInterpreter",
+    "sttp.tapir.server.pekkohttp.PekkoHttpServerInterpreter"
+  )
     .when(classIsPresent("sttp.tapir.server.ServerEndpoint").withExpectedMethodNames("showPathTemplate"))
-    .intercept(method("toRoute"), classOf[TapirToRouteInterceptor])
+    .intercept(method("toRoute").and(takesArguments(1)), classOf[TapirToRouteInterceptor])
 }
 
 class TapirToRouteInterceptor
 
 object TapirToRouteInterceptor {
-  def toRoute[I, E, O](@Argument(0) arg: Any, @SuperCall superCall: Callable[Route]): Route = {
+  @annotation.static
+  def toRoute[I, E, O](
+    @Argument(0) arg: Any,
+    @SuperCall superCall: Callable[scala.Function1[Any, Any]]
+  ): scala.Function1[Any, Any] = {
     arg match {
       case endpoint: ServerEndpoint[_, _] => {
         val originalRoute = superCall.call()
 
-        req => {
-          val useEndpointNameAsOperationName = Kamon.config()
-            .getBoolean("kamon.instrumentation.tapir.use-endpoint-name-as-operation-name")
+        new scala.runtime.AbstractFunction1[Any, Any] {
+          def apply(req: Any): Any = {
+            val useEndpointNameAsOperationName = Kamon.config()
+              .getBoolean("kamon.instrumentation.tapir.use-endpoint-name-as-operation-name")
 
-          val operationName = endpoint.info.name match {
-            case Some(endpointName) if useEndpointNameAsOperationName => endpointName
-            case _                                                    => endpoint.showPathTemplate()
+            val operationName = endpoint.info.name match {
+              case Some(endpointName) if useEndpointNameAsOperationName => endpointName
+              case _                                                    => endpoint.showPathTemplate()
+            }
+
+            Kamon.currentSpan()
+              .name(operationName)
+              .takeSamplingDecision()
+
+            originalRoute(req)
           }
-
-          Kamon.currentSpan()
-            .name(operationName)
-            .takeSamplingDecision()
-
-          originalRoute(req)
         }
       }
       case _ =>

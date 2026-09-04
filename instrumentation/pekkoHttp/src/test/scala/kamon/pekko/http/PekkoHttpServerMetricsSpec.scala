@@ -42,14 +42,15 @@ class PekkoHttpServerMetricsSpec extends AnyWordSpecLike with Matchers with Init
   implicit private val executor: ExecutionContextExecutor = system.dispatcher
   implicit private val materializer: Materializer = Materializer(system)
 
-  val port = 8083
   val interface = "127.0.0.1"
   val timeoutTest: FiniteDuration = 5 second
-  val webServer: WebServer = startServer(interface, port)
+  val webServer: WebServer = startServer(interface)
+  val port: Int = webServer.port
 
   "the Pekko HTTP server instrumentation" should {
     "track the number of open connections and active requests on the Server side" in {
-      val httpServerMetrics = HttpServerMetrics.of("pekko.http.server", interface, port)
+      // The instrumentation registers metrics with port 0 (the requested port) before the actual port is assigned
+      val httpServerMetrics = HttpServerMetrics.of("pekko.http.server", interface, 0)
 
       for (_ <- 1 to 8) yield {
         sendRequest(HttpRequest(uri = s"http://$interface:$port/$waitTen"))

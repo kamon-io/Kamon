@@ -1,0 +1,501 @@
+//| mill-version: 1.1.8-jvm
+//| mvnDeps:
+//| - com.goyeau::mill-git::0.3.2
+//| - com.lihaoyi::mill-contrib-buildinfo:$MILL_VERSION
+//| - com.lihaoyi::mill-contrib-scalapblib:$MILL_VERSION
+
+package build
+
+import mill.*, javalib.*, publish.*
+import scalalib.*
+import javalib.Assembly.*
+
+import mill.contrib.buildinfo.BuildInfo
+import mill.contrib.scalapblib.*
+import com.goyeau.mill.git.GitVersionModule
+import coursier.parse.JavaOrScalaModule.ScalaModule
+import mill.api.Task.Simple
+import mill.javalib.Dep
+
+def Scala2Version = "2.13.13"
+def Scala3Version = "3.3.7"
+def AllScalaVersions = Seq(Scala2Version, Scala3Version)
+
+def kamonVersion: T[String] = GitVersionModule.version()()
+
+def collectPublishModules(mod: Module): Seq[PublishModule] = {
+  val self = mod match {
+    case p: PublishModule => Seq(p)
+    case _ => Seq.empty
+  }
+  self ++ mod.moduleDirectChildren.flatMap(collectPublishModules)
+}
+
+def publishedModules: Seq[PublishModule] = {
+  val roots = Seq(this.core, this.bundle, this.reporters, this.instrumentation)
+  roots.flatMap(collectPublishModules)
+}
+
+object bom extends BomModule with SonatypeCentralPublishModule {
+  override def artifactName = "kamon-bom"
+
+  def publishVersion: T[String] = kamonVersion
+
+  def pomSettings = PomSettings(
+    description = "Kamon Bill of Materials (BOM)",
+    organization = "io.kamon",
+    url = "https://kamon.io",
+    licenses = Seq(License.`Apache-2.0`),
+    versionControl = VersionControl.github("kamon-io", "Kamon"),
+    developers = Seq(
+      Developer("Ivan", "Topolnjak", "https://github.com/ivantopo"),
+      Developer("Diego", "Parra", "https://github.com/dpsoft")
+    )
+  )
+
+  override def publishXmlDepMgmt: Task[Seq[mill.javalib.publish.Dependency]] = Task.Anon {
+    val artifacts = Task.traverse(publishedModules)(_.artifactMetadata)()
+    artifacts.sortBy(_.id).map { artifact =>
+      mill.javalib.publish.Dependency(artifact.copy(version = "${project.version}"), mill.javalib.publish.Scope.Compile)
+    }
+  }
+
+  override def pom: T[PathRef] = Task {
+    val basePom = super.pom()
+    val content = os.read(basePom.path)
+    val cleaned = content.replaceAll(" *<dependencies> *</dependencies>\n?", "")
+    val pomPath = Task.dest / s"${artifactId()}-${publishVersion()}.pom"
+    os.write.over(pomPath, cleaned)
+    PathRef(pomPath)
+  }
+}
+
+/** Common dependency versions and definitions */
+object Deps {
+  // Versions
+  val okhttpVersion          = "4.12.0"
+  val okhttpMockVersion      = "4.10.0"
+  val jettyVersion           = "9.4.25.v20191220"
+  val slf4jVersion           = "2.0.17"
+  val logbackClassicVersion  = "1.5.17"
+  val scalatestVersion       = "3.2.9"
+  val hdrHistogramVersion    = "2.1.9"
+  val jctoolsVersion         = "3.3.0"
+  val typesafeConfigVersion  = "1.4.3"
+  val nanojsonVersion        = "1.8"
+  val protobufVersion        = "3.21.7"
+  val kanelaAgentVersion     = "2.0.0"
+  val guavaVersion           = "24.1-jre"
+  val pekkoVersion           = "1.0.1"
+  val pekkoHttpVersion       = "1.0.0"
+  val pekkoGrpcVersion       = "1.0.0"
+  val pekkoConnectorsKafkaVersion = "1.0.0"
+  val pekkoHttpJson4sVersion = "2.0.0"
+  val json4sVersion          = "4.0.6"
+  val grpcStubVersion        = "1.43.2"
+  val scalaPbVersion         = "0.11.8"
+  val scalaPbCodegenVersion  = "0.11.13"
+  val jsqlparserVersion      = "4.1"
+  val hikariCpVersion        = "4.0.3"
+  val h2Version              = "1.4.192"
+  val postgresqlVersion      = "42.5.4"
+  val mariadbVersion         = "2.2.6"
+  val mysqlVersion           = "9.3.0"
+  val sqliteVersion          = "3.34.0"
+  val awsJdbcWrapperVersion  = "2.5.6"
+  val testContainersVersion  = "2.0.3"
+  val slick213Version        = "3.3.2"
+  val slick3Version          = "3.5.0-M5"
+  val twitterUtilVersion     = "20.3.0"
+  val scalazVersion          = "7.2.28"
+  val catsEffect2Version     = "2.1.2"
+  val catsEffect3Version     = "3.3.14"
+  val caffeineVersion        = "2.8.5"
+  val lagomVersion           = "1.6.7"
+  val finagleVersion         = "21.12.0"
+  val bijectionVersion       = "0.9.7"
+  val jedisVersion           = "3.6.0"
+  val lettuceVersion         = "6.1.2.RELEASE"
+  val rediscalaVersion       = "1.13.0"
+  val mongoVersion           = "4.2.3"
+  val mongoLegacyVersion     = "3.11.0"
+  val mongoLegacyScalaVersion = "2.7.0"
+  val mongoLegacyReactiveVersion = "1.12.0"
+  val elasticsearchVersion   = "7.9.1"
+  val opensearchVersion      = "1.3.14"
+  val kafkaVersion           = "3.4.0"
+  val apacheCxfVersion       = "3.3.6"
+  val apacheHttpClientVersion = "4.0"
+  val mockServerVersion      = "5.13.2"
+  val akkaVersion            = "2.7.1"
+  val akkaHttpVersion        = "10.5.3"
+
+  // Common dependencies
+  def okhttp           = mvn"com.squareup.okhttp3:okhttp:$okhttpVersion"
+  def okhttpMock       = mvn"com.squareup.okhttp3:mockwebserver:$okhttpMockVersion"
+  def jettyServer      = mvn"org.eclipse.jetty:jetty-server:$jettyVersion"
+  def jettyServlet     = mvn"org.eclipse.jetty:jetty-servlet:$jettyVersion"
+  def slf4jApi         = mvn"org.slf4j:slf4j-api:$slf4jVersion"
+  def slf4jNop         = mvn"org.slf4j:slf4j-nop:$slf4jVersion"
+  def logbackClassic   = mvn"ch.qos.logback:logback-classic:$logbackClassicVersion"
+  def scalatest        = mvn"org.scalatest::scalatest:$scalatestVersion"
+  def hdrHistogram     = mvn"org.hdrhistogram:HdrHistogram:$hdrHistogramVersion"
+  def jctools          = mvn"org.jctools:jctools-core:$jctoolsVersion"
+  def typesafeConfig   = mvn"com.typesafe:config:$typesafeConfigVersion"
+  def nanojson         = mvn"com.grack:nanojson:$nanojsonVersion"
+  def protobuf         = mvn"com.google.protobuf:protobuf-java:$protobufVersion"
+  def kanelaAgent      = mvn"io.kamon:kanela-agent:$kanelaAgentVersion"
+  def byteBuddyAgent   = mvn"net.bytebuddy:byte-buddy-agent:1.12.7"
+  def guava            = mvn"com.google.guava:guava:$guavaVersion"
+  def jsqlparser       = mvn"com.github.jsqlparser:jsqlparser:$jsqlparserVersion"
+  
+  // JDBC dependencies
+  def hikariCp         = mvn"com.zaxxer:HikariCP:$hikariCpVersion"
+  def h2               = mvn"com.h2database:h2:$h2Version"
+  def postgresql       = mvn"org.postgresql:postgresql:$postgresqlVersion"
+  def mariadb          = mvn"org.mariadb.jdbc:mariadb-java-client:$mariadbVersion"
+  def mysqlConnector   = mvn"com.mysql:mysql-connector-j:$mysqlVersion"
+  def sqliteJdbc       = mvn"org.xerial:sqlite-jdbc:$sqliteVersion"
+  def awsJdbcWrapper   = mvn"software.amazon.jdbc:aws-advanced-jdbc-wrapper:$awsJdbcWrapperVersion"
+  def testContainersPostgres = mvn"org.testcontainers:testcontainers-postgresql:$testContainersVersion"
+  def testContainersMysql    = mvn"org.testcontainers:testcontainers-mysql:$testContainersVersion"
+  def slick(scalaVersion: String) = {
+    val version = if (scalaVersion == Scala3Version) slick3Version else slick213Version
+    mvn"com.typesafe.slick::slick:$version"
+  }
+  def slickHikariCp(scalaVersion: String) = {
+    val version = if (scalaVersion == Scala3Version) slick3Version else slick213Version
+    mvn"com.typesafe.slick::slick-hikaricp:$version"
+  }
+
+  // Twitter and Scalaz dependencies
+  def twitterUtil          = mvn"com.twitter::util-core:$twitterUtilVersion"
+  def scalazConcurrent     = mvn"org.scalaz::scalaz-concurrent:$scalazVersion"
+
+  // Cats Effect dependencies
+  def catsEffect2          = mvn"org.typelevel::cats-effect:$catsEffect2Version"
+  def catsEffect3          = mvn"org.typelevel::cats-effect:$catsEffect3Version"
+
+  // Caffeine dependencies
+  def caffeine             = mvn"com.github.ben-manes.caffeine:caffeine:$caffeineVersion"
+
+  // Lagom dependencies
+  def lagomServer          = mvn"com.lightbend.lagom::lagom-server:$lagomVersion"
+
+  // Finagle dependencies
+  def finagleHttp          = mvn"com.twitter::finagle-http:$finagleVersion"
+  def bijectionUtil        = mvn"com.twitter::bijection-util:$bijectionVersion"
+
+  // Redis dependencies
+  def jedis                = mvn"redis.clients:jedis:$jedisVersion"
+  def lettuce              = mvn"io.lettuce:lettuce-core:$lettuceVersion"
+  def rediscala            = mvn"io.github.rediscala::rediscala:$rediscalaVersion"
+  def testContainers       = mvn"org.testcontainers:testcontainers:$testContainersVersion"
+
+  // MongoDB dependencies
+  def mongoDriverSync      = mvn"org.mongodb:mongodb-driver-sync:$mongoVersion"
+  def mongoScalaDriver(scalaVersion: String) = {
+    // MongoDB Scala driver uses underscore notation, not double colon
+    mvn"org.mongodb.scala:mongo-scala-driver_${if (scalaVersion == Scala3Version) "2.13" else "2.13"}:$mongoVersion"
+  }
+  def mongoDriverReactive  = mvn"org.mongodb:mongodb-driver-reactivestreams:$mongoVersion"
+  def testContainersMongo  = mvn"org.testcontainers:testcontainers-mongodb:$testContainersVersion"
+
+  // MongoDB Legacy dependencies (3.x driver)
+  def mongoLegacyDriverSync      = mvn"org.mongodb:mongodb-driver-sync:$mongoLegacyVersion"
+  def mongoLegacyScalaDriver     = mvn"org.mongodb.scala::mongo-scala-driver:$mongoLegacyScalaVersion"
+  def mongoLegacyDriverReactive  = mvn"org.mongodb:mongodb-driver-reactivestreams:$mongoLegacyReactiveVersion"
+
+  // Elasticsearch dependencies
+  def elasticsearchRestClient          = mvn"org.elasticsearch.client:elasticsearch-rest-client:$elasticsearchVersion"
+  def elasticsearchRestHighLevelClient = mvn"org.elasticsearch.client:elasticsearch-rest-high-level-client:$elasticsearchVersion"
+  def testContainersElasticsearch      = mvn"org.testcontainers:testcontainers-elasticsearch:$testContainersVersion"
+
+  // OpenSearch dependencies
+  def opensearchRestClient          = mvn"org.opensearch.client:opensearch-rest-client:$opensearchVersion"
+  def opensearchRestHighLevelClient = mvn"org.opensearch.client:opensearch-rest-high-level-client:$opensearchVersion"
+
+  // Kafka dependencies
+  def kafkaClients            = mvn"org.apache.kafka:kafka-clients:$kafkaVersion"
+  def testContainersKafka     = mvn"org.testcontainers:testcontainers-kafka:$testContainersVersion"
+
+  // Cassandra dependencies
+  val cassandra3xDriverVersion = "3.10.0"
+  val cassandra4xDriverVersion = "4.10.0"
+  def cassandra3xDriver        = mvn"com.datastax.cassandra:cassandra-driver-core:$cassandra3xDriverVersion"
+  def cassandra4xDriverCore    = mvn"com.datastax.oss:java-driver-core:$cassandra4xDriverVersion"
+  def cassandra4xQueryBuilder  = mvn"com.datastax.oss:java-driver-query-builder:$cassandra4xDriverVersion"
+  def testContainersCassandra  = mvn"org.testcontainers:testcontainers-cassandra:$testContainersVersion"
+
+  // Apache CXF dependencies
+  def apacheCxfFrontendSimple = mvn"org.apache.cxf:cxf-rt-frontend-simple:$apacheCxfVersion"
+  def apacheCxfFrontendJaxws  = mvn"org.apache.cxf:cxf-rt-frontend-jaxws:$apacheCxfVersion"
+  def apacheCxfTransportsHttp = mvn"org.apache.cxf:cxf-rt-transports-http:$apacheCxfVersion"
+  def jaxbApi                 = mvn"javax.xml.bind:jaxb-api:2.3.1"
+  
+  // Apache HttpClient dependencies  
+  def apacheHttpClient        = mvn"org.apache.httpcomponents:httpclient:$apacheHttpClientVersion"
+  
+  // MockServer dependencies (shared by apache-cxf and apache-httpclient)
+  def mockServerClient        = mvn"org.mock-server:mockserver-client-java:$mockServerVersion"
+  def testContainersMockServer = mvn"org.testcontainers:testcontainers-mockserver:$testContainersVersion"
+
+  // Pekko dependencies
+  def pekkoActor           = mvn"org.apache.pekko::pekko-actor:$pekkoVersion"
+  def pekkoTestkit         = mvn"org.apache.pekko::pekko-testkit:$pekkoVersion"
+  def pekkoSlf4j           = mvn"org.apache.pekko::pekko-slf4j:$pekkoVersion"
+  def pekkoRemote          = mvn"org.apache.pekko::pekko-remote:$pekkoVersion"
+  def pekkoCluster         = mvn"org.apache.pekko::pekko-cluster:$pekkoVersion"
+  def pekkoClusterSharding = mvn"org.apache.pekko::pekko-cluster-sharding:$pekkoVersion"
+  def pekkoProtobuf        = mvn"org.apache.pekko::pekko-protobuf:$pekkoVersion"
+  def pekkoHttp            = mvn"org.apache.pekko::pekko-http:$pekkoHttpVersion"
+  def pekkoStream          = mvn"org.apache.pekko::pekko-stream:$pekkoVersion"
+  def pekkoHttpTestkit     = mvn"org.apache.pekko::pekko-http-testkit:$pekkoHttpVersion"
+  def pekkoHttpJson4s      = mvn"com.github.pjfanning::pekko-http-json4s:$pekkoHttpJson4sVersion"
+  def pekkoDiscovery       = mvn"org.apache.pekko::pekko-discovery:$pekkoVersion"
+  def pekkoGrpcRuntime     = mvn"org.apache.pekko::pekko-grpc-runtime:$pekkoGrpcVersion"
+  def pekkoConnectorsKafka = mvn"org.apache.pekko::pekko-connectors-kafka:$pekkoConnectorsKafkaVersion"
+  def json4sNative         = mvn"org.json4s::json4s-native:$json4sVersion"
+  def grpcStub             = mvn"io.grpc:grpc-stub:$grpcStubVersion"
+  def scalaPbRuntime       = mvn"com.thesamet.scalapb::scalapb-runtime:$scalaPbVersion"
+
+  // Akka dependencies
+  def akkaActor            = mvn"com.typesafe.akka::akka-actor:$akkaVersion"
+  def akkaTestkit          = mvn"com.typesafe.akka::akka-testkit:$akkaVersion"
+  def akkaSlf4j            = mvn"com.typesafe.akka::akka-slf4j:$akkaVersion"
+  def akkaRemote           = mvn"com.typesafe.akka::akka-remote:$akkaVersion"
+  def akkaCluster          = mvn"com.typesafe.akka::akka-cluster:$akkaVersion"
+  def akkaClusterSharding  = mvn"com.typesafe.akka::akka-cluster-sharding:$akkaVersion"
+  def akkaProtobuf         = mvn"com.typesafe.akka::akka-protobuf-v3:$akkaVersion"
+  def akkaStream           = mvn"com.typesafe.akka::akka-stream:$akkaVersion"
+  def akkaDiscovery        = mvn"com.typesafe.akka::akka-discovery:$akkaVersion"
+
+  // Akka HTTP dependencies
+  def akkaHttp             = mvn"com.typesafe.akka::akka-http:$akkaHttpVersion"
+  def akkaHttp2Support     = mvn"com.typesafe.akka::akka-http2-support:$akkaHttpVersion"
+  def akkaHttpTestkit      = mvn"com.typesafe.akka::akka-http-testkit:$akkaHttpVersion"
+  def akkaHttpJson4s       = mvn"de.heikoseeberger:akka-http-json4s_2.13:1.27.0"
+    .exclude("org.json4s" -> "*")
+    .exclude("com.typesafe.akka" -> "*")
+
+  // Akka gRPC dependencies
+  val akkaGrpcVersion      = "2.3.4"
+  def akkaGrpcRuntime      = mvn"com.lightbend.akka.grpc::akka-grpc-runtime:$akkaGrpcVersion"
+
+  // Alpakka Kafka (Akka Streams Kafka connector)
+  val alpakkaKafkaVersion  = "2.1.1"
+  def alpakkaKafka         = mvn"com.typesafe.akka::akka-stream-kafka:$alpakkaKafkaVersion"
+
+  // Annotation shading dependencies
+  val glassfishElVersion   = "3.0.1-b11"
+  def glassfishEl          = mvn"org.glassfish:javax.el:$glassfishElVersion"
+
+  // System metrics
+  val oshiVersion          = "6.4.13"
+  def oshiCore             = mvn"com.github.oshi:oshi-core:$oshiVersion"
+
+  // ZIO 2
+  val zio2Version          = "2.0.21"
+  def zio2                 = mvn"dev.zio::zio:$zio2Version"
+
+  // AWS SDK
+  val awsSdkV1Version      = "1.12.225"
+  val awsSdkV2Version      = "2.17.191"
+  def awsLambdaV1          = mvn"com.amazonaws:aws-java-sdk-lambda:$awsSdkV1Version"
+  def awsDynamoDbV2        = mvn"software.amazon.awssdk:dynamodb:$awsSdkV2Version"
+  def awsSqsV2             = mvn"software.amazon.awssdk:sqs:$awsSdkV2Version"
+  // Note: dynalite module was removed in testcontainers 2.x, but the test only uses GenericContainer
+
+  // Spring Boot dependencies
+  val springBootVersion    = "2.4.2"
+  val javaxServletVersion  = "4.0.1"
+  def springBootStarterWeb     = mvn"org.springframework.boot:spring-boot-starter-web:$springBootVersion"
+  def springBootStarterWebflux = mvn"org.springframework.boot:spring-boot-starter-webflux:$springBootVersion"
+  def springBootStarterDataJpa = mvn"org.springframework.boot:spring-boot-starter-data-jpa:$springBootVersion"
+  def javaxServletApi          = mvn"javax.servlet:javax.servlet-api:$javaxServletVersion"
+
+  // Tapir dependencies
+  val tapirVersion         = "1.13.6"
+  val tapirLegacyVersion   = "0.20.2"
+  val sttpClientVersion    = "3.8.0"    // Version with Scala 3 support
+  def tapirCore            = mvn"com.softwaremill.sttp.tapir::tapir-core:$tapirVersion"
+  def tapirAkkaHttpServer  = mvn"com.softwaremill.sttp.tapir::tapir-akka-http-server:$tapirVersion"
+  def tapirPekkoHttpServer = mvn"com.softwaremill.sttp.tapir::tapir-pekko-http-server:$tapirVersion"
+  def tapirCoreLegacy      = mvn"com.softwaremill.sttp.tapir::tapir-core:$tapirLegacyVersion"
+  def tapirAkkaHttpServerLegacy = mvn"com.softwaremill.sttp.tapir::tapir-akka-http-server:$tapirLegacyVersion"
+  def sttpClient           = mvn"com.softwaremill.sttp.client3::core:$sttpClientVersion"
+
+  // Http4s 1.0 dependencies
+  val http4s10Version       = "1.0.0-M38"
+  def http4s10Client        = mvn"org.http4s::http4s-client:$http4s10Version"
+  def http4s10Server        = mvn"org.http4s::http4s-server:$http4s10Version"
+  def http4s10BlazeClient   = mvn"org.http4s::http4s-blaze-client:$http4s10Version"
+  def http4s10BlazeServer   = mvn"org.http4s::http4s-blaze-server:$http4s10Version"
+  def http4s10Dsl           = mvn"org.http4s::http4s-dsl:$http4s10Version"
+
+  // Http4s 0.23 dependencies
+  val http4s023Version      = "0.23.19"
+  val http4s023BlazeVersion = "0.23.14"
+  def http4s023Client       = mvn"org.http4s::http4s-client:$http4s023Version"
+  def http4s023Server       = mvn"org.http4s::http4s-server:$http4s023Version"
+  def http4s023BlazeClient  = mvn"org.http4s::http4s-blaze-client:$http4s023BlazeVersion"
+  def http4s023BlazeServer  = mvn"org.http4s::http4s-blaze-server:$http4s023BlazeVersion"
+  def http4s023Dsl          = mvn"org.http4s::http4s-dsl:$http4s023Version"
+
+  // Play Framework dependencies
+  val play28Version         = "2.8.22"
+  val play29Version         = "2.9.7"
+  val play30Version         = "3.0.7"
+  val scalatestPlusPlay28Version = "5.1.0"
+  val scalatestPlusPlay29Version = "6.0.1"
+  val scalatestPlusPlay30Version = "7.0.1"
+  val guiceVersion          = "5.1.0"
+
+  // Play 2.8 dependencies (com.typesafe.play, Akka-based)
+  def play28                     = mvn"com.typesafe.play::play:$play28Version"
+  def play28NettyServer          = mvn"com.typesafe.play::play-netty-server:$play28Version"
+  def play28AkkaHttpServer       = mvn"com.typesafe.play::play-akka-http-server:$play28Version"
+  def play28AkkaHttp2Support     = mvn"com.typesafe.play::play-akka-http2-support:$play28Version"
+  def play28Ws                   = mvn"com.typesafe.play::play-ws:$play28Version"
+  def play28Test                 = mvn"com.typesafe.play::play-test:$play28Version"
+  def play28Logback              = mvn"com.typesafe.play::play-logback:$play28Version"
+  def scalatestPlusPlay28        = mvn"org.scalatestplus.play::scalatestplus-play:$scalatestPlusPlay28Version"
+
+  // Play 2.9 dependencies (com.typesafe.play, Akka-based)
+  def play29                     = mvn"com.typesafe.play::play:$play29Version"
+  def play29NettyServer          = mvn"com.typesafe.play::play-netty-server:$play29Version"
+  def play29AkkaHttpServer       = mvn"com.typesafe.play::play-akka-http-server:$play29Version"
+  def play29AkkaHttp2Support     = mvn"com.typesafe.play::play-akka-http2-support:$play29Version"
+  def play29Ws                   = mvn"com.typesafe.play::play-ws:$play29Version"
+  def play29Test                 = mvn"com.typesafe.play::play-test:$play29Version"
+  def play29Logback              = mvn"com.typesafe.play::play-logback:$play29Version"
+  def scalatestPlusPlay29        = mvn"org.scalatestplus.play::scalatestplus-play:$scalatestPlusPlay29Version"
+
+  // Play 3.0 dependencies (org.playframework, Pekko-based)
+  def play30                     = mvn"org.playframework::play:$play30Version"
+  def play30NettyServer          = mvn"org.playframework::play-netty-server:$play30Version"
+  def play30PekkoHttpServer      = mvn"org.playframework::play-pekko-http-server:$play30Version"
+  def play30PekkoHttp2Support    = mvn"org.playframework::play-pekko-http2-support:$play30Version"
+  def play30Ws                   = mvn"org.playframework::play-ws:$play30Version"
+  def play30Test                 = mvn"org.playframework::play-test:$play30Version"
+  def play30Logback              = mvn"org.playframework::play-logback:$play30Version"
+  def scalatestPlusPlay30        = mvn"org.scalatestplus.play::scalatestplus-play:$scalatestPlusPlay30Version"
+
+  // Guice (for Play tests)
+  def guice                      = mvn"com.google.inject:guice:$guiceVersion"
+  def guiceAssistedInject        = mvn"com.google.inject.extensions:guice-assistedinject:$guiceVersion"
+}
+
+def CommonJavacOptions = Seq("--release", "8", "-encoding", "UTF-8")
+
+trait KamonModule extends CrossSbtModule with SonatypeCentralPublishModule  {
+
+  def javacOptions = CommonJavacOptions
+
+  def scalacOptions = {
+    val commonSettings = Seq(
+          "-release:8",
+      "-feature",
+      "-unchecked",
+      "-deprecation",
+      "-encoding",
+      "UTF-8",
+      "-language:postfixOps",
+      "-language:higherKinds",
+      "-language:existentials",
+      "-language:implicitConversions"
+    )
+
+    val scala2Settings = Seq("-g:vars", "-Ywarn-dead-code", "-Xlog-reflective-calls")
+    val scala3Settings = Seq("-source:3.0-migration")
+    val crossScalaVersionSettings = if(crossValue == Scala2Version) scala2Settings else scala3Settings
+    commonSettings ++ crossScalaVersionSettings
+  }
+
+  def publishVersion: T[String] = kamonVersion
+
+  def pomSettings = PomSettings(
+    description = "Kamon - Monitoring and Instrumentation for the JVM",
+    organization = "io.kamon",
+    url = "https://kamon.io",
+    licenses = Seq(License.`Apache-2.0`),
+    versionControl = VersionControl.github("kamon-io", "Kamon"),
+    developers = Seq(
+      Developer("Ivan", "Topolnjak", "https://github.com/ivantopo"),
+      Developer("Diego", "Parra", "https://github.com/dpsoft")
+    )
+  )
+
+  /** Dependencies to be shaded (included) in the jar */
+  def shadedMvnDeps: Seq[Dep] = Seq.empty
+
+  /**
+   * Shading rules for the assembly. Override to add relocation rules.
+   * Example: Seq(Assembly.Rule.Relocate("com.typesafe.config", "kamon.lib.com.typesafe.config"))
+   */
+  def shadingRules: Seq[Assembly.Rule] = Assembly.defaultRules
+
+  def jarWithShadedDependencies: T[PathRef] = Task {
+    // Get paths from localClasspath (same as default jar)
+    val localPaths = localClasspath().map(_.path).filter(os.exists)
+
+    // Resolve shaded dependencies (including transitives)
+    val shadedDepPaths: Seq[os.Path] = if (shadedMvnDeps.nonEmpty) {
+      defaultResolver().classpath(shadedMvnDeps).map(_.path)
+    } else {
+      Seq.empty
+    }
+
+    // Create assembly with local classes + shaded deps
+    val assembly = Assembly.create(
+      destJar = Task.dest / "out.jar",
+      inputPaths = localPaths ++ shadedDepPaths,
+      manifest = manifest(),
+      assemblyRules = shadingRules,
+      shader = AssemblyModule.jarjarabramsWorker()
+    )
+
+    assembly.pathRef
+  }
+
+  /** Kamon test suites share process-global state and must run one class at a time. */
+  trait KamonScalaTest extends TestModule.ScalaTest {
+    override def testParallelism: T[Boolean] = Task { false }
+
+    override def runClasspath: T[Seq[PathRef]] = Task {
+      val testResources = resources()
+      val unshadedDeps = defaultResolver().classpath(Seq(Deps.hdrHistogram, Deps.jctools))
+      testResources ++ super.runClasspath().filterNot(ref => testResources.exists(_.path == ref.path)) ++ unshadedDeps
+    }
+  }
+
+  /** Test module that runs with the Kanela agent attached */
+  trait TestWithKanelaAgent extends CrossSbtTests with KamonScalaTest {
+
+    def kanelaAgentJar: T[PathRef] = Task {
+      defaultResolver()
+        .classpath(Seq(Deps.kanelaAgent))
+        .find(_.path.last.startsWith("kanela-agent"))
+        .getOrElse(throw new RuntimeException("Could not find kanela-agent JAR"))
+    }
+
+    override def forkArgs: T[Seq[String]] = Task {
+      val agentPath = kanelaAgentJar().path
+      super.forkArgs() ++ Seq(
+        s"-javaagent:$agentPath"
+      )
+    }
+
+  }
+}
+
+trait BuildInfoSettings extends BuildInfo { outer: KamonModule =>
+
+  def buildInfoPackageName = "kamon.status"
+  def buildInfoStaticCompiled = true
+  def buildInfoMembers = Seq(
+    BuildInfo.Value("version", publishVersion()),
+  )
+
+  override def resources: T[Seq[PathRef]] = super[BuildInfo].resources
+}

@@ -1,6 +1,5 @@
 package kamon.instrumentation
 
-import com.dimafeng.testcontainers.{ElasticsearchContainer, ForAllTestContainer}
 import kamon.tag.Lookups.plain
 import kamon.testkit.{InitAndStopKamonAfterAll, Reconfigure, TestSpanReporter}
 import org.apache.http.HttpHost
@@ -11,7 +10,8 @@ import org.scalatest.concurrent.Eventually
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.time.SpanSugar
 import org.scalatest.wordspec.AnyWordSpec
-import org.scalatest.OptionValues
+import org.scalatest.{BeforeAndAfterAll, OptionValues}
+import org.testcontainers.elasticsearch.ElasticsearchContainer
 
 class ElasticSearchInstrumentationTest
     extends AnyWordSpec
@@ -22,7 +22,7 @@ class ElasticSearchInstrumentationTest
     with OptionValues
     with TestSpanReporter
     with InitAndStopKamonAfterAll
-    with ForAllTestContainer {
+    with BeforeAndAfterAll {
 
   val endpointTag = "elasticsearch.http.endpoint"
   val methodTag = "elasticsearch.http.method"
@@ -85,7 +85,7 @@ class ElasticSearchInstrumentationTest
     }
   }
 
-  override val container: ElasticsearchContainer = ElasticsearchContainer()
+  val container = new ElasticsearchContainer("docker.elastic.co/elasticsearch/elasticsearch:7.9.1")
   var client: RestClient = _
   var highLevelClient: RestHighLevelClient = _
 
@@ -94,11 +94,11 @@ class ElasticSearchInstrumentationTest
     container.start()
 
     client = RestClient
-      .builder(HttpHost.create(container.httpHostAddress))
+      .builder(HttpHost.create(container.getHttpHostAddress))
       .build()
 
     highLevelClient = new RestHighLevelClient(
-      RestClient.builder(HttpHost.create(container.httpHostAddress))
+      RestClient.builder(HttpHost.create(container.getHttpHostAddress))
     )
   }
 

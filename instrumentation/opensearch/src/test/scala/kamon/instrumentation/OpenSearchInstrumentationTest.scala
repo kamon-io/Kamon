@@ -1,6 +1,5 @@
 package kamon.instrumentation
 
-import com.dimafeng.testcontainers.{GenericContainer, ForAllTestContainer}
 import kamon.tag.Lookups.plain
 import kamon.testkit.{InitAndStopKamonAfterAll, Reconfigure, TestSpanReporter}
 import org.apache.http.HttpHost
@@ -11,7 +10,8 @@ import org.scalatest.concurrent.Eventually
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.time.SpanSugar
 import org.scalatest.wordspec.AnyWordSpec
-import org.scalatest.OptionValues
+import org.scalatest.{BeforeAndAfterAll, OptionValues}
+import org.testcontainers.containers.GenericContainer
 import org.testcontainers.containers.wait.strategy.Wait
 
 class OpenSearchInstrumentationTest
@@ -23,7 +23,7 @@ class OpenSearchInstrumentationTest
     with OptionValues
     with TestSpanReporter
     with InitAndStopKamonAfterAll
-    with ForAllTestContainer {
+    with BeforeAndAfterAll {
 
   val endpointTag = "opensearch.http.endpoint"
   val methodTag = "opensearch.http.method"
@@ -86,25 +86,27 @@ class OpenSearchInstrumentationTest
     }
   }
 
-  override val container: GenericContainer = GenericContainer(
-    "opensearchproject/opensearch:1.3.14",
-    exposedPorts = Seq(9200),
-    env = Map("discovery.type" -> "single-node", "plugins.security.disabled" -> "true"),
-    waitStrategy = Wait.forHttp("/_cluster/health")
-  )
+  val container = new GenericContainer("opensearchproject/opensearch:1.3.14")
   var client: RestClient = _
   var highLevelClient: RestHighLevelClient = _
 
   override protected def beforeAll(): Unit = {
     super.beforeAll()
+    
+    container.addExposedPort(9200)
+    container.addEnv("discovery.type", "single-node")
+    container.addEnv("plugins.security.disabled", "true")
+    container.setWaitStrategy(Wait.forHttp("/_cluster/health"))
     container.start()
 
+    val hostAddress = s"${container.getHost}:${container.getMappedPort(9200)}"
+    
     client = RestClient
-      .builder(HttpHost.create(s"${container.host}:${container.mappedPort(9200)}"))
+      .builder(HttpHost.create(hostAddress))
       .build()
 
     highLevelClient = new RestHighLevelClient(
-      RestClient.builder(HttpHost.create(s"${container.host}:${container.mappedPort(9200)}"))
+      RestClient.builder(HttpHost.create(hostAddress))
     )
   }
 

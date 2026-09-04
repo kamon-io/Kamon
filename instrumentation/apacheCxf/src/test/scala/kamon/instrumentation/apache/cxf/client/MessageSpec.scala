@@ -1,15 +1,16 @@
 package kamon.instrumentation.apache.cxf.client
 
-import com.dimafeng.testcontainers.{ForAllTestContainer, MockServerContainer}
 import kamon.instrumentation.apache.cxf.client.util.MockServerExpectations
 import kamon.tag.Lookups.{plain, plainBoolean, plainLong}
 import kamon.testkit.{InitAndStopKamonAfterAll, Reconfigure, TestSpanReporter}
-import org.scalatest.OptionValues
+import org.scalatest.{BeforeAndAfterAll, OptionValues}
 import org.scalatest.concurrent.Eventually
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.time.SpanSugar
 import org.scalatest.wordspec.AnyWordSpec
 import org.slf4j.LoggerFactory
+import org.testcontainers.containers.MockServerContainer
+import org.testcontainers.utility.DockerImageName
 
 class MessageSpec
     extends AnyWordSpec
@@ -20,7 +21,7 @@ class MessageSpec
     with OptionValues
     with TestSpanReporter
     with InitAndStopKamonAfterAll
-    with ForAllTestContainer {
+    with BeforeAndAfterAll {
 
   private val _logger = LoggerFactory.getLogger(classOf[MessageSpec])
 
@@ -90,9 +91,9 @@ class MessageSpec
     }
   }
 
-  override val container: MockServerContainer = MockServerContainer()
+  val container = new MockServerContainer(DockerImageName.parse("mockserver/mockserver:5.13.2"))
   lazy val clientExpectation: MockServerExpectations =
-    new MockServerExpectations(container.container.getHost, container.serverPort)
+    new MockServerExpectations(container.getHost, container.getServerPort)
 
   override protected def beforeAll(): Unit = {
     super.beforeAll()

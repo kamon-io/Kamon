@@ -57,8 +57,8 @@ class PekkoHttpServerTracingSpec extends AnyWordSpecLike with Matchers with Scal
 
   val timeoutTest: FiniteDuration = 5 second
   val interface = "127.0.0.1"
-  val httpWebServer = startServer(interface, 8081, https = false)
-  val httpsWebServer = startServer(interface, 8082, https = true)
+  val httpWebServer = startServer(interface)
+  val httpsWebServer = startServer(interface, https = true)
 
   testSuite("HTTP", httpWebServer, okHttp)
   testSuite("HTTPS", httpsWebServer, okHttp)

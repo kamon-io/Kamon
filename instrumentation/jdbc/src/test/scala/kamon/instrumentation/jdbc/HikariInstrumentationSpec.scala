@@ -28,7 +28,7 @@ import org.scalatest.matchers.should.Matchers
 import org.scalatest.time.SpanSugar
 import org.scalatest.wordspec.AnyWordSpec
 import org.scalatest.{BeforeAndAfterEach, OptionValues}
-import org.testcontainers.containers.PostgreSQLContainer
+import org.testcontainers.postgresql.PostgreSQLContainer
 
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutor}
 

@@ -16,14 +16,14 @@
 
 package kamon.instrumentation.tapir
 
-import akka.actor.ActorSystem
-import akka.http.scaladsl.Http
+import org.apache.pekko.actor.ActorSystem
+import org.apache.pekko.http.scaladsl.Http
 
-import scala.concurrent.Await
 import scala.concurrent.Future
+import scala.concurrent.Await
 import scala.concurrent.duration._
 
-object TapirAkkaHttpServer {
+object TapirPekkoHttpServer {
   implicit val actorSystem: ActorSystem = ActorSystem()
 
   import actorSystem.dispatcher
@@ -31,7 +31,7 @@ object TapirAkkaHttpServer {
   private var server: Future[Http.ServerBinding] = _
 
   def start(): Int = {
-    server = Http().bindAndHandle(AkkaHttpTestRoutes.routes, "localhost", 0)
+    server = Http().bindAndHandle(PekkoHttpTestRoutes.routes, "localhost", 0)
     val binding = Await.result(server, 10 seconds)
     binding.localAddress.getPort()
   }

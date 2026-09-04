@@ -46,7 +46,7 @@ import scala.util.{Failure, Success}
 class WSInstrumentationSpec extends PlaySpecShim with GuiceOneServerPerSuite with ScalaFutures with Eventually with SpanSugar
   with InitAndStopKamonAfterAll with MetricInspection.Syntax with Reconfigure with OptionValues with TestSpanReporter {
 
-  System.setProperty("config.file", "./instrumentation/kamon-play/src/test-common/resources/conf/application.conf")
+  System.setProperty("config.file", "./instrumentation/play/src/test/resources/conf/application.conf")
 
   override def fakeApplication(): Application = new GuiceApplicationBuilder()
     .appRoutes(testRoutes)

@@ -9,15 +9,17 @@ import org.apache.pekko.stream.scaladsl.{Flow, Sink, Source}
 import org.apache.pekko.util.ByteString
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.matchers.should.Matchers
+import org.scalatest.time.{Seconds, Span}
 import org.scalatest.wordspec.AnyWordSpecLike
 
 import scala.concurrent.ExecutionContextExecutor
 
 class ServerFlowWrapperSpec extends AnyWordSpecLike with Matchers with ScalaFutures with InitAndStopKamonAfterAll {
 
-  implicit private val system: ActorSystem = ActorSystem("http-client-instrumentation-spec")
+  implicit private val system: ActorSystem = ActorSystem("server-flow-wrapper-spec")
   implicit private val executor: ExecutionContextExecutor = system.dispatcher
   implicit private val materializer: Materializer = Materializer(system)
+  implicit override val patienceConfig: PatienceConfig = PatienceConfig(timeout = Span(10, Seconds))
 
   private val okReturningFlow = Flow[HttpRequest].map { _ =>
     HttpResponse(status = StatusCodes.OK, entity = HttpEntity("OK"))

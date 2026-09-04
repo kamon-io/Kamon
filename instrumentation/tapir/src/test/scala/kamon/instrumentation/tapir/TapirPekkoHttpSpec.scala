@@ -20,12 +20,12 @@ import kamon.testkit.{InitAndStopKamonAfterAll, TestSpanReporter}
 import org.scalatest.concurrent.Eventually
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
-import org.scalatest.{BeforeAndAfterAll, OptionValues}
+import org.scalatest.OptionValues
 import sttp.client3.{HttpURLConnectionBackend, Identity, SttpBackend, UriContext, asStringAlways, basicRequest}
 
 import scala.concurrent.duration.DurationInt
 
-class TapirAkkaHttpSpec extends AnyWordSpec with Matchers
+class TapirPekkoHttpSpec extends AnyWordSpec with Matchers
     with InitAndStopKamonAfterAll
     with TestSpanReporter
     with Eventually
@@ -37,16 +37,16 @@ class TapirAkkaHttpSpec extends AnyWordSpec with Matchers
   override def beforeAll() = {
     super.beforeAll()
     backend = HttpURLConnectionBackend()
-    listenPort = TapirAkkaHttpServer.start()
+    listenPort = TapirPekkoHttpServer.start()
   }
 
   override def afterAll() = {
-    TapirAkkaHttpServer.stop()
+    TapirPekkoHttpServer.stop()
     backend.close()
     super.afterAll()
   }
 
-  "the Tapir Akka HTTP instrumentation" should {
+  "the Tapir Pekko HTTP instrumentation" should {
     "replace params in path when naming span" in {
       basicRequest
         .response(asStringAlways)

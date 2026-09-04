@@ -46,8 +46,8 @@ class PekkoHttpClientTracingSpec extends AnyWordSpecLike with Matchers with Init
 
   val timeoutTest: FiniteDuration = 5 second
   val interface = "127.0.0.1"
-  val port = 8080
-  val webServer: WebServer = startServer(interface, port)
+  val webServer: WebServer = startServer(interface)
+  val port: Int = webServer.port
 
   "the Pekko HTTP client instrumentation" should {
     "create a client Span when using the request level API - Http().singleRequest(...)" in {

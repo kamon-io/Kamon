@@ -47,12 +47,12 @@ class AkkaHTTPRequestHandlerInstrumentationSpec extends {
       val (confFile, expectedServer) = {
         if (PlayVersion.current.startsWith("2")) {
           (
-            "/instrumentation/kamon-play/src/test-common/resources/conf/application-akka-http.conf",
+            "/instrumentation/play/src/test/resources/conf/application-akka-http.conf",
             "play.server.akka-http"
           )
         } else {
           (
-            "/instrumentation/kamon-play/src/test-common/resources/conf/application-pekko-http.conf",
+            "/instrumentation/play/src/test/resources/conf/application-pekko-http.conf",
             "play.server.pekko-http"
           )
         }
@@ -61,7 +61,7 @@ class AkkaHTTPRequestHandlerInstrumentationSpec extends {
     } with RequestHandlerInstrumentationSpec
 
 class NettyRequestHandlerInstrumentationSpec extends {
-      val confFile = "/instrumentation/kamon-play/src/test-common/resources/conf/application-netty.conf"
+      val confFile = "/instrumentation/play/src/test/resources/conf/application-netty.conf"
       val expectedServer = "play.server.netty"
     } with RequestHandlerInstrumentationSpec
 

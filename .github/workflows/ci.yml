@@ -1,6 +1,6 @@
-name: Test all the things
+name: CI
 
-on:
+'on':
   pull_request:
   push:
     branches:
@@ -12,25 +12,44 @@ env:
 
 jobs:
   ci:
+    name: Compile & Unit Tests
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - run: git fetch -f --depth=1 origin '+refs/tags/*:refs/tags/*'
-      - uses: coursier/cache-action@v6
-      - uses: coursier/setup-action@v1
+      - name: Checkout repository
+        uses: actions/checkout@v4
         with:
-          jvm: zulu:17
-          apps: sbt
-      - name: Test
-        run: sbt -v ";+core/test;+instrumentation/test;+reporters/test"
-  lint:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: coursier/cache-action@v6
-      - uses: coursier/setup-action@v1
+          fetch-depth: 0
+
+      - name: Fetch git tags
+        run: git fetch -f --depth=1 origin '+refs/tags/*:refs/tags/*'
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
         with:
-          jvm: zulu:17
-          apps: sbt
-      - name: Test
-        run: sbt -v "+scalafmtCheckAll;scalafmtSbtCheck"
+          distribution: 'zulu'
+          java-version: '21'
+
+      - name: Cache Mill and Coursier
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/mill
+            ~/.cache/coursier
+          key: ${{ runner.os }}-mill-${{ hashFiles('build.mill', '**/*.mill') }}
+          restore-keys: |
+            ${{ runner.os }}-mill-
+
+      - name: Verify build loading
+        run: ./mill --no-daemon version
+
+      - name: Compile all modules
+        run: ./mill --no-daemon '__.compile'
+
+      - name: Test core modules
+        run: ./mill --no-daemon 'core.__.test'
+
+      - name: Test reporters
+        run: ./mill --no-daemon 'reporters.__.test'
+
+      - name: Test instrumentation
+        run: ./mill --no-daemon 'instrumentation.__.test'

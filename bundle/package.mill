@@ -1,0 +1,207 @@
+package build.bundle
+
+import mill.*, scalalib.*, build.*
+import mill.contrib.buildinfo.BuildInfo
+import mill.javalib.Assembly.Rule
+
+object runtimeAttacher extends Cross[runtimeAttacher](AllScalaVersions)
+trait runtimeAttacher extends KamonModule with BuildInfo {
+
+  override def artifactName = "kamon-runtime-attacher"
+
+  def buildInfoPackageName = "kamon.runtime.attacher"
+  def buildInfoStaticCompiled = true
+
+  /** Resolve the Kanela agent jar and get its filename */
+  def kanelaAgentJar: T[PathRef] = Task {
+    defaultResolver()
+      .classpath(Seq(Deps.kanelaAgent))
+      .find(_.path.last.startsWith("kanela-agent"))
+      .getOrElse(throw new RuntimeException("Could not find kanela-agent JAR"))
+  }
+
+  def kanelaAgentJarName: T[String] = Task {
+    kanelaAgentJar().path.last
+  }
+
+  def buildInfoMembers = Seq(
+    BuildInfo.Value("kanelaAgentJarName", kanelaAgentJarName()),
+  )
+
+  def mvnDeps = Seq(
+    Deps.slf4jApi
+  )
+
+  /** byte-buddy-agent is shaded into the jar */
+  def shadedMvnDeps = Seq(
+    Deps.byteBuddyAgent
+  )
+
+  def compileMvnDeps = shadedMvnDeps
+
+  override def shadingRules = super.shadingRules ++ Seq(
+    Rule.Relocate("net.bytebuddy.agent.**", "kamon.lib.@0"),
+    Rule.ExcludePattern("META-INF/maven.*"),
+    Rule.ExcludePattern(".*module-info\\.class")
+  )
+
+  override def jar: T[PathRef] = jarWithShadedDependencies
+
+  /** Include the Kanela agent jar as a resource */
+  override def resources: T[Seq[PathRef]] = Task {
+    val baseResources = super.resources()
+    val agentJar = kanelaAgentJar()
+
+    // Copy the agent jar to resources destination (at the root, not in a subdirectory)
+    os.copy.over(agentJar.path, Task.dest / agentJar.path.last)
+
+    baseResources :+ PathRef(Task.dest)
+  }
+}
+
+/**
+ * The Kamon Bundle combines all instrumentation modules into a single jar.
+ * 
+ * This makes it easy for users to include all Kamon instrumentation with a single dependency.
+ * The bundle contains compiled classes from all instrumentation modules and merges their
+ * reference.conf files.
+ * 
+ * Note: Some modules are only available for Scala 2.13 (e.g., Play, Spring, Lagom, etc.)
+ * so the Scala 3 bundle contains fewer modules.
+ */
+object bundle extends Cross[bundle](AllScalaVersions)
+trait bundle extends KamonModule {
+
+  override def artifactName = "kamon-bundle"
+
+  /** 
+   * All instrumentation modules that are available for all Scala versions.
+   * These modules will be included in both Scala 2.13 and Scala 3 bundles.
+   */
+  def allScalaVersionModules: Seq[ScalaModule] = Seq(
+    instrumentation.annotation(crossValue),
+    instrumentation.common(crossValue),
+    instrumentation.executors(crossValue),
+    instrumentation.scalaFuture(crossValue),
+    instrumentation.catsIo3(crossValue),
+    instrumentation.pekko(crossValue),
+    instrumentation.pekkoHttp(crossValue),
+    instrumentation.pekkoGrpc(crossValue),
+    instrumentation.pekkoConnectorsKafka(crossValue),
+    instrumentation.akka(crossValue),
+    instrumentation.akkaHttp(crossValue),
+    instrumentation.akkaGrpc(crossValue),
+    instrumentation.jdbc(crossValue),
+    instrumentation.logback(crossValue),
+    instrumentation.caffeine(crossValue),
+    instrumentation.redis(crossValue),
+    instrumentation.mongo(crossValue),
+    instrumentation.okHttp(crossValue),
+    instrumentation.elasticsearch(crossValue),
+    instrumentation.opensearch(crossValue),
+    instrumentation.kafka(crossValue),
+    instrumentation.apacheCxf(crossValue),
+    instrumentation.apacheHttpClient(crossValue),
+    instrumentation.systemMetrics(crossValue),
+    instrumentation.zio2(crossValue),
+    instrumentation.awsSdk(crossValue),
+    instrumentation.tapir(crossValue),
+    instrumentation.http4s10(crossValue),
+    instrumentation.http4s023(crossValue),
+    instrumentation.cassandra(crossValue)
+  )
+
+  /**
+   * Additional instrumentation modules that are only available for Scala 2.13.
+   * These modules depend on libraries that don't support Scala 3.
+   */
+  def scala213OnlyModules: Seq[ScalaModule] = Seq(
+    instrumentation.twitterFuture(Scala2Version),
+    instrumentation.scalazFuture(Scala2Version),
+    instrumentation.catsIo(Scala2Version),
+    instrumentation.alpakkaKafka(Scala2Version),
+    instrumentation.lagom(Scala2Version),
+    instrumentation.finagle(Scala2Version),
+    instrumentation.mongoLegacy(Scala2Version),
+    instrumentation.tapirLegacy(Scala2Version),
+    instrumentation.spring(Scala2Version),
+    instrumentation.play(Scala2Version)
+  )
+
+  /** All instrumentation modules to bundle, based on the Scala version */
+  def instrumentationModules: Seq[ScalaModule] = {
+    if (crossValue == Scala2Version) {
+      allScalaVersionModules ++ scala213OnlyModules
+    } else {
+      allScalaVersionModules
+    }
+  }
+
+  /**
+   * All modules to aggregate into the bundle jar.
+   * Combines all instrumentation modules, the annotation API, runtime attacher, and status page.
+   */
+  def aggregatedModules: Seq[JavaModule] = {
+    instrumentationModules ++ Seq(
+      instrumentation.annotationApi,
+      runtimeAttacher(crossValue),
+      core.statusPage(crossValue)
+    )
+  }
+
+  /**
+   * kamon-core and oshi-core are declared as external module/library dependencies,
+   * so they appear in the published POM but are not unpacked into the bundle jar.
+   */
+  def moduleDeps = Seq(
+    core.core(crossValue)
+  )
+
+  def mvnDeps = Seq(
+    Deps.oshiCore
+  )
+
+  /** 
+   * Override localClasspath to include compiled classes from all aggregated modules.
+   * This is how we aggregate all modules into a single jar.
+   */
+  override def localClasspath: T[Seq[PathRef]] = Task {
+    // Get our own compiled classes
+    val ownClasspath = super.localClasspath()
+    
+    // Get compiled classes from all aggregated modules
+    val aggregatedClasspaths = Task.traverse(aggregatedModules)(_.localClasspath)()
+    
+    (ownClasspath ++ aggregatedClasspaths.flatten).distinct
+  }
+
+  /**
+   * Merge resources from all aggregated modules (ensuring kanela-agent jar from
+   * runtimeAttacher, status-page/index.html from statusPage, and reference.conf
+   * from all modules are included).
+   */
+  override def resources: T[Seq[PathRef]] = Task {
+    val ownResources = super.resources()
+    
+    // Collect resources from all aggregated modules
+    val allResources = Task.traverse(aggregatedModules)(_.resources)()
+    
+    (ownResources ++ allResources.flatten).distinct
+  }
+
+  /**
+   * Assembly rules for creating the bundle jar.
+   * - Relocate byte-buddy-agent classes if present
+   * - Append reference.conf files (they use include directives, so order doesn't matter)
+   * - Exclude maven metadata
+   */
+  override def shadingRules = super.shadingRules ++ Seq(
+    Rule.Relocate("net.bytebuddy.agent.**", "kamon.lib.@0"),
+    Rule.Append("reference.conf"),
+    Rule.ExcludePattern("META-INF/maven.*"),
+    Rule.ExcludePattern(".*module-info\\.class")
+  )
+
+  /** Use the shaded/assembled jar as the published artifact */
+  override def jar: T[PathRef] = jarWithShadedDependencies
+}

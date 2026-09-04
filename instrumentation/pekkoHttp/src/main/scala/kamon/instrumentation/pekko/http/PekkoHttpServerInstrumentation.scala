@@ -316,7 +316,6 @@ object Http2BlueprintInterceptor {
     @Argument(1) handler: HttpRequest => Future[HttpResponse],
     @SuperCall zuper: Callable[Flow[HttpRequest, HttpResponse, NotUsed]]
   ): Flow[HttpRequest, HttpResponse, NotUsed] = {
-
     handler match {
       case HandlerWithEndpoint(interface, port, _) =>
         ServerFlowWrapper(zuper.call(), interface, port)

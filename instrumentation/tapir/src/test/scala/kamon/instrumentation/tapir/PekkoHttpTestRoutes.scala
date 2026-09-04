@@ -16,20 +16,20 @@
 
 package kamon.instrumentation.tapir
 
-import akka.http.scaladsl.server.Directives._
-import sttp.tapir.server.akkahttp.AkkaHttpServerInterpreter
+import org.apache.pekko.http.scaladsl.server.Directives._
+import sttp.tapir.server.pekkohttp.PekkoHttpServerInterpreter
 import sttp.tapir.{endpoint, path, plainBody}
 
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
 
-object AkkaHttpTestRoutes {
+object PekkoHttpTestRoutes {
 
   // hello/{}
   private val hello = endpoint.get
     .in("hello").in(path[String])
     .out(plainBody[String])
-  private val helloRoute = AkkaHttpServerInterpreter().toRoute(
+  private val helloRoute = PekkoHttpServerInterpreter().toRoute(
     hello.serverLogic[Future] { name => Future.successful(Right(name)) }
   )
 
@@ -39,7 +39,7 @@ object AkkaHttpTestRoutes {
     .in("with").in(path[Int])
     .in("mixed").in(path[Boolean]("other_param"))
     .in("types").out(plainBody[String])
-  private val nestedRoute = AkkaHttpServerInterpreter().toRoute(
+  private val nestedRoute = PekkoHttpServerInterpreter().toRoute(
     nested.serverLogic[Future] { x => Future.successful(Right[Unit, String](x.toString())) }
   )
 

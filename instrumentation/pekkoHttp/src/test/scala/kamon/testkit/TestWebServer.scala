@@ -37,14 +37,18 @@ import org.json4s.{DefaultFormats, native, Serialization}
 import kamon.tag.Lookups.plain
 import kamon.trace.Trace
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{Await, ExecutionContext, Future}
+import scala.concurrent.duration._
 
 trait TestWebServer extends TracingDirectives {
   implicit val serialization: Serialization = native.Serialization
   implicit val formats: DefaultFormats = DefaultFormats
   import Json4sSupport._
 
-  def startServer(interface: String, port: Int, https: Boolean = false)(implicit system: ActorSystem): WebServer = {
+  def startServer(interface: String, https: Boolean = false)(implicit system: ActorSystem): WebServer =
+    startServer(interface, 0, https)
+
+  def startServer(interface: String, port: Int, https: Boolean)(implicit system: ActorSystem): WebServer = {
     import Endpoints._
 
     implicit val ec: ExecutionContext = system.dispatcher
@@ -179,15 +183,18 @@ trait TestWebServer extends TracingDirectives {
       }
     }
 
-    if (https)
-      new WebServer(
-        interface,
-        port,
-        "https",
-        Http().newServerAt(interface, port).enableHttps(httpContext()).bind(Route.toFunction(routes))
-      )
+    val bindingFuture = if (https)
+      Http().newServerAt(interface, port).enableHttps(httpContext()).bind(Route.toFunction(routes))
     else
-      new WebServer(interface, port, "http", Http().newServerAt(interface, port).bindFlow(routes))
+      Http().newServerAt(interface, port).bindFlow(routes)
+
+    val binding = Await.result(bindingFuture, 10.seconds)
+    new WebServer(
+      binding.localAddress.getHostString,
+      binding.localAddress.getPort,
+      if (https) "https" else "http",
+      binding
+    )
   }
 
   def httpContext(): HttpsConnectionContext = {
@@ -249,10 +256,10 @@ trait TestWebServer extends TracingDirectives {
     val interface: String,
     val port: Int,
     val protocol: String,
-    bindingFuture: Future[Http.ServerBinding]
-  )(implicit ec: ExecutionContext) {
+    binding: Http.ServerBinding
+  ) {
     def shutdown(): Future[_] = {
-      bindingFuture.flatMap(binding => binding.unbind())
+      binding.unbind()
     }
   }
 
