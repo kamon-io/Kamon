@@ -11,18 +11,45 @@ jobs:
       JAVA_OPTS: -Xms5120M -Xmx5120M -Xss6M -XX:ReservedCodeCacheSize=256M -Dfile.encoding=UTF-8
       JVM_OPTS: -Xms5120M -Xmx5120M -Xss6M -XX:ReservedCodeCacheSize=256M -Dfile.encoding=UTF-8
     steps:
-      - uses: actions/checkout@v4
-      - run: git fetch -f --depth=1 origin '+refs/tags/*:refs/tags/*'
-      - uses: coursier/cache-action@v6
-      - uses: coursier/setup-action@v1
+      - name: Checkout repository
+        uses: actions/checkout@v4
         with:
-          jvm: zulu:17
-          apps: sbt
-      - name: Release
-        run: sbt ";+instrumentation/publishLocal; release"
+          fetch-depth: 0
+
+      - name: Fetch git tags
+        run: git fetch -f --depth=1 origin '+refs/tags/*:refs/tags/*'
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '21'
+
+      - name: Cache Mill and Coursier
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/mill
+            ~/.cache/coursier
+          key: ${{ runner.os }}-mill-${{ hashFiles('build.mill', '**/*.mill') }}
+          restore-keys: |
+            ${{ runner.os }}-mill-
+
+      - name: Publish to Maven Central
+        run: |
+          if [ -n "$MILL_PGP_SECRET_BASE64" ]; then
+            if ! echo "$MILL_PGP_SECRET_BASE64" | base64 -d > /dev/null 2>&1; then
+              export MILL_PGP_SECRET_BASE64="$(echo "$MILL_PGP_SECRET_BASE64" | base64 -w 0)"
+            fi
+          fi
+          ./mill --no-daemon mill.javalib.SonatypeCentralPublishModule/publishAll
         shell: bash
         env:
-          PGP_SECRET: ${{ secrets.PGP_SECRET }}
-          PGP_PASSPHRASE: ${{ secrets.PGP_PASSPHRASE }}
-          SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
-          SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
+          MILL_SONATYPE_USERNAME: ${{ secrets.MILL_SONATYPE_USERNAME || secrets.SONATYPE_USERNAME }}
+          MILL_SONATYPE_PASSWORD: ${{ secrets.MILL_SONATYPE_PASSWORD || secrets.SONATYPE_PASSWORD }}
+          MILL_PGP_SECRET_BASE64: ${{ secrets.MILL_PGP_SECRET_BASE64 || secrets.MILL_PGP_SECRET || secrets.PGP_SECRET }}
+          MILL_PGP_PASSPHRASE: ${{ secrets.MILL_PGP_PASSPHRASE || secrets.PGP_PASSPHRASE }}
+          SONATYPE_USERNAME: ${{ secrets.MILL_SONATYPE_USERNAME || secrets.SONATYPE_USERNAME }}
+          SONATYPE_PASSWORD: ${{ secrets.MILL_SONATYPE_PASSWORD || secrets.SONATYPE_PASSWORD }}
+          PGP_SECRET: ${{ secrets.MILL_PGP_SECRET_BASE64 || secrets.MILL_PGP_SECRET || secrets.PGP_SECRET }}
+          PGP_PASSPHRASE: ${{ secrets.MILL_PGP_PASSPHRASE || secrets.PGP_PASSPHRASE }}

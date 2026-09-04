@@ -1,0 +1,1293 @@
+package build.instrumentation
+
+import mill.*, scalalib.*, publish.*, build.*
+import mill.javalib.JavaModule
+import mill.javalib.Dep
+import mill.contrib.scalapblib.ScalaPBModule
+
+/** Base path for modules with custom test source paths */
+val InstrumentationRoot: os.Path = os.pwd / "instrumentation"
+
+trait GrpcTests extends ScalaPBModule { self: KamonModule#CrossSbtTests =>
+  def grpcCodegenDep: Dep
+  def grpcCodegenName: String
+  def grpcCodegenMainClass: String
+
+  def scalaPBVersion = Deps.scalaPbCodegenVersion
+  override def scalaPBFlatPackage = true
+  override def scalaPBGrpc = false
+  override def scalaPBProtocPath = Task { Some(scalaPBResolveProtoc().path.toString) }
+  override def scalaPBSources = Task.Sources("src/test/protobuf")
+
+  def grpcCodegenLauncher: T[PathRef] = Task {
+    val classpath = defaultResolver().classpath(Seq(grpcCodegenDep)).map(_.path).mkString(java.io.File.pathSeparator)
+    val launcher = Task.dest / s"protoc-gen-$grpcCodegenName"
+    os.write(
+      launcher,
+      s"#!/bin/sh\nexec java -cp '$classpath' $grpcCodegenMainClass \"$$@\"\n"
+    )
+    os.perms.set(launcher, os.PermSet.fromString("rwxr-xr-x"))
+    PathRef(launcher)
+  }
+
+  def compileGrpcServices: T[PathRef] = Task {
+    val sourceRoot = scalaPBSources().head.path
+    val protoFiles = os.walk(sourceRoot).filter(path => os.isFile(path) && path.ext == "proto")
+    val output = Task.dest
+    os.makeDir.all(output)
+    os.proc(
+      scalaPBResolveProtoc().path,
+      s"--plugin=protoc-gen-$grpcCodegenName=${grpcCodegenLauncher().path}",
+      s"--${grpcCodegenName}_out=language=scala,flat_package,generate_client=true,generate_server=true:$output",
+      s"--proto_path=$sourceRoot",
+      protoFiles
+    ).call()
+    PathRef(output)
+  }
+
+  override def generatedSources: T[Seq[PathRef]] = Task {
+    super.generatedSources() :+ compileGrpcServices()
+  }
+}
+
+/** Java-only annotation API module - no Scala dependency */
+object annotationApi extends annotationApi
+trait annotationApi extends JavaModule with SonatypeCentralPublishModule {
+
+  override def artifactName = "kamon-annotation-api"
+
+  def publishVersion: T[String] = kamonVersion
+
+  def pomSettings = PomSettings(
+    description = "Kamon Annotation API",
+    organization = "io.kamon",
+    url = "https://kamon.io",
+    licenses = Seq(License.`Apache-2.0`),
+    versionControl = VersionControl.github("kamon-io", "Kamon"),
+    developers = Seq(
+      Developer("Ivan", "Topolnjak", "https://github.com/ivantopo"),
+      Developer("Diego", "Parra", "https://github.com/dpsoft")
+    )
+  )
+
+  def javacOptions = CommonJavacOptions ++ Seq("-Xdoclint:none")
+  override def javadocOptions = Seq("-Xdoclint:none")
+}
+
+object annotation extends Cross[annotation](AllScalaVersions)
+trait annotation extends KamonModule {
+
+  override def artifactName = "kamon-annotation"
+
+  def moduleDeps = Seq(core.core(crossValue), annotationApi)
+
+  def compileMvnDeps = Seq(
+    Deps.kanelaAgent
+  )
+
+  // Dependencies to shade
+  def shadedMvnDeps = Seq(
+    Deps.caffeine,
+    Deps.glassfishEl
+  )
+
+  // Make shaded deps available at compile time
+  override def mandatoryMvnDeps = super.mandatoryMvnDeps() ++ shadedMvnDeps
+
+  // Shading rules
+  override def shadingRules = super.shadingRules ++ Seq(
+    Assembly.Rule.Relocate("javax.el.**", "kamon.lib.@1"),
+    Assembly.Rule.Relocate("com.sun.el.**", "kamon.lib.@1"),
+    Assembly.Rule.Relocate("com.github.benmanes.**", "kamon.lib.@1"),
+    Assembly.Rule.Relocate("com.google.errorprone.**", "kamon.lib.@1"),
+    Assembly.Rule.Relocate("org.checkerframework.**", "kamon.lib.@1"),
+    Assembly.Rule.ExcludePattern("META-INF/maven.*")
+  )
+
+  // Use shaded JAR as the published artifact
+  override def jar: T[PathRef] = jarWithShadedDependencies
+
+  object test extends TestWithKanelaAgent {
+    def moduleDeps = super.moduleDeps ++ Seq(core.testkit(crossValue))
+
+    def mvnDeps = Seq(
+      Deps.scalatest,
+      Deps.logbackClassic
+    )
+  }
+}
+
+object common extends Cross[common](AllScalaVersions)
+trait common extends KamonModule {
+
+  override def artifactName = "kamon-instrumentation-common"
+
+  def moduleDeps = Seq(core.core(crossValue))
+
+  def compileMvnDeps = Seq(
+    Deps.kanelaAgent
+  )
+
+  object test extends TestWithKanelaAgent {
+    def moduleDeps = super.moduleDeps ++ Seq(core.testkit(crossValue))
+
+    def mvnDeps = Seq(
+      Deps.scalatest,
+      Deps.slf4jApi,
+      Deps.kanelaAgent
+    )
+  }
+}
+
+object executors extends Cross[executors](AllScalaVersions) {
+  val ExperimentalTestClass = "kamon.instrumentation.executor.CaptureContextOnSubmitInstrumentationSpec"
+}
+trait executors extends KamonModule {
+
+  override def artifactName = "kamon-executors"
+
+  def moduleDeps = Seq(core.core(crossValue), common(crossValue))
+
+  def compileMvnDeps = Seq(
+    Deps.kanelaAgent
+  )
+
+  object test extends TestWithKanelaAgent {
+    def moduleDeps = super.moduleDeps ++ Seq(core.testkit(crossValue))
+
+    def mvnDeps = Seq(
+      Deps.scalatest,
+      Deps.logbackClassic,
+      Deps.guava
+    )
+
+    override def discoveredTestClasses: T[Seq[String]] = Task {
+      super.discoveredTestClasses().filterNot(_ == executors.ExperimentalTestClass)
+    }
+  }
+
+  object experimental extends Module {
+    object test extends TestWithKanelaAgent {
+      def moduleDeps = super.moduleDeps ++ Seq(core.testkit(crossValue))
+
+      def mvnDeps = Seq(
+        Deps.scalatest,
+        Deps.logbackClassic,
+        Deps.guava
+      )
+
+      override def forkArgs: T[Seq[String]] = Task {
+        super.forkArgs() ++ Seq(
+          "-Dkanela.modules.executor-service.enabled=false",
+          "-Dkanela.modules.executor-service-capture-on-submit.enabled=true"
+        )
+      }
+
+      override def discoveredTestClasses: T[Seq[String]] = Task {
+        super.discoveredTestClasses().filter(_ == executors.ExperimentalTestClass)
+      }
+    }
+  }
+}
+
+object twitterFuture extends Cross[twitterFuture](Scala2Version)
+trait twitterFuture extends KamonModule {
+
+  override def artifactName = "kamon-twitter-future"
+
+  def moduleDeps = Seq(core.core(crossValue), executors(crossValue))
+
+  def compileMvnDeps = Seq(
+    Deps.kanelaAgent,
+    Deps.twitterUtil
+  )
+
+  object test extends TestWithKanelaAgent {
+    def moduleDeps = super.moduleDeps ++ Seq(core.testkit(crossValue))
+
+    def mvnDeps = Seq(
+      Deps.scalatest,
+      Deps.logbackClassic,
+      Deps.twitterUtil
+    )
+  }
+}
+
+object scalazFuture extends Cross[scalazFuture](Scala2Version)
+trait scalazFuture extends KamonModule {
+
+  override def artifactName = "kamon-scalaz-future"
+
+  def moduleDeps = Seq(core.core(crossValue), executors(crossValue))
+
+  def compileMvnDeps = Seq(
+    Deps.kanelaAgent,
+    Deps.scalazConcurrent
+  )
+
+  object test extends TestWithKanelaAgent {
+    def moduleDeps = super.moduleDeps ++ Seq(core.testkit(crossValue))
+
+    def mvnDeps = Seq(
+      Deps.scalatest,
+      Deps.logbackClassic,
+      Deps.scalazConcurrent
+    )
+  }
+}
+
+object catsIo extends Cross[catsIo](Scala2Version)
+trait catsIo extends KamonModule {
+
+  override def artifactName = "kamon-cats-io"
+
+  def moduleDeps = Seq(core.core(crossValue), executors(crossValue))
+
+  def compileMvnDeps = Seq(
+    Deps.kanelaAgent,
+    Deps.catsEffect2
+  )
+
+  object test extends TestWithKanelaAgent {
+    def moduleDeps = super.moduleDeps ++ Seq(core.testkit(crossValue))
+
+    def mvnDeps = Seq(
+      Deps.scalatest,
+      Deps.logbackClassic,
+      Deps.catsEffect2
+    )
+  }
+}
+
+object catsIo3 extends Cross[catsIo3](AllScalaVersions)
+trait catsIo3 extends KamonModule {
+
+  override def artifactName = "kamon-cats-io-3"
+
+  def moduleDeps = Seq(core.core(crossValue), executors(crossValue))
+
+  def compileMvnDeps = Seq(
+    Deps.kanelaAgent,
+    Deps.catsEffect3
+  )
+
+  object test extends TestWithKanelaAgent {
+    def moduleDeps = super.moduleDeps ++ Seq(core.testkit(crossValue))
+
+    def mvnDeps = Seq(
+      Deps.scalatest,
+      Deps.logbackClassic,
+      Deps.catsEffect3
+    )
+  }
+}
+
+object scalaFuture extends Cross[scalaFuture](AllScalaVersions)
+trait scalaFuture extends KamonModule {
+
+  override def artifactName = "kamon-scala-future"
+
+  def moduleDeps = Seq(core.core(crossValue), executors(crossValue))
+
+  def compileMvnDeps = Seq(
+    Deps.kanelaAgent
+  )
+
+  object test extends TestWithKanelaAgent {
+    def moduleDeps = super.moduleDeps ++ Seq(core.testkit(crossValue))
+
+    def mvnDeps = Seq(
+      Deps.scalatest,
+      Deps.logbackClassic
+    )
+  }
+}
+
+object pekko extends Cross[pekko](AllScalaVersions)
+trait pekko extends KamonModule {
+
+  override def artifactName = "kamon-pekko"
+
+  def moduleDeps = Seq(core.core(crossValue), common(crossValue), scalaFuture(crossValue))
+
+  def compileMvnDeps = Seq(
+    Deps.kanelaAgent,
+    Deps.pekkoActor,
+    Deps.pekkoRemote,
+    Deps.pekkoCluster,
+    Deps.pekkoClusterSharding,
+    Deps.pekkoProtobuf
+  )
+
+  object test extends TestWithKanelaAgent {
+    def moduleDeps = super.moduleDeps ++ Seq(core.testkit(crossValue))
+
+    def mvnDeps = Seq(
+      Deps.scalatest,
+      Deps.logbackClassic,
+      Deps.kanelaAgent,
+      Deps.pekkoActor,
+      Deps.pekkoTestkit,
+      Deps.pekkoSlf4j,
+      Deps.pekkoRemote,
+      Deps.pekkoCluster,
+      Deps.pekkoClusterSharding,
+      Deps.pekkoProtobuf
+    )
+  }
+}
+
+object pekkoHttp extends Cross[pekkoHttp](AllScalaVersions)
+trait pekkoHttp extends KamonModule {
+
+  override def artifactName = "kamon-pekko-http"
+
+  def moduleDeps = Seq(core.core(crossValue), pekko(crossValue))
+
+  def compileMvnDeps = Seq(
+    Deps.kanelaAgent,
+    Deps.pekkoHttp,
+    Deps.pekkoStream
+  )
+
+  object test extends TestWithKanelaAgent {
+    def moduleDeps = super.moduleDeps ++ Seq(core.testkit(crossValue))
+
+    def mvnDeps = Seq(
+      Deps.scalatest,
+      Deps.logbackClassic,
+      Deps.slf4jApi,
+      Deps.slf4jNop,
+      Deps.okhttp,
+      Deps.pekkoActor,
+      Deps.pekkoStream,
+      Deps.pekkoHttpTestkit,
+      Deps.pekkoHttpJson4s,
+      Deps.json4sNative,
+      Deps.kanelaAgent
+    )
+  }
+}
+
+object pekkoGrpc extends Cross[pekkoGrpc](AllScalaVersions)
+trait pekkoGrpc extends KamonModule {
+
+  override def artifactName = "kamon-pekko-grpc"
+
+  def moduleDeps = Seq(core.core(crossValue), pekkoHttp(crossValue))
+
+  def compileMvnDeps = Seq(
+    Deps.kanelaAgent,
+    Deps.pekkoHttp,
+    Deps.pekkoStream,
+    Deps.pekkoDiscovery,
+    Deps.scalaPbRuntime,
+    Deps.pekkoGrpcRuntime,
+    Deps.grpcStub
+  )
+
+  object test extends TestWithKanelaAgent with GrpcTests {
+    def grpcCodegenDep = mvn"org.apache.pekko:pekko-grpc-codegen_2.13:1.0.1"
+    def grpcCodegenName = "pekko-grpc"
+    def grpcCodegenMainClass = "org.apache.pekko.grpc.gen.Main"
+
+    def moduleDeps = super.moduleDeps ++ Seq(core.testkit(crossValue))
+
+    def mvnDeps = Seq(
+      Deps.scalatest,
+      Deps.slf4jApi,
+      Deps.logbackClassic,
+      Deps.kanelaAgent,
+      Deps.pekkoActor,
+      Deps.pekkoHttp,
+      Deps.pekkoStream,
+      Deps.pekkoDiscovery,
+      Deps.scalaPbRuntime,
+      Deps.pekkoGrpcRuntime,
+      Deps.grpcStub
+    )
+  }
+}
+
+object pekkoConnectorsKafka extends Cross[pekkoConnectorsKafka](AllScalaVersions)
+trait pekkoConnectorsKafka extends KamonModule {
+
+  override def artifactName = "kamon-pekko-connectors-kafka"
+
+  def moduleDeps = Seq(core.core(crossValue), pekko(crossValue))
+
+  def compileMvnDeps = Seq(
+    Deps.kanelaAgent,
+    Deps.pekkoConnectorsKafka,
+    Deps.pekkoStream
+  )
+
+  object test extends TestWithKanelaAgent {
+    def moduleDeps = super.moduleDeps ++ Seq(core.testkit(crossValue))
+
+    def mvnDeps = Seq(
+      Deps.scalatest,
+      Deps.logbackClassic,
+      Deps.kanelaAgent
+    )
+  }
+}
+
+object akka extends Cross[akka](AllScalaVersions)
+trait akka extends KamonModule {
+
+  override def artifactName = "kamon-akka"
+
+  def moduleDeps = Seq(core.core(crossValue), common(crossValue), scalaFuture(crossValue))
+
+  def compileMvnDeps = Seq(
+    Deps.kanelaAgent,
+    Deps.akkaActor,
+    Deps.akkaRemote,
+    Deps.akkaCluster,
+    Deps.akkaClusterSharding,
+    Deps.akkaProtobuf
+  )
+
+  object test extends TestWithKanelaAgent {
+    def moduleDeps = super.moduleDeps ++ Seq(core.testkit(crossValue))
+
+    def mvnDeps = Seq(
+      Deps.scalatest,
+      Deps.logbackClassic,
+      Deps.kanelaAgent,
+      Deps.akkaActor,
+      Deps.akkaTestkit,
+      Deps.akkaSlf4j,
+      Deps.akkaRemote,
+      Deps.akkaCluster,
+      Deps.akkaClusterSharding,
+      Deps.akkaProtobuf
+    )
+  }
+}
+
+object akkaHttp extends Cross[akkaHttp](AllScalaVersions)
+trait akkaHttp extends KamonModule {
+
+  override def artifactName = "kamon-akka-http"
+
+  def moduleDeps = Seq(core.core(crossValue), akka(crossValue))
+
+  def compileMvnDeps = Seq(
+    Deps.kanelaAgent,
+    Deps.akkaHttp,
+    Deps.akkaHttp2Support,
+    Deps.akkaStream
+  )
+
+  object test extends TestWithKanelaAgent {
+    def moduleDeps = super.moduleDeps ++ Seq(core.testkit(crossValue))
+
+    def mvnDeps = Seq(
+      Deps.scalatest,
+      Deps.slf4jApi,
+      Deps.slf4jNop,
+      Deps.okhttp,
+      Deps.akkaHttp,
+      Deps.akkaStream,
+      Deps.akkaHttpTestkit,
+      Deps.akkaHttpJson4s,
+      Deps.json4sNative,
+      Deps.kanelaAgent
+    )
+  }
+}
+
+object akkaGrpc extends Cross[akkaGrpc](AllScalaVersions)
+trait akkaGrpc extends KamonModule {
+
+  override def artifactName = "kamon-akka-grpc"
+
+  def moduleDeps = Seq(core.core(crossValue), akkaHttp(crossValue))
+
+  def compileMvnDeps = Seq(
+    Deps.kanelaAgent,
+    Deps.akkaHttp,
+    Deps.akkaHttp2Support,
+    Deps.akkaStream,
+    Deps.akkaDiscovery,
+    Deps.scalaPbRuntime,
+    Deps.akkaGrpcRuntime,
+    Deps.grpcStub
+  )
+
+  object test extends TestWithKanelaAgent with GrpcTests {
+    def grpcCodegenDep = mvn"com.lightbend.akka.grpc:akka-grpc-codegen_2.13:${Deps.akkaGrpcVersion}"
+    def grpcCodegenName = "akka-grpc"
+    def grpcCodegenMainClass = "akka.grpc.gen.Main"
+
+    def moduleDeps = super.moduleDeps ++ Seq(core.testkit(crossValue))
+
+    def mvnDeps = Seq(
+      Deps.scalatest,
+      Deps.slf4jApi,
+      Deps.logbackClassic,
+      Deps.kanelaAgent,
+      Deps.akkaActor,
+      Deps.akkaHttp,
+      Deps.akkaHttp2Support,
+      Deps.akkaStream,
+      Deps.akkaDiscovery,
+      Deps.scalaPbRuntime,
+      Deps.akkaGrpcRuntime,
+      Deps.grpcStub
+    )
+  }
+}
+
+object alpakkaKafka extends Cross[alpakkaKafka](Scala2Version)
+trait alpakkaKafka extends KamonModule {
+
+  override def artifactName = "kamon-alpakka-kafka"
+
+  def moduleDeps = Seq(core.core(crossValue), akka(crossValue))
+
+  def compileMvnDeps = Seq(
+    Deps.kanelaAgent,
+    Deps.alpakkaKafka,
+    Deps.akkaStream
+  )
+
+  // No tests in this module
+}
+
+object jdbc extends Cross[jdbc](AllScalaVersions)
+trait jdbc extends KamonModule {
+
+  override def artifactName = "kamon-jdbc"
+
+  def moduleDeps = Seq(core.core(crossValue), executors(crossValue))
+
+  def compileMvnDeps = Seq(
+    Deps.jsqlparser,
+    Deps.kanelaAgent,
+    Deps.hikariCp,
+    Deps.mariadb,
+    Deps.slick(crossValue),
+    Deps.postgresql
+  )
+
+  object test extends TestWithKanelaAgent {
+    def moduleDeps = super.moduleDeps ++ Seq(core.testkit(crossValue))
+
+    def mvnDeps = Seq(
+      Deps.scalatest,
+      Deps.logbackClassic,
+      Deps.jsqlparser,  // Needed by instrumentation at runtime
+      Deps.slickHikariCp(crossValue),
+      Deps.h2,
+      Deps.postgresql,
+      Deps.mysqlConnector,
+      Deps.sqliteJdbc,
+      Deps.awsJdbcWrapper,
+      Deps.testContainersPostgres,
+      Deps.testContainersMysql
+    )
+  }
+}
+
+object logback extends Cross[logback](AllScalaVersions)
+trait logback extends KamonModule {
+
+  override def artifactName = "kamon-logback"
+
+  def moduleDeps = Seq(core.core(crossValue), common(crossValue))
+
+  def compileMvnDeps = Seq(
+    Deps.kanelaAgent,
+    Deps.logbackClassic
+  )
+
+  object test extends TestWithKanelaAgent {
+    def moduleDeps = super.moduleDeps ++ Seq(core.testkit(crossValue))
+
+    def mvnDeps = Seq(
+      Deps.scalatest,
+      Deps.logbackClassic,
+      Deps.kanelaAgent
+    )
+  }
+}
+
+object caffeine extends Cross[caffeine](AllScalaVersions)
+trait caffeine extends KamonModule {
+
+  override def artifactName = "kamon-caffeine"
+
+  def moduleDeps = Seq(core.core(crossValue), common(crossValue))
+
+  def compileMvnDeps = Seq(
+    Deps.kanelaAgent,
+    Deps.caffeine
+  )
+
+  object test extends TestWithKanelaAgent {
+    def moduleDeps = super.moduleDeps ++ Seq(core.testkit(crossValue))
+
+    def mvnDeps = Seq(
+      Deps.scalatest,
+      Deps.logbackClassic,
+      Deps.caffeine,
+      Deps.kanelaAgent
+    )
+  }
+}
+
+object lagom extends Cross[lagom](Scala2Version)
+trait lagom extends KamonModule {
+
+  override def artifactName = "kamon-lagom"
+
+  def moduleDeps = Seq(core.core(crossValue))
+
+  def compileMvnDeps = Seq(
+    Deps.lagomServer
+  )
+}
+
+object finagle extends Cross[finagle](Scala2Version)
+trait finagle extends KamonModule {
+
+  override def artifactName = "kamon-finagle"
+
+  def moduleDeps = Seq(core.core(crossValue), common(crossValue))
+
+  def compileMvnDeps = Seq(
+    Deps.kanelaAgent,
+    Deps.finagleHttp
+  )
+
+  object test extends TestWithKanelaAgent {
+    def moduleDeps = super.moduleDeps ++ Seq(core.testkit(crossValue))
+
+    def mvnDeps = Seq(
+      Deps.scalatest,
+      Deps.logbackClassic,
+      Deps.finagleHttp,
+      Deps.bijectionUtil,
+      Deps.kanelaAgent
+    )
+  }
+}
+
+object redis extends Cross[redis](AllScalaVersions)
+trait redis extends KamonModule {
+
+  override def artifactName = "kamon-redis"
+
+  def moduleDeps = Seq(core.core(crossValue), common(crossValue))
+
+  def compileMvnDeps = Seq(
+    Deps.kanelaAgent,
+    Deps.jedis,
+    Deps.lettuce,
+    Deps.rediscala
+  )
+
+  object test extends TestWithKanelaAgent {
+    def moduleDeps = super.moduleDeps ++ Seq(core.testkit(crossValue))
+
+    def mvnDeps = Seq(
+      Deps.scalatest,
+      Deps.logbackClassic,
+      Deps.jedis,
+      Deps.lettuce,
+      Deps.rediscala,
+      Deps.testContainers,
+      Deps.kanelaAgent
+    )
+  }
+}
+
+object mongo extends Cross[mongo](AllScalaVersions)
+trait mongo extends KamonModule {
+
+  override def artifactName = "kamon-mongo"
+
+  def moduleDeps = Seq(core.core(crossValue), common(crossValue))
+
+  def compileMvnDeps = Seq(
+    Deps.kanelaAgent,
+    Deps.mongoDriverSync,
+    Deps.mongoScalaDriver(crossValue),
+    Deps.mongoDriverReactive
+  )
+
+  object test extends TestWithKanelaAgent {
+    def moduleDeps = super.moduleDeps ++ Seq(core.testkit(crossValue))
+
+    def mvnDeps = Seq(
+      Deps.scalatest,
+      Deps.logbackClassic,
+      Deps.mongoDriverSync,
+      Deps.mongoScalaDriver(crossValue),
+      Deps.mongoDriverReactive,
+      Deps.testContainersMongo,
+      Deps.kanelaAgent
+    )
+  }
+}
+
+object mongoLegacy extends Cross[mongoLegacy](Scala2Version)
+trait mongoLegacy extends KamonModule {
+
+  override def artifactName = "kamon-mongo-legacy"
+
+  def moduleDeps = Seq(core.core(crossValue), common(crossValue))
+
+  def compileMvnDeps = Seq(
+    Deps.kanelaAgent,
+    Deps.mongoLegacyDriverSync,
+    Deps.mongoLegacyScalaDriver,
+    Deps.mongoLegacyDriverReactive
+  )
+
+  object test extends TestWithKanelaAgent {
+    def moduleDeps = super.moduleDeps ++ Seq(core.testkit(crossValue))
+
+    def mvnDeps = Seq(
+      Deps.scalatest,
+      Deps.logbackClassic,
+      Deps.mongoLegacyDriverSync,
+      Deps.mongoLegacyScalaDriver,
+      Deps.mongoLegacyDriverReactive,
+      Deps.testContainersMongo,
+      Deps.kanelaAgent
+    )
+  }
+}
+
+object okHttp extends Cross[okHttp](AllScalaVersions)
+trait okHttp extends KamonModule {
+
+  override def artifactName = "kamon-okhttp"
+
+  def moduleDeps = Seq(core.core(crossValue), executors(crossValue))
+
+  def compileMvnDeps = Seq(
+    Deps.kanelaAgent,
+    Deps.okhttp
+  )
+
+  object test extends TestWithKanelaAgent {
+    def moduleDeps = super.moduleDeps ++ Seq(core.testkit(crossValue))
+
+    def mvnDeps = Seq(
+      Deps.scalatest,
+      Deps.logbackClassic,
+      Deps.okhttp,
+      Deps.jettyServer,
+      Deps.jettyServlet,
+      Deps.kanelaAgent
+    )
+  }
+}
+
+object elasticsearch extends Cross[elasticsearch](AllScalaVersions)
+trait elasticsearch extends KamonModule {
+
+  override def artifactName = "kamon-elasticsearch"
+
+  def moduleDeps = Seq(core.core(crossValue), common(crossValue))
+
+  def compileMvnDeps = Seq(
+    Deps.kanelaAgent,
+    Deps.elasticsearchRestClient,
+    Deps.elasticsearchRestHighLevelClient
+  )
+
+  object test extends TestWithKanelaAgent {
+    def moduleDeps = super.moduleDeps ++ Seq(core.testkit(crossValue))
+
+    def mvnDeps = Seq(
+      Deps.scalatest,
+      Deps.logbackClassic,
+      Deps.elasticsearchRestClient,
+      Deps.elasticsearchRestHighLevelClient,
+      Deps.testContainersElasticsearch,
+      Deps.kanelaAgent
+    )
+  }
+}
+
+object opensearch extends Cross[opensearch](AllScalaVersions)
+trait opensearch extends KamonModule {
+
+  override def artifactName = "kamon-opensearch"
+
+  def moduleDeps = Seq(core.core(crossValue), common(crossValue))
+
+  def compileMvnDeps = Seq(
+    Deps.kanelaAgent,
+    Deps.opensearchRestClient,
+    Deps.opensearchRestHighLevelClient
+  )
+
+  object test extends TestWithKanelaAgent {
+    def moduleDeps = super.moduleDeps ++ Seq(core.testkit(crossValue))
+
+    def mvnDeps = Seq(
+      Deps.scalatest,
+      Deps.logbackClassic,
+      Deps.opensearchRestClient,
+      Deps.opensearchRestHighLevelClient,
+      Deps.testContainers,
+      Deps.kanelaAgent
+    )
+  }
+}
+
+object kafka extends Cross[kafka](AllScalaVersions)
+trait kafka extends KamonModule {
+
+  override def artifactName = "kamon-kafka"
+
+  def moduleDeps = Seq(core.core(crossValue), executors(crossValue))
+
+  def compileMvnDeps = Seq(
+    Deps.kanelaAgent,
+    Deps.kafkaClients
+  )
+
+  object test extends TestWithKanelaAgent {
+    def moduleDeps = super.moduleDeps ++ Seq(core.testkit(crossValue))
+
+    def mvnDeps = Seq(
+      Deps.scalatest,
+      Deps.logbackClassic,
+      Deps.kafkaClients,
+      Deps.testContainersKafka,
+      Deps.kanelaAgent
+    )
+  }
+}
+
+object apacheCxf extends Cross[apacheCxf](AllScalaVersions)
+trait apacheCxf extends KamonModule {
+
+  override def artifactName = "kamon-apache-cxf"
+
+  def moduleDeps = Seq(core.core(crossValue), executors(crossValue))
+
+  def compileMvnDeps = Seq(
+    Deps.kanelaAgent,
+    Deps.apacheCxfFrontendSimple,
+    Deps.slf4jApi
+  )
+
+  object test extends TestWithKanelaAgent {
+    def moduleDeps = super.moduleDeps ++ Seq(core.testkit(crossValue))
+
+    def mvnDeps = Seq(
+      Deps.scalatest,
+      Deps.logbackClassic,
+      Deps.apacheCxfFrontendSimple,
+      Deps.apacheCxfFrontendJaxws,
+      Deps.apacheCxfTransportsHttp,
+      Deps.jaxbApi,
+      Deps.mockServerClient,
+      Deps.testContainersMockServer,
+      Deps.kanelaAgent
+    )
+  }
+}
+
+object apacheHttpClient extends Cross[apacheHttpClient](AllScalaVersions)
+trait apacheHttpClient extends KamonModule {
+
+  override def artifactName = "kamon-apache-httpclient"
+
+  def moduleDeps = Seq(core.core(crossValue), executors(crossValue))
+
+  def compileMvnDeps = Seq(
+    Deps.kanelaAgent,
+    Deps.apacheHttpClient,
+    Deps.slf4jApi
+  )
+
+  object test extends TestWithKanelaAgent {
+    def moduleDeps = super.moduleDeps ++ Seq(core.testkit(crossValue))
+
+    def mvnDeps = Seq(
+      Deps.scalatest,
+      Deps.logbackClassic,
+      Deps.apacheHttpClient,
+      Deps.mockServerClient,
+      Deps.testContainersMockServer,
+      Deps.kanelaAgent
+    )
+  }
+}
+
+object systemMetrics extends Cross[systemMetrics](AllScalaVersions)
+trait systemMetrics extends KamonModule {
+
+  override def artifactName = "kamon-system-metrics"
+
+  def moduleDeps = Seq(core.core(crossValue))
+
+  def mvnDeps = Seq(
+    Deps.oshiCore
+  )
+
+  object test extends SbtTests with KamonScalaTest {
+    def moduleDeps = super.moduleDeps ++ Seq(core.testkit(crossValue))
+
+    def mvnDeps = Seq(
+      Deps.scalatest,
+      Deps.logbackClassic
+    )
+  }
+}
+
+object zio2 extends Cross[zio2](AllScalaVersions)
+trait zio2 extends KamonModule {
+
+  override def artifactName = "kamon-zio-2"
+
+  def moduleDeps = Seq(core.core(crossValue), executors(crossValue))
+
+  def compileMvnDeps = Seq(
+    Deps.kanelaAgent,
+    Deps.zio2
+  )
+
+  object test extends TestWithKanelaAgent {
+    def moduleDeps = super.moduleDeps ++ Seq(core.testkit(crossValue))
+
+    def mvnDeps = Seq(
+      Deps.scalatest,
+      Deps.logbackClassic,
+      Deps.zio2
+    )
+  }
+}
+
+object awsSdk extends Cross[awsSdk](AllScalaVersions)
+trait awsSdk extends KamonModule {
+
+  override def artifactName = "kamon-aws-sdk"
+
+  def moduleDeps = Seq(core.core(crossValue), executors(crossValue))
+
+  def compileMvnDeps = Seq(
+    Deps.kanelaAgent,
+    Deps.awsLambdaV1,
+    Deps.awsDynamoDbV2,
+    Deps.awsSqsV2
+  )
+
+  object test extends TestWithKanelaAgent {
+    def moduleDeps = super.moduleDeps ++ Seq(core.testkit(crossValue))
+
+    def mvnDeps = Seq(
+      Deps.scalatest,
+      Deps.logbackClassic,
+      Deps.awsDynamoDbV2,
+      Deps.testContainers
+    )
+  }
+}
+
+object tapir extends Cross[tapir](AllScalaVersions)
+trait tapir extends KamonModule {
+
+  override def artifactName = "kamon-tapir"
+
+  def moduleDeps = Seq(core.core(crossValue), akkaHttp(crossValue), pekkoHttp(crossValue))
+
+  def compileMvnDeps = Seq(
+    Deps.kanelaAgent,
+    Deps.tapirCore,
+    Deps.akkaHttp,
+    Deps.pekkoHttp
+  )
+
+  object test extends TestWithKanelaAgent {
+    def moduleDeps = super.moduleDeps ++ Seq(core.testkit(crossValue))
+
+    def mvnDeps = {
+      val commonDeps = Seq(
+        Deps.scalatest,
+        Deps.logbackClassic,
+        Deps.sttpClient,
+        Deps.pekkoHttp,
+        Deps.pekkoStream,
+          Deps.tapirPekkoHttpServer,
+      )
+
+      if(crossValue == Scala2Version)
+        commonDeps :+ Deps.tapirAkkaHttpServer
+      else
+        commonDeps
+
+    }
+  }
+}
+
+object tapirLegacy extends Cross[tapirLegacy](Scala2Version)
+trait tapirLegacy extends KamonModule {
+
+  override def artifactName = "kamon-tapir-legacy"
+
+  def moduleDeps = Seq(core.core(crossValue), akkaHttp(crossValue))
+
+  def compileMvnDeps = Seq(
+    Deps.kanelaAgent,
+    Deps.tapirCoreLegacy,
+    Deps.akkaHttp
+  )
+
+  object test extends TestWithKanelaAgent {
+    def moduleDeps = super.moduleDeps ++ Seq(core.testkit(crossValue))
+
+    def mvnDeps = Seq(
+      Deps.scalatest,
+      Deps.logbackClassic,
+      Deps.tapirAkkaHttpServerLegacy,
+      Deps.sttpClient,
+      Deps.akkaHttp,
+      Deps.akkaStream
+    )
+  }
+}
+
+object spring extends Cross[spring](Scala2Version)
+trait spring extends KamonModule {
+
+  override def artifactName = "kamon-spring"
+
+  def moduleDeps = Seq(core.core(crossValue), common(crossValue))
+
+  def compileMvnDeps = Seq(
+    Deps.kanelaAgent,
+    Deps.springBootStarterWeb,
+    Deps.springBootStarterWebflux,
+    Deps.javaxServletApi
+  )
+
+  object test extends TestWithKanelaAgent {
+    def moduleDeps = super.moduleDeps ++ Seq(core.testkit(crossValue))
+
+    def mvnDeps = Seq(
+      Deps.scalatest,
+      Deps.logbackClassic,
+      Deps.okhttp,
+      Deps.h2,
+      Deps.jaxbApi,
+      Deps.springBootStarterDataJpa,
+      Deps.springBootStarterWebflux,
+      Deps.javaxServletApi
+    )
+  }
+}
+
+object http4s10 extends Cross[http4s10](AllScalaVersions)
+trait http4s10 extends KamonModule {
+
+  override def artifactName = "kamon-http4s-1.0"
+
+  def moduleDeps = Seq(core.core(crossValue), common(crossValue))
+
+  def compileMvnDeps = Seq(
+    Deps.http4s10Client,
+    Deps.http4s10Server
+  )
+
+  object test extends SbtTests with KamonScalaTest {
+    def moduleDeps = super.moduleDeps ++ Seq(core.testkit(crossValue))
+
+    def mvnDeps = Seq(
+      Deps.scalatest,
+      Deps.http4s10BlazeClient,
+      Deps.http4s10BlazeServer,
+      Deps.http4s10Dsl
+    )
+  }
+}
+
+object http4s023 extends Cross[http4s023](AllScalaVersions)
+trait http4s023 extends KamonModule {
+
+  override def artifactName = "kamon-http4s-0.23"
+
+  def moduleDeps = Seq(core.core(crossValue), common(crossValue))
+
+  def compileMvnDeps = Seq(
+    Deps.http4s023Client,
+    Deps.http4s023Server
+  )
+
+  object test extends SbtTests with KamonScalaTest {
+    def moduleDeps = super.moduleDeps ++ Seq(core.testkit(crossValue))
+
+    def mvnDeps = Seq(
+      Deps.scalatest,
+      Deps.http4s023BlazeClient,
+      Deps.http4s023BlazeServer,
+      Deps.http4s023Dsl
+    )
+  }
+}
+
+/** Play Framework versions for cross-compilation */
+val PlayVersions = Seq("play28", "play29", "play30")
+
+/** Scala 2.13 only for Play modules (Play 2.8/2.9 don't support Scala 3) */
+val Scala213Only = Seq(build.Scala2Version)
+
+/** Base path for play module sources */
+val PlayModulePath: os.Path = InstrumentationRoot / "play"
+
+object play extends Cross[play](Scala213Only)
+trait play extends KamonModule {
+
+  override def artifactName = "kamon-play"
+
+  // Play depends on common (for HTTP instrumentation), akkaHttp and pekkoHttp (for ServerFlowWrapper)
+  def moduleDeps = Seq(core.core(crossValue), common(crossValue), akkaHttp(crossValue), pekkoHttp(crossValue))
+
+  // Play 2.8 dependencies are provided at compile time for main sources
+  def compileMvnDeps = Seq(
+    Deps.kanelaAgent,
+    Deps.play28,
+    Deps.play28NettyServer,
+    Deps.play28AkkaHttpServer,
+    Deps.play28AkkaHttp2Support,
+    Deps.play28Ws,
+    Deps.play28Test,
+    Deps.play28Logback,
+    Deps.scalatestPlusPlay28
+  )
+
+  /** Test module with Play version dimension */
+  object test extends Cross[PlayTestModule](PlayVersions)
+  trait PlayTestModule extends TestWithKanelaAgent with Cross.Module[String] {
+    def playVersion: String = crossValue
+
+    def moduleDeps = super.moduleDeps ++ Seq(core.testkit(play.this.crossValue))
+
+    // All Play versions use the same test sources from the parent module
+    override def sources: T[Seq[PathRef]] = Task.Sources(
+      PlayModulePath / "src" / "test" / "scala"
+    )
+
+    override def resources: T[Seq[PathRef]] = Task.Sources(
+      PlayModulePath / "src" / "test" / "resources"
+    )
+
+    // Extra JVM args for Play 2.8 (Java module exports)
+    override def forkArgs: T[Seq[String]] = Task {
+      val baseArgs = super.forkArgs()
+      playVersion match {
+        case "play28" => baseArgs ++ Seq(
+          "--add-exports=java.base/sun.security.x509=ALL-UNNAMED",
+          "--add-opens=java.base/sun.security.ssl=ALL-UNNAMED"
+        )
+        case _ => baseArgs
+      }
+    }
+
+    def mvnDeps = {
+      val baseDeps = Seq(Deps.scalatest)
+
+      playVersion match {
+        case "play28" => baseDeps ++ Seq(
+          Deps.play28,
+          Deps.play28NettyServer,
+          Deps.play28AkkaHttpServer,
+          Deps.play28AkkaHttp2Support,
+          Deps.play28Ws,
+          Deps.play28Test,
+          Deps.play28Logback,
+          Deps.scalatestPlusPlay28,
+          Deps.guice,
+          Deps.guiceAssistedInject
+        )
+        case "play29" => baseDeps ++ Seq(
+          Deps.play29,
+          Deps.play29NettyServer,
+          Deps.play29AkkaHttpServer,
+          Deps.play29AkkaHttp2Support,
+          Deps.play29Ws,
+          Deps.play29Test,
+          Deps.play29Logback,
+          Deps.scalatestPlusPlay29
+        )
+        case "play30" => baseDeps ++ Seq(
+          Deps.play30,
+          Deps.play30NettyServer,
+          Deps.play30PekkoHttpServer,
+          Deps.play30PekkoHttp2Support,
+          Deps.play30Ws,
+          Deps.play30Test,
+          Deps.play30Logback,
+          Deps.scalatestPlusPlay30
+        )
+      }
+    }
+  }
+}
+
+/** Cassandra driver versions for cross-compilation */
+val CassandraDriverVersions = Seq("cas3", "cas4")
+
+/** Base path for cassandra module sources */
+val CassandraModulePath: os.Path = InstrumentationRoot / "cassandra"
+
+object cassandra extends Cross[cassandra](AllScalaVersions)
+trait cassandra extends KamonModule {
+
+  override def artifactName = "kamon-cassandra"
+
+  def moduleDeps = Seq(core.core(crossValue), executors(crossValue))
+
+  // Both driver versions are provided at compile time since main code works with both
+  def compileMvnDeps = Seq(
+    Deps.kanelaAgent,
+    Deps.cassandra3xDriver,
+    Deps.cassandra4xDriverCore,
+    Deps.cassandra4xQueryBuilder
+  )
+
+  /** Test module with additional Cassandra driver version dimension */
+  object test extends Cross[CassandraTestModule](CassandraDriverVersions)
+  trait CassandraTestModule extends TestWithKanelaAgent with Cross.Module[String] {
+    def cassandraDriverVersion: String = crossValue
+
+    def moduleDeps = super.moduleDeps ++ Seq(core.testkit(cassandra.this.crossValue))
+
+    def testSourceDir: String = cassandraDriverVersion match {
+      case "cas3" => "testCas3"
+      case "cas4" => "testCas4"
+    }
+
+    // Override sources to point to the driver-specific test directory
+    override def sources: T[Seq[PathRef]] = Task.Sources(
+      CassandraModulePath / "src" / testSourceDir / "scala"
+    )
+
+    override def resources: T[Seq[PathRef]] = Task.Sources(
+      CassandraModulePath / "src" / testSourceDir / "resources"
+    )
+
+    def mvnDeps = {
+      val baseDeps = Seq(
+        Deps.scalatest,
+        Deps.logbackClassic,
+        Deps.testContainersCassandra
+      )
+
+      cassandraDriverVersion match {
+        case "cas3" => baseDeps :+ Deps.cassandra3xDriver
+        case "cas4" => baseDeps ++ Seq(Deps.cassandra4xDriverCore, Deps.cassandra4xQueryBuilder)
+      }
+    }
+  }
+}
