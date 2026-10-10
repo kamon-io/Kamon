@@ -25,7 +25,8 @@ import org.apache.pekko.dispatch.{
   ExecutorServiceFactoryProvider,
   ForkJoinExecutorConfigurator,
   PinnedDispatcherConfigurator,
-  ThreadPoolExecutorConfigurator
+  ThreadPoolExecutorConfigurator,
+  ThreadPoolExecutorServiceFactoryProvider
 }
 import kamon.Kamon
 import kamon.instrumentation.pekko.PekkoInstrumentation
@@ -77,6 +78,16 @@ class DispatcherInstrumentation extends InstrumentationBuilder {
     .advise(method("createExecutorServiceFactory"), classOf[CopyDispatcherInfoToExecutorServiceFactory])
 
   /**
+      * Pekko 2.x moved createExecutorServiceFactory from ThreadPoolConfig to a default method on the
+      * ThreadPoolExecutorServiceFactoryProvider trait, implemented by ThreadPoolExecutorConfigurator and PinnedDispatcher.
+      */
+  onType("org.apache.pekko.dispatch.ThreadPoolExecutorServiceFactoryProvider")
+    .advise(
+      method("createExecutorServiceFactory"),
+      classOf[CopyDispatcherInfoFromThreadPoolExecutorServiceFactoryProvider]
+    )
+
+  /**
       * This ensures that the ActorSystem name is not lost when creating PinnedDispatcher instances.
       */
   onType("org.apache.pekko.dispatch.ThreadPoolConfig")
@@ -114,6 +125,22 @@ object CopyDispatcherInfoToExecutorServiceFactory {
     @Advice.Return factory: Any
   ): Unit = {
     val factoryWithMixins = factory.asInstanceOf[HasDispatcherName with HasDispatcherPrerequisites]
+    factoryWithMixins.setDispatcherPrerequisites(poolConfig.dispatcherPrerequisites)
+    factoryWithMixins.setDispatcherName(dispatcherName)
+  }
+}
+
+class CopyDispatcherInfoFromThreadPoolExecutorServiceFactoryProvider
+object CopyDispatcherInfoFromThreadPoolExecutorServiceFactoryProvider {
+
+  @Advice.OnMethodExit
+  @static def exit(
+    @Advice.This provider: ThreadPoolExecutorServiceFactoryProvider,
+    @Advice.Argument(0) dispatcherName: String,
+    @Advice.Return factory: Any
+  ): Unit = {
+    val factoryWithMixins = factory.asInstanceOf[HasDispatcherName with HasDispatcherPrerequisites]
+    val poolConfig = provider.threadPoolConfig.asInstanceOf[HasDispatcherPrerequisites]
     factoryWithMixins.setDispatcherPrerequisites(poolConfig.dispatcherPrerequisites)
     factoryWithMixins.setDispatcherName(dispatcherName)
   }

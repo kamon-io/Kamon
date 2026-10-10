@@ -95,7 +95,7 @@ public final class ContextAwareWireFormats_Pekko {
               if (((bitField0_ & 0x00000001) != 0)) {
                 subBuilder = ack_.toBuilder();
               }
-              ack_ = input.readMessage(org.apache.pekko.remote.WireFormats.AcknowledgementInfo.PARSER, extensionRegistry);
+              ack_ = input.readMessage(org.apache.pekko.remote.WireFormats.AcknowledgementInfo.parser(), extensionRegistry);
               if (subBuilder != null) {
                 subBuilder.mergeFrom(ack_);
                 ack_ = subBuilder.buildPartial();
@@ -974,7 +974,7 @@ public final class ContextAwareWireFormats_Pekko {
               if (((bitField0_ & 0x00000001) != 0)) {
                 subBuilder = recipient_.toBuilder();
               }
-              recipient_ = input.readMessage(org.apache.pekko.remote.WireFormats.ActorRefData.PARSER, extensionRegistry);
+              recipient_ = input.readMessage(org.apache.pekko.remote.WireFormats.ActorRefData.parser(), extensionRegistry);
               if (subBuilder != null) {
                 subBuilder.mergeFrom(recipient_);
                 recipient_ = subBuilder.buildPartial();
@@ -987,7 +987,7 @@ public final class ContextAwareWireFormats_Pekko {
               if (((bitField0_ & 0x00000002) != 0)) {
                 subBuilder = message_.toBuilder();
               }
-              message_ = input.readMessage(org.apache.pekko.remote.WireFormats.SerializedMessage.PARSER, extensionRegistry);
+              message_ = input.readMessage(org.apache.pekko.remote.WireFormats.SerializedMessage.parser(), extensionRegistry);
               if (subBuilder != null) {
                 subBuilder.mergeFrom(message_);
                 message_ = subBuilder.buildPartial();
@@ -1000,7 +1000,7 @@ public final class ContextAwareWireFormats_Pekko {
               if (((bitField0_ & 0x00000004) != 0)) {
                 subBuilder = sender_.toBuilder();
               }
-              sender_ = input.readMessage(org.apache.pekko.remote.WireFormats.ActorRefData.PARSER, extensionRegistry);
+              sender_ = input.readMessage(org.apache.pekko.remote.WireFormats.ActorRefData.parser(), extensionRegistry);
               if (subBuilder != null) {
                 subBuilder.mergeFrom(sender_);
                 sender_ = subBuilder.buildPartial();

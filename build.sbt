@@ -131,7 +131,7 @@ val instrumentationProjects = Seq[ProjectReference](
   `kamon-system-metrics`,
   `kamon-akka`,
   `kamon-akka-http`,
-  `kamon-akka-grpc`,
+  // TEMPORARY (Pekko 2 experiment, do not merge): `kamon-akka-grpc`,
   `kamon-pekko`,
   `kamon-pekko-http`,
   `kamon-pekko-grpc`,
@@ -511,6 +511,8 @@ lazy val `kamon-akka-http` = (project in file("instrumentation/kamon-akka-http")
   ))
   .dependsOn(`kamon-akka`, `kamon-testkit` % "test")
 
+lazy val pekkoVersion = "2.0.0-M4"
+
 lazy val `kamon-pekko` = (project in file("instrumentation/kamon-pekko"))
   .enablePlugins(JavaAgent)
   .disablePlugins(AssemblyPlugin)
@@ -518,7 +520,7 @@ lazy val `kamon-pekko` = (project in file("instrumentation/kamon-pekko"))
   .settings(Seq(
     crossScalaVersions := Seq(`scala_2.13_version`, scala_3_version),
     libraryDependencies ++= Seq(
-      "org.apache.pekko" %% "pekko-actor" % "1.0.1" % "provided"
+      "org.apache.pekko" %% "pekko-actor" % pekkoVersion % "provided"
     )
   ))
   .dependsOn(
@@ -526,7 +528,7 @@ lazy val `kamon-pekko` = (project in file("instrumentation/kamon-pekko"))
     `kamon-testkit` % "test"
   )
 
-lazy val pekkoHttpVersion = "1.0.0"
+lazy val pekkoHttpVersion = "2.0.0-M2"
 
 lazy val `kamon-pekko-http` = (project in file("instrumentation/kamon-pekko-http"))
   .enablePlugins(JavaAgent)
@@ -537,7 +539,7 @@ lazy val `kamon-pekko-http` = (project in file("instrumentation/kamon-pekko-http
     libraryDependencies ++= Seq(
       kanelaAgent % "provided",
       "org.apache.pekko" %% "pekko-http" % pekkoHttpVersion % "provided",
-      "org.apache.pekko" %% "pekko-stream" % "1.0.1" % "provided",
+      "org.apache.pekko" %% "pekko-stream" % pekkoVersion % "provided",
       scalatest % "test",
       slf4jApi % "test",
       slf4jnop % "test",
@@ -558,10 +560,10 @@ lazy val `kamon-pekko-grpc` = (project in file("instrumentation/kamon-pekko-grpc
     libraryDependencies ++= Seq(
       kanelaAgent % "provided",
       "org.apache.pekko" %% "pekko-http" % pekkoHttpVersion % "provided",
-      "org.apache.pekko" %% "pekko-stream" % "1.0.1" % "provided",
-      "org.apache.pekko" %% "pekko-discovery" % "1.0.0" % "provided",
+      "org.apache.pekko" %% "pekko-stream" % pekkoVersion % "provided",
+      "org.apache.pekko" %% "pekko-discovery" % pekkoVersion % "provided",
       "com.thesamet.scalapb" %% "scalapb-runtime" % "0.11.8" % "provided",
-      "org.apache.pekko" %% "pekko-grpc-runtime" % "1.0.0" % "provided",
+      "org.apache.pekko" %% "pekko-grpc-runtime" % "2.0.0-M2" % "provided",
       "io.grpc" % "grpc-stub" % "1.43.2" % "provided",
       scalatest % "test",
       slf4jApi % "test",
@@ -577,36 +579,37 @@ lazy val `kamon-pekko-connectors-kafka` = (project in file("instrumentation/kamo
     crossScalaVersions := Seq(`scala_2.13_version`, scala_3_version),
     libraryDependencies ++= Seq(
       kanelaAgent % "provided",
-      "org.apache.pekko" %% "pekko-connectors-kafka" % "1.0.0" % "provided",
-      "org.apache.pekko" %% "pekko-stream" % "1.0.1" % "provided",
+      "org.apache.pekko" %% "pekko-connectors-kafka" % "2.0.0-M1" % "provided",
+      "org.apache.pekko" %% "pekko-stream" % pekkoVersion % "provided",
       scalatest % "test",
       logbackClassic % "test"
     )
   ).dependsOn(`kamon-core`, `kamon-pekko`, `kamon-testkit` % "test")
 
-lazy val `kamon-akka-grpc` = (project in file("instrumentation/kamon-akka-grpc"))
-  .enablePlugins(JavaAgent, AkkaGrpcPlugin)
-  .disablePlugins(AssemblyPlugin)
-  .settings(instrumentationSettings)
-  .settings(Seq(
-    PB.additionalDependencies := Seq.empty,
-    crossScalaVersions := Seq(`scala_2.13_version`, scala_3_version),
-    libraryDependencies ++= Seq(
-      kanelaAgent % "provided",
-      "com.typesafe.akka" %% "akka-http" % akkaHttpVersion(scalaBinaryVersion.value) % "provided",
-      "com.typesafe.akka" %% "akka-http2-support" % akkaHttpVersion(scalaBinaryVersion.value) % "provided",
-      "com.typesafe.akka" %% "akka-stream" % akkaStreamVersion(scalaBinaryVersion.value) % "provided",
-      "com.typesafe.akka" %% "akka-discovery" % akkaStreamVersion(scalaBinaryVersion.value) % "provided",
-
-      // gRPC-specific dependencies provided by the sbt-akka-grpc plugin. We
-      "com.thesamet.scalapb" %% "scalapb-runtime" % "0.11.8" % "provided",
-      "com.lightbend.akka.grpc" %% "akka-grpc-runtime" % akkaGrpcRuntimeVersion(scalaBinaryVersion.value) % "provided",
-      "io.grpc" % "grpc-stub" % "1.43.2" % "provided",
-      scalatest % "test",
-      slf4jApi % "test",
-      logbackClassic % "test"
-    )
-  )).dependsOn(`kamon-akka-http`, `kamon-testkit` % "test")
+// TEMPORARY (Pekko 2 experiment, do not merge): kamon-akka-grpc disabled because sbt-akka-grpc conflicts with pekko-grpc-sbt-plugin 2.x
+// lazy val `kamon-akka-grpc` = (project in file("instrumentation/kamon-akka-grpc"))
+//   .enablePlugins(JavaAgent, AkkaGrpcPlugin)
+//   .disablePlugins(AssemblyPlugin)
+//   .settings(instrumentationSettings)
+//   .settings(Seq(
+//     PB.additionalDependencies := Seq.empty,
+//     crossScalaVersions := Seq(`scala_2.13_version`, scala_3_version),
+//     libraryDependencies ++= Seq(
+//       kanelaAgent % "provided",
+//       "com.typesafe.akka" %% "akka-http" % akkaHttpVersion(scalaBinaryVersion.value) % "provided",
+//       "com.typesafe.akka" %% "akka-http2-support" % akkaHttpVersion(scalaBinaryVersion.value) % "provided",
+//       "com.typesafe.akka" %% "akka-stream" % akkaStreamVersion(scalaBinaryVersion.value) % "provided",
+//       "com.typesafe.akka" %% "akka-discovery" % akkaStreamVersion(scalaBinaryVersion.value) % "provided",
+//
+//       // gRPC-specific dependencies provided by the sbt-akka-grpc plugin. We
+//       "com.thesamet.scalapb" %% "scalapb-runtime" % "0.11.8" % "provided",
+//       "com.lightbend.akka.grpc" %% "akka-grpc-runtime" % akkaGrpcRuntimeVersion(scalaBinaryVersion.value) % "provided",
+//       "io.grpc" % "grpc-stub" % "1.43.2" % "provided",
+//       scalatest % "test",
+//       slf4jApi % "test",
+//       logbackClassic % "test"
+//     )
+//   )).dependsOn(`kamon-akka-http`, `kamon-testkit` % "test")
 
 lazy val `kamon-play` = (project in file("instrumentation/kamon-play"))
   .enablePlugins(JavaAgent)
@@ -1108,7 +1111,7 @@ lazy val `kamon-bundle-dependencies-2-13` = (project in file("bundle/kamon-bundl
   )
   .dependsOn(
     `kamon-bundle-dependencies-all`,
-    `kamon-akka-grpc`,
+    // TEMPORARY (Pekko 2 experiment, do not merge): `kamon-akka-grpc`,
     `kamon-cats-io-3`,
     `kamon-zio-2`,
     `kamon-finagle`,
@@ -1145,7 +1148,7 @@ lazy val `kamon-bundle-dependencies-3` = (project in file("bundle/kamon-bundle-d
     `kamon-system-metrics`,
     `kamon-akka`,
     `kamon-akka-http`,
-    `kamon-akka-grpc`,
+    // TEMPORARY (Pekko 2 experiment, do not merge): `kamon-akka-grpc`,
     `kamon-redis`,
     `kamon-okhttp`,
     `kamon-caffeine`,

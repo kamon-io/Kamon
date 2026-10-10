@@ -6,7 +6,9 @@ import kamon.instrumentation.pekko.http.HasMatchingContext.PathMatchingContext
 import kanela.agent.api.instrumentation.InstrumentationBuilder
 import kanela.agent.api.instrumentation.mixin.Initializer
 import kanela.agent.libs.net.bytebuddy.implementation.bind.annotation._
-import kanela.agent.libs.net.bytebuddy.matcher.ElementMatchers.isPublic
+import kanela.agent.libs.net.bytebuddy.description.method.MethodDescription
+import kanela.agent.libs.net.bytebuddy.description.`type`.TypeDescription
+import kanela.agent.libs.net.bytebuddy.matcher.ElementMatchers.{declaresMethod, isDeclaredBy, isPublic, named, not}
 import org.apache.pekko.NotUsed
 import org.apache.pekko.http.scaladsl.marshalling.{ToEntityMarshaller, ToResponseMarshallable, ToResponseMarshaller}
 import org.apache.pekko.http.scaladsl.model.StatusCodes.Redirection
@@ -35,9 +37,20 @@ class PekkoHttpServerInstrumentation extends InstrumentationBuilder {
     * One important point about the HTTP Server instrumentation is that because it is almost impossible to have a proper
     * operation name before the request processing hits the routing tree, we are delaying the sampling decision to the
     * point at which we have some operation name.
+    *
+    * Pekko HTTP 2.x removed bindAndHandle, leaving bindAndHandleImpl. In 1.x bindAndHandleImpl delegates to
+    * bindAndHandle, so bindAndHandleImpl is only advised when bindAndHandle doesn't exist, to avoid wrapping twice.
     */
   onType("org.apache.pekko.http.scaladsl.HttpExt")
-    .advise(method("bindAndHandle"), classOf[HttpExtBindAndHandleAdvice])
+    .advise(
+      method("bindAndHandle").or(
+        named[MethodDescription]("bindAndHandleImpl")
+          .and(isDeclaredBy[MethodDescription](
+            not[TypeDescription](declaresMethod[TypeDescription](named[MethodDescription]("bindAndHandle")))
+          ))
+      ),
+      classOf[HttpExtBindAndHandleAdvice]
+    )
 
   /**
     * For the HTTP/2 instrumentation, since the parts where we can capture the interface/port and the actual flow
@@ -322,7 +335,13 @@ object Http2BlueprintInterceptor {
         ServerFlowWrapper(zuper.call(), interface, port)
 
       case _ =>
-        zuper.call()
+        // Pekko HTTP 2.x wraps the handler before calling handleWithStreamIdHeader, hiding HandlerWithEndpoint. The call
+        // still happens within Http2Ext.bindAndHandleAsync, so the endpoint can be read from there.
+        val endpoint = FlowOpsMapAsyncAdvice.currentEndpoint.get()
+        if (endpoint != null)
+          ServerFlowWrapper(zuper.call(), endpoint.listenInterface, endpoint.listenPort)
+        else
+          zuper.call()
     }
   }
 }

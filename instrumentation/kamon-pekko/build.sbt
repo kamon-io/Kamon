@@ -4,7 +4,7 @@ inConfig(Compile)(Defaults.compileSettings ++ Seq(
   crossScalaVersions := Seq(`scala_2.13_version`, scala_3_version)
 ))
 
-val pekkoVersion = "1.0.1"
+val pekkoVersion = "2.0.0-M4"
 libraryDependencies ++= Seq(
   kanelaAgent % "provided",
   scalatest % Test,
@@ -15,7 +15,7 @@ libraryDependencies ++= Seq(
   "org.apache.pekko" %% "pekko-remote" % pekkoVersion % "provided,test",
   "org.apache.pekko" %% "pekko-cluster" % pekkoVersion % "provided,test",
   "org.apache.pekko" %% "pekko-cluster-sharding" % pekkoVersion % "provided,test",
-  "org.apache.pekko" %% "pekko-protobuf" % pekkoVersion % "provided,test",
+  "org.apache.pekko" %% "pekko-protobuf-v3" % pekkoVersion % "provided,test",
   "org.apache.pekko" %% "pekko-testkit" % pekkoVersion % Test
 )
 
@@ -35,3 +35,6 @@ lazy val baseTestSettings = Seq(
 inConfig(Test)(Defaults.testSettings ++ instrumentationSettings ++ baseTestSettings ++ Seq(
   crossScalaVersions := Seq(`scala_2.13_version`, scala_3_version)
 ))
+
+// Agrona (used by Pekko 2 Artery) needs access to jdk.internal.misc.Unsafe
+Test / javaOptions += "--add-exports=java.base/jdk.internal.misc=ALL-UNNAMED"

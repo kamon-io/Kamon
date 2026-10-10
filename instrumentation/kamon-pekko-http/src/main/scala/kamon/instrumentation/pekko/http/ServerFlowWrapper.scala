@@ -168,7 +168,7 @@ object ServerFlowWrapper {
                     val responseSizeCounter = new AtomicLong(0L)
                     responseWithContext.entity.transformDataBytes(
                       Flow[ByteString]
-                        .watchTermination()(Keep.right)
+                        .watchTermination(Keep.right)
                         .wireTap(bs => responseSizeCounter.addAndGet(bs.size))
                         .mapMaterializedValue { f =>
                           f.andThen {
