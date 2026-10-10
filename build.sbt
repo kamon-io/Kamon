@@ -580,7 +580,9 @@ lazy val `kamon-pekko-connectors-kafka` = (project in file("instrumentation/kamo
       "org.apache.pekko" %% "pekko-connectors-kafka" % "1.0.0" % "provided",
       "org.apache.pekko" %% "pekko-stream" % "1.0.1" % "provided",
       scalatest % "test",
-      logbackClassic % "test"
+      logbackClassic % "test",
+      "org.apache.pekko" %% "pekko-connectors-kafka-testkit" % "1.0.0" % "test" intransitive (),
+      "org.apache.pekko" %% "pekko-testkit" % "1.0.1" % "test"
     )
   ).dependsOn(`kamon-core`, `kamon-pekko`, `kamon-testkit` % "test")
 

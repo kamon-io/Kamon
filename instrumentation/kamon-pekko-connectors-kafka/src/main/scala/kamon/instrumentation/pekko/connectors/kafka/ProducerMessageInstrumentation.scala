@@ -26,6 +26,9 @@ import kamon.context.Storage.Scope
 import kamon.instrumentation.context.HasContext
 import kanela.agent.api.instrumentation.InstrumentationBuilder
 import kanela.agent.libs.net.bytebuddy.asm.Advice
+import kanela.agent.libs.net.bytebuddy.matcher.ElementMatchers.nameEndsWith
+
+import scala.annotation.static
 
 class ProducerMessageInstrumentation extends InstrumentationBuilder {
 
@@ -40,13 +43,15 @@ class ProducerMessageInstrumentation extends InstrumentationBuilder {
     "org.apache.pekko.kafka.internal.DefaultProducerStageLogic",
     "org.apache.pekko.kafka.internal.CommittingProducerSinkStageLogic"
   )
-    .advise(method("produce"), ProduceWithEnvelopeContext)
+    // CommittingProducerSinkStageLogic.produce is private and compiles to a name-mangled method
+    .advise(method("produce").or(nameEndsWith("$$produce")), classOf[ProduceWithEnvelopeContext])
 }
 
+class ProduceWithEnvelopeContext
 object ProduceWithEnvelopeContext {
 
   @Advice.OnMethodEnter
-  def enter(@Advice.Argument(0) envelope: Any): Storage.Scope = {
+  @static def enter(@Advice.Argument(0) envelope: Any): Storage.Scope = {
     envelope match {
       case hasContext: HasContext => Kamon.storeContext(hasContext.context)
       case _                      => Scope.Empty
@@ -54,6 +59,6 @@ object ProduceWithEnvelopeContext {
   }
 
   @Advice.OnMethodExit(onThrowable = classOf[Throwable])
-  def exit(@Advice.Enter scope: Storage.Scope): Unit =
+  @static def exit(@Advice.Enter scope: Storage.Scope): Unit =
     scope.close()
 }
