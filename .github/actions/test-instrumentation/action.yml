@@ -1,0 +1,14 @@
+name: Test instrumentation
+description: Run one instrumentation test group using the prepared Mill environment.
+inputs:
+  group:
+    description: Instrumentation group to run (akka, pekko, play, or other).
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: Run instrumentation tests
+      shell: bash
+      env:
+        INSTRUMENTATION_GROUP: ${{ inputs.group }}
+      run: python3 "$GITHUB_ACTION_PATH/test-instrumentation.py" "$INSTRUMENTATION_GROUP"

@@ -5,6 +5,9 @@
 .pygments-cache
 .DS_Store
 
+# Mill specific
+out/
+
 # sbt specific
 dist/*
 target/

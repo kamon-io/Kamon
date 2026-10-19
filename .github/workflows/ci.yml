@@ -1,6 +1,6 @@
-name: Test all the things
+name: CI
 
-on:
+"on":
   pull_request:
   push:
     branches:
@@ -11,26 +11,184 @@ env:
   JVM_OPTS: -Xms5120M -Xmx5120M -Xss6M -XX:ReservedCodeCacheSize=256M -Dfile.encoding=UTF-8
 
 jobs:
-  ci:
-    runs-on: ubuntu-latest
+  compile:
+    name: Compile everything
+    runs-on: ubuntu-26.04
+    outputs:
+      artifact-id: ${{ steps.compiled.outputs.artifact-id }}
     steps:
-      - uses: actions/checkout@v4
-      - run: git fetch -f --depth=1 origin '+refs/tags/*:refs/tags/*'
-      - uses: coursier/cache-action@v6
-      - uses: coursier/setup-action@v1
+      - name: Checkout repository
+        uses: actions/checkout@v5
         with:
-          jvm: zulu:17
-          apps: sbt
-      - name: Test
-        run: sbt -v ";+core/test;+instrumentation/test;+reporters/test"
-  lint:
-    runs-on: ubuntu-latest
+          fetch-depth: 0
+
+      - name: Set up Mill
+        uses: ./.github/actions/setup-mill
+
+      - name: Verify build loading
+        run: ./mill --no-daemon version
+
+      - name: Check Scala formatting
+        run: ./mill --no-daemon mill.scalalib.scalafmt.ScalafmtModule/checkFormatAll
+
+      - name: Compile all modules
+        run: ./mill --no-daemon '__.compile'
+
+      - name: Archive compiled output
+        run: |
+          tar -czf "$RUNNER_TEMP/mill-compiled.tar.gz" \
+            --exclude='out/mill-daemon' \
+            --exclude='out/mill-no-daemon' \
+            --exclude='out/mill-out-lock' \
+            --exclude='out/mill-worker-*' \
+            out
+
+      - name: Get short commit SHA
+        id: commit
+        run: echo "short-sha=${GITHUB_SHA:0:7}" >> "$GITHUB_OUTPUT"
+
+      - name: Upload compiled output
+        id: compiled
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: mill-compiled-${{ steps.commit.outputs.short-sha }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/mill-compiled.tar.gz
+          if-no-files-found: error
+          compression-level: 0
+
+  core:
+    name: Run core tests
+    needs: compile
+    runs-on: ubuntu-26.04
     steps:
-      - uses: actions/checkout@v4
-      - uses: coursier/cache-action@v6
-      - uses: coursier/setup-action@v1
+      - name: Checkout repository
+        uses: actions/checkout@v5
         with:
-          jvm: zulu:17
-          apps: sbt
-      - name: Test
-        run: sbt -v "+scalafmtCheckAll;scalafmtSbtCheck"
+          fetch-depth: 0
+
+      - name: Set up Mill
+        uses: ./.github/actions/setup-mill
+        with:
+          artifact-id: ${{ needs.compile.outputs.artifact-id }}
+
+      - name: Test core modules
+        run: ./mill --no-daemon 'core.__.testForked'
+
+  instrumentation-akka:
+    name: Run Akka tests
+    needs: [compile, core]
+    runs-on: ubuntu-26.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Set up Mill
+        uses: ./.github/actions/setup-mill
+        with:
+          artifact-id: ${{ needs.compile.outputs.artifact-id }}
+
+      - name: Test Akka instrumentation
+        uses: ./.github/actions/test-instrumentation
+        with:
+          group: akka
+
+  instrumentation-pekko:
+    name: Run Pekko tests
+    needs: [compile, core]
+    runs-on: ubuntu-26.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Set up Mill
+        uses: ./.github/actions/setup-mill
+        with:
+          artifact-id: ${{ needs.compile.outputs.artifact-id }}
+
+      - name: Test Pekko instrumentation
+        uses: ./.github/actions/test-instrumentation
+        with:
+          group: pekko
+
+  instrumentation-play:
+    name: Run Play tests
+    needs: [compile, core]
+    runs-on: ubuntu-26.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Set up Mill
+        uses: ./.github/actions/setup-mill
+        with:
+          artifact-id: ${{ needs.compile.outputs.artifact-id }}
+
+      - name: Test Play instrumentation
+        uses: ./.github/actions/test-instrumentation
+        with:
+          group: play
+
+  instrumentation-other:
+    name: Run all other tests
+    needs: [compile, core]
+    runs-on: ubuntu-26.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Set up Mill
+        uses: ./.github/actions/setup-mill
+        with:
+          artifact-id: ${{ needs.compile.outputs.artifact-id }}
+
+      - name: Test other instrumentation
+        uses: ./.github/actions/test-instrumentation
+        with:
+          group: other
+
+  exporters:
+    name: Run reporter tests
+    needs: [compile, core]
+    runs-on: ubuntu-26.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Set up Mill
+        uses: ./.github/actions/setup-mill
+        with:
+          artifact-id: ${{ needs.compile.outputs.artifact-id }}
+
+      - name: Test reporters
+        run: ./mill --no-daemon -j 1 'reporters.__.testForked'
+
+  bundle:
+    name: Verify release packaging
+    needs: [compile, core]
+    runs-on: ubuntu-26.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Set up Mill
+        uses: ./.github/actions/setup-mill
+        with:
+          artifact-id: ${{ needs.compile.outputs.artifact-id }}
+
+      - name: Verify published bundles
+        run: ./mill --no-daemon 'bundle.bundle.__.verifyJar'
+
+      - name: Generate release artifacts
+        run: ./mill --no-daemon '__.publishArtifacts'

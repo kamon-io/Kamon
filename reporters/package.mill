@@ -1,0 +1,268 @@
+package build.reporters
+
+import mill.*, scalalib.*, build.*
+import mill.javalib.Assembly.Rule
+
+object apm extends Cross[apm](AllScalaVersions)
+trait apm extends KamonModule {
+
+  override def artifactName = "kamon-apm-reporter"
+
+  def moduleDeps = Seq(core.core(crossValue))
+
+  def compileMvnDeps = shadedMvnDeps
+
+  def shadedMvnDeps = Seq(
+    Deps.okhttp,
+    Deps.protobuf
+  )
+
+  override def shadingRules = super.shadingRules ++ Seq(
+    Rule.Relocate("fastparse.**", "kamon.apm.shaded.@1"),
+    Rule.Relocate("fansi.**", "kamon.apm.shaded.@1"),
+    Rule.Relocate("sourcecode.**", "kamon.apm.shaded.@1"),
+    Rule.Relocate("com.google.protobuf.**", "kamon.apm.shaded.@1"),
+    Rule.Relocate("google.protobuf.**", "kamon.apm.shaded.@1"),
+    Rule.Relocate("okhttp3.**", "kamon.apm.shaded.@1"),
+    Rule.Relocate("okio.**", "kamon.apm.shaded.@1"),
+    Rule.ExcludePattern("META-INF/maven.*")
+  )
+
+  override def jar: T[PathRef] = jarWithShadedDependencies
+
+  object test extends SbtTests with KamonScalaTest {
+    def moduleDeps = super.moduleDeps ++ Seq(core.testkit(crossValue))
+
+    def mvnDeps = {
+      val commonDeps = Seq(
+        mvn"ch.qos.logback:logback-classic:1.2.3",
+        Deps.scalatest
+      ) ++ shadedMvnDeps
+
+      val akkaDeps = if (crossValue == Scala2Version) {
+        Seq(
+          mvn"com.typesafe.akka::akka-http:10.1.8",
+          mvn"com.typesafe.akka::akka-stream:2.5.23",
+          mvn"com.typesafe.akka::akka-testkit:2.5.23"
+        )
+      } else {
+        Seq(
+          mvn"com.typesafe.akka:akka-http_2.13:10.1.8",
+          mvn"com.typesafe.akka:akka-stream_2.13:2.5.23",
+          mvn"com.typesafe.akka:akka-testkit_2.13:2.5.23"
+        )
+      }
+
+      commonDeps ++ akkaDeps
+    }
+  }
+}
+
+object datadog extends Cross[datadog](AllScalaVersions)
+trait datadog extends KamonModule {
+
+  override def artifactName = "kamon-datadog"
+
+  def moduleDeps = Seq(core.core(crossValue))
+
+  def mvnDeps = Seq(
+    Deps.nanojson
+  )
+
+  def compileMvnDeps = shadedMvnDeps
+
+  def shadedMvnDeps = Seq(
+    Deps.okhttp
+  )
+
+  override def shadingRules = super.shadingRules ++ Seq(
+    Rule.Relocate("okhttp3.**", "kamon.lib.@1"),
+    Rule.Relocate("okio.**", "kamon.lib.@1"),
+    Rule.ExcludePattern("META-INF/maven.*")
+  )
+
+  override def jar: T[PathRef] = jarWithShadedDependencies
+
+  object test extends SbtTests with KamonScalaTest {
+    def moduleDeps = super.moduleDeps ++ Seq(core.testkit(crossValue))
+
+    def mvnDeps = {
+      val baseDeps = Seq(
+        Deps.scalatest,
+        Deps.slf4jApi,
+        Deps.slf4jNop,
+        Deps.okhttpMock
+      ) ++ shadedMvnDeps
+
+      if (crossValue == Scala2Version) {
+        baseDeps :+ mvn"com.typesafe.play::play-json:2.7.4"
+      } else {
+        baseDeps :+ mvn"com.typesafe.play:play-json_2.13:2.7.4"
+      }
+    }
+  }
+}
+
+object prometheus extends Cross[prometheus](AllScalaVersions)
+trait prometheus extends KamonModule {
+
+  override def artifactName = "kamon-prometheus"
+
+  def moduleDeps = Seq(core.core(crossValue))
+
+  def mvnDeps = Seq(
+    Deps.okhttp
+  )
+
+  object test extends SbtTests with KamonScalaTest {
+    def moduleDeps = super.moduleDeps ++ Seq(core.testkit(crossValue))
+
+    def mvnDeps = Seq(
+      Deps.scalatest,
+      Deps.logbackClassic
+    )
+  }
+}
+
+object statsd extends Cross[statsd](AllScalaVersions)
+trait statsd extends KamonModule {
+
+  override def artifactName = "kamon-statsd"
+
+  def moduleDeps = Seq(core.core(crossValue))
+
+  object test extends SbtTests with KamonScalaTest {
+    def moduleDeps = super.moduleDeps ++ Seq(core.testkit(crossValue))
+
+    def mvnDeps = Seq(
+      Deps.scalatest
+    )
+  }
+}
+
+object zipkin extends Cross[zipkin](AllScalaVersions)
+trait zipkin extends KamonModule {
+
+  override def artifactName = "kamon-zipkin"
+
+  def moduleDeps = Seq(core.core(crossValue))
+
+  def mvnDeps = Seq(
+    mvn"io.zipkin.reporter2:zipkin-reporter:3.3.0",
+    mvn"io.zipkin.reporter2:zipkin-sender-okhttp3:3.3.0"
+  )
+
+  object test extends SbtTests with KamonScalaTest {
+    def moduleDeps = super.moduleDeps ++ Seq(core.testkit(crossValue))
+
+    def mvnDeps = Seq(
+      Deps.scalatest
+    )
+  }
+}
+
+object jaeger extends Cross[jaeger](AllScalaVersions)
+trait jaeger extends KamonModule {
+
+  override def artifactName = "kamon-jaeger"
+
+  def moduleDeps = Seq(core.core(crossValue))
+
+  def mvnDeps = Seq(
+    mvn"io.jaegertracing:jaeger-thrift:1.8.1"
+  )
+
+  object test extends SbtTests with KamonScalaTest {
+    def moduleDeps = super.moduleDeps ++ Seq(core.testkit(crossValue))
+
+    def mvnDeps = Seq(
+      Deps.scalatest
+    )
+  }
+}
+
+object influxdb extends Cross[influxdb](AllScalaVersions)
+trait influxdb extends KamonModule {
+
+  override def artifactName = "kamon-influxdb"
+
+  def moduleDeps = Seq(core.core(crossValue))
+
+  def mvnDeps = Seq(
+    Deps.okhttp
+  )
+
+  object test extends SbtTests with KamonScalaTest {
+    def moduleDeps = super.moduleDeps ++ Seq(core.testkit(crossValue))
+
+    def mvnDeps = Seq(
+      Deps.scalatest,
+      Deps.okhttpMock
+    )
+  }
+}
+
+object graphite extends Cross[graphite](AllScalaVersions)
+trait graphite extends KamonModule {
+
+  override def artifactName = "kamon-graphite"
+
+  def moduleDeps = Seq(core.core(crossValue))
+
+  object test extends SbtTests with KamonScalaTest {
+    def moduleDeps = super.moduleDeps ++ Seq(core.testkit(crossValue))
+
+    def mvnDeps = Seq(
+      Deps.scalatest,
+      Deps.logbackClassic
+    )
+  }
+}
+
+object newrelic extends Cross[newrelic](AllScalaVersions)
+trait newrelic extends KamonModule {
+
+  override def artifactName = "kamon-newrelic"
+
+  def moduleDeps = Seq(core.core(crossValue))
+
+  def mvnDeps = Seq(
+    mvn"com.newrelic.telemetry:telemetry-core:0.16.0",
+    mvn"com.newrelic.telemetry:telemetry-http-okhttp:0.16.0"
+  )
+
+  object test extends SbtTests with KamonScalaTest {
+    def moduleDeps = super.moduleDeps ++ Seq(core.testkit(crossValue))
+
+    def mvnDeps = Seq(
+      Deps.scalatest,
+      mvn"org.mockito:mockito-core:3.12.4"
+    )
+  }
+}
+
+object opentelemetry extends Cross[opentelemetry](AllScalaVersions)
+trait opentelemetry extends KamonModule {
+
+  override def artifactName = "kamon-opentelemetry"
+
+  def moduleDeps = Seq(core.core(crossValue))
+
+  def mvnDeps = Seq(
+    mvn"io.opentelemetry:opentelemetry-exporter-otlp:1.35.0"
+  )
+
+  // Compile-time dependency required in Scala 3
+  def compileMvnDeps = Seq(
+    mvn"com.google.auto.value:auto-value-annotations:1.9"
+  )
+
+  object test extends SbtTests with KamonScalaTest {
+    def moduleDeps = super.moduleDeps ++ Seq(core.testkit(crossValue))
+
+    def mvnDeps = Seq(
+      Deps.scalatest,
+      Deps.logbackClassic
+    )
+  }
+}

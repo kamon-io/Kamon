@@ -1,0 +1,75 @@
+package build.core
+
+import mill.*, scalalib.*, build.*
+import mill.javalib.Assembly.Rule
+
+object core extends Cross[core](AllScalaVersions)
+trait core extends KamonModule with BuildInfoSettings {
+
+  override def artifactName = "kamon-core"
+
+  def mvnDeps = Seq(
+    Deps.typesafeConfig,
+    Deps.slf4jApi
+  )
+
+  def compileMvnDeps = Seq(
+    mvn"com.oracle.substratevm:svm:19.2.1"
+  ) ++ shadedMvnDeps
+
+  def shadedMvnDeps = Seq(
+    Deps.hdrHistogram,
+    Deps.jctools
+  )
+
+  override def shadingRules = super.shadingRules ++ Seq(
+    Rule.Relocate("org.HdrHistogram.**", "kamon.lib.org.HdrHistogram.@1"),
+    Rule.Relocate("org.jctools.**", "kamon.lib.org.jctools.@1"),
+    Rule.ExcludePattern("META-INF/maven.*")
+  )
+
+  override def jar: T[PathRef] = jarWithShadedDependencies
+
+  object test extends SbtTests with KamonScalaTest {
+    def moduleDeps = super.moduleDeps ++ Seq(testkit(crossValue))
+  }
+}
+
+object testkit extends Cross[testkit](AllScalaVersions)
+trait testkit extends KamonModule {
+
+  override def artifactName = "kamon-testkit"
+
+  def moduleDeps = Seq(core(crossValue))
+
+  def compileMvnDeps = Seq(
+    Deps.hdrHistogram
+  )
+
+  def mvnDeps = Seq(
+    Deps.scalatest
+  )
+}
+
+object statusPage extends Cross[statusPage](AllScalaVersions)
+trait statusPage extends KamonModule {
+
+  override def artifactName = "kamon-status-page"
+
+  def moduleDeps = Seq(core(crossValue))
+
+  def compileMvnDeps = shadedMvnDeps
+
+  def shadedMvnDeps = Seq(
+    mvn"com.grack:nanojson:1.6",
+    mvn"org.nanohttpd:nanohttpd:2.3.1"
+  )
+
+  override def shadingRules = super.shadingRules ++ Seq(
+    Rule.Relocate("com.grack.nanojson.**", "kamon.lib.@1"),
+    Rule.Relocate("fi.iki.elonen.**" , "kamon.lib.@1"),
+    Rule.ExcludePattern("META-INF/maven.*")
+  )
+
+  override def jar: T[PathRef] = jarWithShadedDependencies
+}
