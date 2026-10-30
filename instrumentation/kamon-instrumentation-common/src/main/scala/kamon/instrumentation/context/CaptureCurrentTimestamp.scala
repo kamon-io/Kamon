@@ -37,10 +37,11 @@ object CaptureCurrentTimestampOnEnter {
   * Advise that copies the current System.nanoTime into a HasTimestamp instance when the advised method finishes
   * executing.
   */
+class CaptureCurrentTimestampOnExit private ()
 object CaptureCurrentTimestampOnExit {
 
   @Advice.OnMethodExit
-  def exit(@Advice.This hasTimestamp: HasTimestamp): Unit =
+  @static def exit(@Advice.This hasTimestamp: HasTimestamp): Unit =
     hasTimestamp.setTimestamp(System.nanoTime())
 
 }
