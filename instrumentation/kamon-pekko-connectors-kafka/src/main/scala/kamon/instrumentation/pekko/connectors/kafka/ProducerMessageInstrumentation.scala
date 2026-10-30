@@ -27,6 +27,8 @@ import kamon.instrumentation.context.HasContext
 import kanela.agent.api.instrumentation.InstrumentationBuilder
 import kanela.agent.libs.net.bytebuddy.asm.Advice
 
+import scala.annotation.static
+
 class ProducerMessageInstrumentation extends InstrumentationBuilder {
 
   /**
@@ -43,10 +45,11 @@ class ProducerMessageInstrumentation extends InstrumentationBuilder {
     .advise(method("produce"), ProduceWithEnvelopeContext)
 }
 
+class ProduceWithEnvelopeContext private ()
 object ProduceWithEnvelopeContext {
 
   @Advice.OnMethodEnter
-  def enter(@Advice.Argument(0) envelope: Any): Storage.Scope = {
+  @static def enter(@Advice.Argument(0) envelope: Any): Storage.Scope = {
     envelope match {
       case hasContext: HasContext => Kamon.storeContext(hasContext.context)
       case _                      => Scope.Empty
@@ -54,6 +57,6 @@ object ProduceWithEnvelopeContext {
   }
 
   @Advice.OnMethodExit(onThrowable = classOf[Throwable])
-  def exit(@Advice.Enter scope: Storage.Scope): Unit =
+  @static def exit(@Advice.Enter scope: Storage.Scope): Unit =
     scope.close()
 }
