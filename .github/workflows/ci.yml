@@ -11,26 +11,128 @@ env:
   JVM_OPTS: -Xms5120M -Xmx5120M -Xss6M -XX:ReservedCodeCacheSize=256M -Dfile.encoding=UTF-8
 
 jobs:
-  ci:
+  compile:
+    name: Compile everything
     runs-on: ubuntu-latest
+    outputs:
+      artifact-id: ${{ steps.compiled.outputs.artifact-id }}
     steps:
       - uses: actions/checkout@v4
-      - run: git fetch -f --depth=1 origin '+refs/tags/*:refs/tags/*'
-      - uses: coursier/cache-action@v6
-      - uses: coursier/setup-action@v1
         with:
-          jvm: zulu:17
-          apps: sbt
-      - name: Test
-        run: sbt -v ";+core/test;+instrumentation/test;+reporters/test"
-  lint:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: coursier/cache-action@v6
-      - uses: coursier/setup-action@v1
-        with:
-          jvm: zulu:17
-          apps: sbt
-      - name: Test
+          fetch-depth: 0
+      - uses: ./.github/actions/setup-sbt
+      - name: Check formatting
         run: sbt -v "+scalafmtCheckAll;scalafmtSbtCheck"
+      - name: Compile all production and test configurations
+        run: sbt -v ciCompile
+      - name: Archive compiled output
+        # Include Zinc analysis, managed sources, resources, and the compiled build definition.
+        run: |
+          find . -type d -name target -prune -print0 |
+            tar --null -T - -czf "$RUNNER_TEMP/sbt-compiled.tar.gz"
+      - name: Upload compiled output
+        id: compiled
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbt-compiled-${{ github.sha }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/sbt-compiled.tar.gz
+          if-no-files-found: error
+          compression-level: 0
+
+  core:
+    name: Run core tests
+    needs: compile
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/setup-sbt
+        with:
+          artifact-id: ${{ needs.compile.outputs.artifact-id }}
+      - name: Test core modules
+        run: sbt -v "+core/test"
+
+  instrumentation-akka:
+    name: Run Akka tests
+    needs: [compile, core]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/setup-sbt
+        with:
+          artifact-id: ${{ needs.compile.outputs.artifact-id }}
+      - name: Test Akka instrumentation
+        run: sbt -v "+ciAkka/test"
+
+  instrumentation-pekko:
+    name: Run Pekko tests
+    needs: [compile, core]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/setup-sbt
+        with:
+          artifact-id: ${{ needs.compile.outputs.artifact-id }}
+      - name: Test Pekko instrumentation
+        run: sbt -v "+ciPekko/test"
+
+  instrumentation-play:
+    name: Run Play tests
+    needs: [compile, core]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/setup-sbt
+        with:
+          artifact-id: ${{ needs.compile.outputs.artifact-id }}
+      - name: Test Play instrumentation
+        run: sbt -v "+ciPlay/test"
+
+  instrumentation-other:
+    name: Run all other tests
+    needs: [compile, core]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/setup-sbt
+        with:
+          artifact-id: ${{ needs.compile.outputs.artifact-id }}
+      - name: Test other instrumentation
+        run: sbt -v "+ciOther/test"
+
+  reporters:
+    name: Run reporter tests
+    needs: [compile, core]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/setup-sbt
+        with:
+          artifact-id: ${{ needs.compile.outputs.artifact-id }}
+      - name: Test reporters
+        run: sbt -v "+reporters/test"
+
+  bundle:
+    name: Verify release packaging
+    needs: [compile, core]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/setup-sbt
+        with:
+          artifact-id: ${{ needs.compile.outputs.artifact-id }}
+      - name: Generate release artifacts without publishing
+        run: sbt -v "+bundle/packageBin;+packageBin;+packageSrc;+makePom"
