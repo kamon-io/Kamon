@@ -135,6 +135,7 @@ val instrumentationProjects = Seq[ProjectReference](
   `kamon-pekko`,
   `kamon-pekko-http`,
   `kamon-pekko-grpc`,
+  `kamon-pekko-connectors-kafka`,
   `kamon-play`,
   `kamon-okhttp`,
   `kamon-tapir`,
@@ -155,6 +156,51 @@ lazy val instrumentation = (project in file("instrumentation"))
   .settings(noPublishing: _*)
   .settings(crossScalaVersions := Nil)
   .aggregate(instrumentationProjects: _*)
+
+// Keep the CI groups disjoint; new instrumentation belongs to "other" by default.
+val akkaCiProjects = Seq[ProjectReference](
+  `kamon-akka`,
+  `kamon-akka-http`,
+  `kamon-akka-grpc`,
+  `kamon-alpakka-kafka`,
+  `kamon-lagom`
+)
+val pekkoCiProjects = Seq[ProjectReference](
+  `kamon-pekko`,
+  `kamon-pekko-http`,
+  `kamon-pekko-grpc`,
+  `kamon-pekko-connectors-kafka`
+)
+val playCiProjects = Seq[ProjectReference](`kamon-play`)
+
+def ciGroup(id: String, projects: Seq[ProjectReference]) =
+  Project(id, file(s"target/ci/$id"))
+    .disablePlugins(AssemblyPlugin)
+    .settings(noPublishing: _*)
+    .settings(crossScalaVersions := Nil)
+    .aggregate(projects: _*)
+
+lazy val ciAkka = ciGroup("ciAkka", akkaCiProjects)
+lazy val ciPekko = ciGroup("ciPekko", pekkoCiProjects)
+lazy val ciPlay = ciGroup("ciPlay", playCiProjects)
+lazy val ciOther = ciGroup(
+  "ciOther",
+  instrumentationProjects.diff(akkaCiProjects ++ pekkoCiProjects ++ playCiProjects)
+)
+
+// Test / compile alone does not reach configurations invoked by custom Test / test tasks.
+lazy val ciCompileTests = taskKey[Unit]("Compile custom test configurations for CI")
+
+addCommandAlias(
+  "ciCompile",
+  Seq(
+    "+Test/compile",
+    "+kamon-akka/ciCompileTests",
+    "+kamon-play/ciCompileTests",
+    "+kamon-cassandra/ciCompileTests",
+    "+kamon-tapir/ciCompileTests"
+  ).mkString(";", ";", "")
+)
 
 lazy val `kamon-instrumentation-common` = (project in file("instrumentation/kamon-instrumentation-common"))
   .disablePlugins(AssemblyPlugin)
@@ -371,6 +417,13 @@ lazy val `kamon-cassandra` = (project in file("instrumentation/kamon-cassandra")
   .enablePlugins(JavaAgent)
   .settings(instrumentationSettings)
   .settings(crossScalaVersions := Seq(`scala_2.13_version`))
+  .settings(
+    ciCompileTests := {
+      (ConfigKey("testCas3") / compile).value
+      (ConfigKey("testCas4") / compile).value
+      ()
+    }
+  )
   .dependsOn(`kamon-core`, `kamon-instrumentation-common`, `kamon-testkit` % "test", `kamon-executors`)
 
 lazy val `kamon-elasticsearch` = (project in file("instrumentation/kamon-elasticsearch"))
@@ -470,6 +523,13 @@ lazy val `kamon-akka` = (project in file("instrumentation/kamon-akka"))
   .enablePlugins(JavaAgent)
   .disablePlugins(AssemblyPlugin)
   .settings(instrumentationSettings: _*)
+  .settings(
+    // SBT's shell parser cannot address the dotted configuration name directly.
+    ciCompileTests := {
+      (ConfigKey("test-akka-2.6") / compile).value
+      ()
+    }
+  )
   .dependsOn(
     `kamon-scala-future` % "compile,common,akka-2.6",
     `kamon-testkit` % "test,test-common,test-akka-2.6"
@@ -613,7 +673,13 @@ lazy val `kamon-play` = (project in file("instrumentation/kamon-play"))
   .disablePlugins(AssemblyPlugin)
   .settings(
     instrumentationSettings,
-    crossScalaVersions := Seq(`scala_2.13_version`)
+    crossScalaVersions := Seq(`scala_2.13_version`),
+    ciCompileTests := {
+      (ConfigKey("test-play-28") / compile).value
+      (ConfigKey("test-play-29") / compile).value
+      (ConfigKey("test-play-30") / compile).value
+      ()
+    }
   )
   .dependsOn(
     `kamon-akka` % "compile,test-common,test-play-28,test-play-29",
@@ -644,6 +710,10 @@ lazy val `kamon-tapir` = (project in file("instrumentation/kamon-tapir"))
   .settings(
     instrumentationSettings,
     crossScalaVersions := Seq(`scala_2.13_version`),
+    ciCompileTests := {
+      (ConfigKey("test-legacy") / compile).value
+      ()
+    },
     libraryDependencies ++= Seq(
       kanelaAgent % "provided,legacy",
 
