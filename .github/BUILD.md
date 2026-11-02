@@ -6,9 +6,10 @@ CI compiles once, runs core tests, then runs the remaining groups independently:
 compile -> core -> Akka / Pekko / Play / other instrumentation / reporters / packaging
 ```
 
-The instrumentation matrix uses `fail-fast: false`, so a failing group does not
-cancel its siblings. GitHub's **Re-run failed jobs** reuses the successful compile
-job's artifact; it does not require recompiling every group.
+Each group is an explicit job, so the full task graph is visible before jobs run
+and a failing group does not cancel its siblings. GitHub's **Re-run failed jobs**
+reuses the successful compile job's artifact; it does not require recompiling
+every group.
 
 The equivalent local commands are:
 
