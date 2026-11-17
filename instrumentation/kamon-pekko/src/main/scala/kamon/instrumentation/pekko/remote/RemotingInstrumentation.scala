@@ -53,6 +53,7 @@ class RemotingInstrumentation extends InstrumentationBuilder {
       */
   onType("org.apache.pekko.remote.artery.ReusableOutboundEnvelope")
     .mixin(classOf[HasContext.Mixin])
+    .advise(method("init"), classOf[CaptureCurrentContextOnReusableEnvelopeInit])
     .advise(method("copy"), classOf[CopyContextOnReusableEnvelope])
 
   onType("org.apache.pekko.remote.artery.Association")
@@ -63,10 +64,19 @@ class RemotingInstrumentation extends InstrumentationBuilder {
 
   onType("org.apache.pekko.remote.artery.ReusableInboundEnvelope")
     .mixin(classOf[HasContext.Mixin])
+    .advise(method("init"), classOf[ResetContextOnReusableEnvelopeInit])
     .advise(method("copyForLane"), classOf[CopyContextOnReusableEnvelope])
 
   onType("org.apache.pekko.remote.artery.MessageDispatcher")
     .advise(method("dispatch"), classOf[ArteryMessageDispatcherAdvice])
+
+  /**
+      * KamonRemoteInstrument.remoteWriteMetadata writes the current Context, but the Encoder serializes on the outbound
+      * stream's thread, where the current Context is the one of whichever sender woke the stream up. Make the envelope's
+      * own Context current while it is serialized, so that each message carries its own Context.
+      */
+  onType("org.apache.pekko.remote.MessageSerializer$")
+    .advise(method("serializeForArtery"), classOf[SerializeForArteryWithEnvelopeContext])
 
 }
 
@@ -88,6 +98,46 @@ object CopyContextOnReusableEnvelope {
   @Advice.OnMethodExit
   @static def exit(@Advice.This oldEnvelope: Any, @Advice.Return newEnvelope: Any): Unit =
     newEnvelope.asInstanceOf[HasContext].setContext(oldEnvelope.asInstanceOf[HasContext].context)
+}
+
+/**
+  * Inbound envelopes are pooled and Kamon only sets their Context when the incoming message carries one, so the Context
+  * must be cleared when an envelope is reused. Otherwise a message sent without a Context is dispatched with the Context
+  * of the previous message that used the same envelope. The Decoder calls init before the Deserializer reads Kamon's
+  * metadata, so a Context carried by the message is still applied.
+  */
+class ResetContextOnReusableEnvelopeInit
+object ResetContextOnReusableEnvelopeInit {
+
+  @Advice.OnMethodExit
+  @static def exit(@Advice.This envelope: Any): Unit =
+    envelope.asInstanceOf[HasContext].setContext(Context.Empty)
+}
+
+/**
+  * Outbound envelopes are pooled as well and not all of them are created through Association.createOutboundEnvelope
+  * (e.g. control messages), so the sender's Context is captured every time an envelope is initialized.
+  */
+class CaptureCurrentContextOnReusableEnvelopeInit
+object CaptureCurrentContextOnReusableEnvelopeInit {
+
+  @Advice.OnMethodExit
+  @static def exit(@Advice.This envelope: Any): Unit =
+    envelope.asInstanceOf[HasContext].setContext(Kamon.currentContext())
+}
+
+class SerializeForArteryWithEnvelopeContext
+object SerializeForArteryWithEnvelopeContext {
+
+  @Advice.OnMethodEnter
+  @static def enter(@Advice.Argument(1) envelope: Any): Storage.Scope = envelope match {
+    case hc: HasContext if hc.context != null => Kamon.storeContext(hc.context)
+    case _                                    => Kamon.storeContext(Context.Empty)
+  }
+
+  @Advice.OnMethodExit(onThrowable = classOf[Throwable])
+  @static def exit(@Advice.Enter scope: Storage.Scope): Unit =
+    scope.close()
 }
 
 class CaptureCurrentContextOnReusableEnvelope
